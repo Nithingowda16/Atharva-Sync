@@ -176,3 +176,4 @@ export function updateAccountAccess(id: string, isAccessGranted: boolean): void 
     acc.isAccessGranted = isAccessGranted;
   }
 }
+
