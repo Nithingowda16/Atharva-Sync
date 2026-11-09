@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { getStoredItem, setStoredItem, STORAGE_KEYS } from '@/lib/storage';
 import {
   FileText,
   PlusCircle,
@@ -947,6 +948,34 @@ export function SettingsModule({
     canManageRoster: true,
   });
 
+  // Hydrate persistent state from storage on mount
+  useEffect(() => {
+    const savedContracts = getStoredItem<ContractRecord[]>(STORAGE_KEYS.CONTRACTS, null as any);
+    if (savedContracts && Array.isArray(savedContracts) && savedContracts.length > 0) {
+      setContractsList(savedContracts);
+    }
+    const savedVehicles = getStoredItem<VehicleRecord[]>(STORAGE_KEYS.VEHICLES, null as any);
+    if (savedVehicles && Array.isArray(savedVehicles) && savedVehicles.length > 0) {
+      setVehiclesList(savedVehicles);
+    }
+    const savedDrivers = getStoredItem<DriverRecord[]>(STORAGE_KEYS.DRIVERS, null as any);
+    if (savedDrivers && Array.isArray(savedDrivers) && savedDrivers.length > 0) {
+      setDriversList(savedDrivers);
+    }
+    const savedRules = getStoredItem<ComplianceRule[]>(STORAGE_KEYS.COMPLIANCE, null as any);
+    if (savedRules && Array.isArray(savedRules) && savedRules.length > 0) {
+      setComplianceRules(savedRules);
+    }
+    const savedDevices = getStoredItem<FixedDeviceRecord[]>(STORAGE_KEYS.DEVICES, null as any);
+    if (savedDevices && Array.isArray(savedDevices) && savedDevices.length > 0) {
+      setFixedDevices(savedDevices);
+    }
+    const savedVendors = getStoredItem<ManagedVendorAccessUser[]>(STORAGE_KEYS.VENDOR_USERS, null as any);
+    if (savedVendors && Array.isArray(savedVendors) && savedVendors.length > 0) {
+      setVendorAccessUsers(savedVendors);
+    }
+  }, []);
+
   // CSV Export utility
   const handleExportCSV = (filename: string, content: string) => {
     const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
@@ -960,43 +989,54 @@ export function SettingsModule({
     showToast(`Downloaded ${filename} successfully!`);
   };
 
-  // Toggle compliance rule
+  // Toggle compliance rule (Persisted Permanently)
   const handleToggleRule = (ruleId: string) => {
-    setComplianceRules((prev) =>
-      prev.map((r) => {
+    setComplianceRules((prev) => {
+      const updated = prev.map((r) => {
         if (r.id === ruleId) {
           const nextVal = !r.enabled;
           showToast(`Compliance rule "${r.name}" has been ${nextVal ? 'ENABLED' : 'DISABLED'}`);
           return { ...r, enabled: nextVal };
         }
         return r;
-      })
-    );
+      });
+      setStoredItem(STORAGE_KEYS.COMPLIANCE, updated);
+      return updated;
+    });
   };
 
-  // Toggle Vendor User Access (Admin only authority)
+  // Toggle Vendor User Access (Admin only authority - Persisted & Synced)
   const handleToggleUserAccess = (userId: string) => {
-    setVendorAccessUsers((prev) =>
-      prev.map((u) => {
+    setVendorAccessUsers((prev) => {
+      let toggledVal = false;
+      const updated = prev.map((u) => {
         if (u.id === userId) {
           const nextVal = !u.isAccessGranted;
+          toggledVal = nextVal;
           showToast(`Super Admin updated ${u.name}'s account: ${nextVal ? 'ACCESS GRANTED ✓' : 'ACCESS SUSPENDED ✕'}`);
           return { ...u, isAccessGranted: nextVal };
         }
         return u;
-      })
-    );
+      });
+      setStoredItem(STORAGE_KEYS.VENDOR_USERS, updated);
+      fetch('/api/portal/sync-vendor', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'toggle-access', id: userId, isAccessGranted: toggledVal }),
+      }).catch(() => {});
+      return updated;
+    });
   };
 
-  // Toggle specific permission for a vendor team member
+  // Toggle specific permission for a vendor team member (Persisted Permanently)
   const handleTogglePermission = (
     userId: string,
     permissionKey: 'canAllocateCabs' | 'canViewRadar' | 'canRequestAdhoc' | 'canViewBilling' | 'canManageRoster'
   ) => {
-    setVendorAccessUsers((prev) =>
-      prev.map((u) => {
+    setVendorAccessUsers((prev) => {
+      const updated = prev.map((u) => {
         if (u.id === userId) {
-          const updated = {
+          const mod = {
             ...u,
             permissions: {
               ...u.permissions,
@@ -1004,14 +1044,16 @@ export function SettingsModule({
             },
           };
           showToast(`Admin updated permission "${permissionKey}" for ${u.name}`);
-          return updated;
+          return mod;
         }
         return u;
-      })
-    );
+      });
+      setStoredItem(STORAGE_KEYS.VENDOR_USERS, updated);
+      return updated;
+    });
   };
 
-  // Create New Vendor Submit (Admin Authority)
+  // Create New Vendor Submit (Admin Authority - Persisted Permanently & Synced to Auth Registry)
   const handleCreateVendorSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newVendorForm.companyName || !newVendorForm.primaryAdminName || !newVendorForm.email) {
@@ -1040,12 +1082,22 @@ export function SettingsModule({
       lastLogin: 'Provisioned Just Now',
     };
 
-    setVendorAccessUsers([created, ...vendorAccessUsers]);
+    const updated = [created, ...vendorAccessUsers];
+    setVendorAccessUsers(updated);
+    setStoredItem(STORAGE_KEYS.VENDOR_USERS, updated);
+
+    // Sync with central backend auth registry so newly provisioned accounts can immediately log in
+    fetch('/api/portal/sync-vendor', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'register', account: created }),
+    }).catch(() => {});
+
     setIsAddVendorModalOpen(false);
     showToast(`Vendor ${created.vendorCompany} provisioned & granted access by Super Admin!`);
   };
 
-  // Add Vendor Team Member Submit (Admin Authority)
+  // Add Vendor Team Member Submit (Admin Authority - Persisted Permanently & Synced to Auth Registry)
   const handleAddTeamMemberSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTeamMemberForm.name || !newTeamMemberForm.email) {
@@ -1074,12 +1126,22 @@ export function SettingsModule({
       lastLogin: 'Provisioned Just Now',
     };
 
-    setVendorAccessUsers([created, ...vendorAccessUsers]);
+    const updated = [created, ...vendorAccessUsers];
+    setVendorAccessUsers(updated);
+    setStoredItem(STORAGE_KEYS.VENDOR_USERS, updated);
+
+    // Sync with central backend auth registry
+    fetch('/api/portal/sync-vendor', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'register', account: created }),
+    }).catch(() => {});
+
     setIsAddTeamMemberModalOpen(false);
     showToast(`Super Admin granted access to Vendor Team Member ${created.name}!`);
   };
 
-  // Submit New Contract Form
+  // Submit New Contract Form (Persisted Permanently)
   const handleCreateContractSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newContractForm.code || !newContractForm.title) {
@@ -1107,12 +1169,14 @@ export function SettingsModule({
       slaOnTimeThreshold: '98.5%',
     };
 
-    setContractsList([created, ...contractsList]);
+    const updated = [created, ...contractsList];
+    setContractsList(updated);
+    setStoredItem(STORAGE_KEYS.CONTRACTS, updated);
     showToast(`Contract ${created.code} activated successfully for Atharva Travels!`);
     handleTabSelect('VEHICLE_CONTRACTS');
   };
 
-  // Submit New Vehicle Form
+  // Submit New Vehicle Form (Persisted Permanently)
   const handleAddVehicleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newVehicleForm.plate || !newVehicleForm.driverName) {
@@ -1139,12 +1203,14 @@ export function SettingsModule({
       status: 'DEPOT_STANDBY',
     };
 
-    setVehiclesList([created, ...vehiclesList]);
+    const updated = [created, ...vehiclesList];
+    setVehiclesList(updated);
+    setStoredItem(STORAGE_KEYS.VEHICLES, updated);
     setIsAddVehicleModalOpen(false);
     showToast(`Vehicle ${created.plate} enrolled into Atharva Travels active fleet!`);
   };
 
-  // Submit New Driver Form
+  // Submit New Driver Form (Persisted Permanently)
   const handleAddDriverSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newDriverForm.name || !newDriverForm.phone || !newDriverForm.dlNumber) {
@@ -1171,7 +1237,9 @@ export function SettingsModule({
       status: 'ACTIVE',
     };
 
-    setDriversList([created, ...driversList]);
+    const updated = [created, ...driversList];
+    setDriversList(updated);
+    setStoredItem(STORAGE_KEYS.DRIVERS, updated);
     setIsAddDriverModalOpen(false);
     showToast(`Driver ${created.name} (${created.staffCode}) successfully onboarded!`);
   };

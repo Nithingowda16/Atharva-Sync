@@ -46,6 +46,7 @@ import {
 import { LocationIssueModal } from '@/components/LocationIssueModal';
 import { GoogleMapsTracker } from '@/components/GoogleMapsTracker';
 import { SettingsModule, SettingsSubTab } from '@/components/SettingsModule';
+import { getStoredItem, setStoredItem, STORAGE_KEYS } from '@/lib/storage';
 
 type LoginRole = 'vendor' | 'admin';
 type ViewState = 'login' | 'vendor-portal' | 'admin-portal';
@@ -453,6 +454,17 @@ export default function ETSPortal() {
   };
 
   useEffect(() => {
+    // 1. Permanently Hydrate Saved Allocations & Passenger Location
+    const savedRoutes = getStoredItem<RouteAllocationRecord[]>(STORAGE_KEYS.ROUTES, null as any);
+    if (savedRoutes && Array.isArray(savedRoutes) && savedRoutes.length > 0) {
+      setRoutesList(savedRoutes);
+    }
+    const savedPassenger = getStoredItem<any>(STORAGE_KEYS.PASSENGER_STATE, null as any);
+    if (savedPassenger && savedPassenger.pickupAddress) {
+      setPassengerState(savedPassenger);
+    }
+
+    // 2. Verify Session
     async function checkSession() {
       try {
         const res = await fetch('/api/auth/me');
@@ -525,39 +537,47 @@ export default function ETSPortal() {
     showToast('Securely logged out.');
   };
 
-  // Cab Allocation Handler
+  // Cab Allocation Handler (Persisted Permanently)
   const handleAllocateCabToRoute = (routeId: string, cab: typeof AVAILABLE_CABS[0]) => {
-    setRoutesList(prev => prev.map(r => {
-      if (r.routeId === routeId) {
-        return {
-          ...r,
-          status: 'ALLOCATED',
-          assignedCount: r.totalCapacity,
-          assignedCabPlate: cab.plate,
-          assignedDriver: cab.driver,
-          assignedDriverPhone: cab.phone,
-        };
-      }
-      return r;
-    }));
+    setRoutesList(prev => {
+      const updated = prev.map(r => {
+        if (r.routeId === routeId) {
+          return {
+            ...r,
+            status: 'ALLOCATED' as const,
+            assignedCount: r.totalCapacity,
+            assignedCabPlate: cab.plate,
+            assignedDriver: cab.driver,
+            assignedDriverPhone: cab.phone,
+          };
+        }
+        return r;
+      });
+      setStoredItem(STORAGE_KEYS.ROUTES, updated);
+      return updated;
+    });
     showToast(`✅ Cab ${cab.plate} allocated to Route #${routeId}! Waypoint pushed to Driver ${cab.driver}.`);
   };
 
-  // Cab Deallocation Handler
+  // Cab Deallocation Handler (Persisted Permanently)
   const handleDeallocateCabFromRoute = (routeId: string) => {
-    setRoutesList(prev => prev.map(r => {
-      if (r.routeId === routeId) {
-        return {
-          ...r,
-          status: 'PENDING',
-          assignedCount: 0,
-          assignedCabPlate: undefined,
-          assignedDriver: undefined,
-          assignedDriverPhone: undefined,
-        };
-      }
-      return r;
-    }));
+    setRoutesList(prev => {
+      const updated = prev.map(r => {
+        if (r.routeId === routeId) {
+          return {
+            ...r,
+            status: 'PENDING' as const,
+            assignedCount: 0,
+            assignedCabPlate: undefined,
+            assignedDriver: undefined,
+            assignedDriverPhone: undefined,
+          };
+        }
+        return r;
+      });
+      setStoredItem(STORAGE_KEYS.ROUTES, updated);
+      return updated;
+    });
     showToast(`Cab deallocated from Route #${routeId}. Route returned to Pending Queue.`);
   };
 
@@ -2377,13 +2397,17 @@ export default function ETSPortal() {
         employeeId="emp-9042"
         currentAddress={passengerState.pickupAddress}
         onLocationUpdated={(newAddress, newCoords) => {
-          setPassengerState(prev => ({
-            ...prev,
-            pickupAddress: newAddress,
-            pickupCoords: newCoords,
-            isReassigned: true,
-            reassignmentReason: 'Reassigned via Employee/Admin portal',
-          }));
+          setPassengerState(prev => {
+            const next = {
+              ...prev,
+              pickupAddress: newAddress,
+              pickupCoords: newCoords,
+              isReassigned: true,
+              reassignmentReason: 'Reassigned via Employee/Admin portal',
+            };
+            setStoredItem(STORAGE_KEYS.PASSENGER_STATE, next);
+            return next;
+          });
           setIsLocationModalOpen(false);
           showToast(`Location reassigned to ${newAddress} and pushed to driver!`);
         }}

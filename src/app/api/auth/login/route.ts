@@ -10,6 +10,7 @@ import {
   setAuthCookie,
   UserSessionPayload,
 } from '@/lib/auth';
+import { findAccount } from '@/lib/provisioned-accounts';
 
 export const dynamic = 'force-dynamic';
 
@@ -173,14 +174,8 @@ export async function POST(request: NextRequest) {
 
     const trimmed = identifier.trim().toLowerCase();
 
-    // 2. Check Admin-Controlled Provisioned Store FIRST (Instant <1ms response)
-    const matched = PROVISIONED_ACCOUNTS.find(
-      (u) =>
-        u.email.toLowerCase() === trimmed ||
-        u.aliasCode.toLowerCase() === trimmed ||
-        (u.staffCode && u.staffCode.toLowerCase() === trimmed) ||
-        (u.clientCode && u.clientCode.toLowerCase() === trimmed)
-    );
+    // 2. Check Admin-Controlled Provisioned Store FIRST (Instant <1ms response, persistent)
+    const matched = findAccount(trimmed);
 
     let authenticatedUser: any = null;
 
