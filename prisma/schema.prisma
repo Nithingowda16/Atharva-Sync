@@ -1,0 +1,447 @@
+// ============================================================================
+// ATHARVA TRAVELS - ENTERPRISE TRANSPORT SYSTEM (ETS) SCHEMA
+// Unified Database supporting:
+// 1. Employee Mobile App
+// 2. Driver Mobile App
+// 3. Web Portal with Dual Logins:
+//    - Corporate Client / Vendor Login (Company Facilities & HR)
+//    - Atharva Travels Admin Login (Fleet Operations & Dispatch Command)
+// ============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ----------------------------------------------------
+// ENUMS
+// ----------------------------------------------------
+
+enum UserRole {
+  EMPLOYEE           // Uses Employee Mobile App
+  DRIVER             // Uses Driver Mobile App
+  CORPORATE_CLIENT   // Web Portal: Corporate Facilities / Company Vendor (e.g. Enterprise Client)
+  ATHARVA_ADMIN      // Web Portal: Atharva Travels Fleet Operations & Central Command
+  ESCORT_GUARD       // Field Security Escort for late-night female employee drops
+}
+
+enum TripType {
+  PICKUP
+  DROP
+}
+
+enum TripStatus {
+  SCHEDULED
+  DRIVER_ASSIGNED
+  EN_ROUTE
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum BoardingStatus {
+  SCHEDULED
+  DRIVER_ARRIVED
+  BOARDED
+  NO_SHOW
+  CANCELLED
+  DROPPED
+}
+
+enum ShiftStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED_BY_CORPORATE
+  ALLOCATED_BY_ATHARVA
+  REJECTED
+  WFH
+}
+
+enum AlertStatus {
+  ACTIVE
+  ACKNOWLEDGED
+  QRT_DISPATCHED
+  RESOLVED
+  FALSE_ALARM
+}
+
+enum DriverDutyStatus {
+  OFFLINE
+  AVAILABLE
+  ON_TRIP
+  ON_BREAK
+}
+
+// ----------------------------------------------------
+// USERS & PROFILE SUBSYSTEM
+// ----------------------------------------------------
+
+model User {
+  id                  String           @id @default(uuid())
+  email               String           @unique
+  passwordHash        String
+  fullName            String
+  phoneNumber         String           @unique
+  role                UserRole         @default(EMPLOYEE)
+  isActive            Boolean          @default(true)
+  pushToken           String?          // Mobile App Push Notification Token (Expo / FCM / APNS)
+  avatarUrl           String?
+  
+  // Strong Security & Brute-Force Lockout Controls
+  failedLoginAttempts Int              @default(0)
+  lockedUntil         DateTime?
+  lastLoginAt         DateTime?
+  lastLoginIp         String?
+
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  // Role-Specific Profile Extensions
+  employeeProfile        EmployeeProfile?
+  driverProfile          DriverProfile?
+  corporateClientProfile CorporateClientProfile?
+  atharvaAdminProfile    AtharvaAdminProfile?
+
+  // Relational Activity Logs
+  shiftRosters           ShiftRoster[]
+  tripPassengers         TripPassenger[]
+  emergencyAlerts        EmergencyAlert[]
+  notifications          PushNotificationLog[]
+  driverTrips            Trip[]                @relation("DriverAssignedTrips")
+  resolvedAlerts         EmergencyAlert[]      @relation("AdminResolvedAlerts")
+  loginLogs              LoginAuditLog[]
+
+  @@index([email])
+  @@index([phoneNumber])
+  @@index([role])
+}
+
+model LoginAuditLog {
+  id            String    @id @default(uuid())
+  userId        String?
+  user          User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  attemptedUser String    // Email or Alias used
+  role          UserRole?
+  success       Boolean
+  failureReason String?
+  ipAddress     String
+  userAgent     String?
+  timestamp     DateTime  @default(now())
+
+  @@index([attemptedUser, timestamp])
+  @@index([ipAddress, timestamp])
+}
+
+// 1. Employee Profile (Powers Employee Mobile App)
+model EmployeeProfile {
+  id                    String          @id @default(uuid())
+  userId                String          @unique
+  user                  User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  employeeCode          String          @unique
+  department            String
+  corporateClientId     String
+  corporateClient       CorporateClientProfile @relation(fields: [corporateClientId], references: [id])
+  officeCampus          String          @default("Bengaluru Tech Park (Tower B)")
+  
+  // Base Home Node
+  defaultHomeAddress    String
+  defaultLatitude       Float
+  defaultLongitude      Float
+
+  // Dynamic Live Geolocation (updated when reporting an issue or waiting at pickup)
+  liveLatitude          Float?
+  liveLongitude         Float?
+  lastLocationUpdate    DateTime?
+
+  // Safety Safeguards
+  femaleSafeguard       Boolean         @default(false)
+  emergencyContactName  String
+  emergencyContactPhone String
+  
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+
+  @@index([corporateClientId])
+}
+
+// 2. Driver Profile (Powers Driver Mobile App)
+model DriverProfile {
+  id                  String           @id @default(uuid())
+  userId              String           @unique
+  user                User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  licenseNumber       String           @unique
+  licenseExpiry       DateTime
+  rating              Float            @default(5.0)
+  totalTripsCompleted Int              @default(0)
+  dutyStatus          DriverDutyStatus @default(OFFLINE)
+
+  // Real-time Vehicle Telemetry streamed from Driver App
+  currentLatitude     Float?
+  currentLongitude    Float?
+  currentHeading      Float?           // Heading angle 0-360
+  currentSpeed        Float?           // Speed in km/h
+  lastLocationUpdate  DateTime?
+
+  // Assigned Atharva Fleet Vehicle
+  assignedVehicleId   String?          @unique
+  assignedVehicle     Vehicle?         @relation(fields: [assignedVehicleId], references: [id])
+
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+}
+
+// 3. Corporate Client Profile (Powers Web Portal: Corporate / Vendor Login)
+model CorporateClientProfile {
+  id              String            @id @default(uuid())
+  userId          String            @unique
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  companyName     String            // e.g., "Nexus Global Enterprise Tech", "Infosys", "Tech Corp"
+  clientCode      String            @unique // e.g., "VND-CORP-01"
+  billingEntity   String
+  contractTier    String            @default("ENTERPRISE_PREMIUM")
+  allocatedBudget Float?
+  primaryCampus   String
+
+  employees       EmployeeProfile[]
+  shiftRosters    ShiftRoster[]
+
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@index([clientCode])
+}
+
+// 4. Atharva Travels Admin Profile (Powers Web Portal: Atharva Admin Login)
+model AtharvaAdminProfile {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  staffCode       String   @unique // e.g. "ATH-OPS-01"
+  deskRole        String   // "Fleet Dispatcher", "TCR Safety Lead", "Operations General Manager"
+  shiftZone       String   @default("Bengaluru Central & South Zone")
+  canDispatchQRT  Boolean  @default(true)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// ----------------------------------------------------
+// ATHARVA TRAVELS FLEET & ASSETS
+// ----------------------------------------------------
+
+model Vehicle {
+  id              String         @id @default(uuid())
+  plateNumber     String         @unique // e.g. "KA-03-HA-8821"
+  make            String         // "Toyota"
+  model           String         // "Innova Crysta"
+  color           String         // "White"
+  seatingCapacity Int            @default(4)
+  fleetType       String         @default("SEDAN_SUV") // SEDAN_SUV, TEMPO_TRAVELER, EV_BUS
+  gpsDeviceId     String?        @unique
+  insuranceExpiry DateTime
+  fitnessExpiry   DateTime
+  isActive        Boolean        @default(true)
+  
+  driverProfile   DriverProfile?
+  trips           Trip[]
+
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([plateNumber])
+}
+
+// ----------------------------------------------------
+// SHIFT ROSTERS & TRIPS
+// ----------------------------------------------------
+
+model ShiftRoster {
+  id                String                 @id @default(uuid())
+  employeeId        String
+  employee          User                   @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  
+  corporateClientId String
+  corporateClient   CorporateClientProfile @relation(fields: [corporateClientId], references: [id])
+  
+  shiftDate         DateTime               @db.Date
+  shiftStartTime    DateTime
+  shiftEndTime      DateTime
+  
+  pickupRequired    Boolean                @default(true)
+  dropRequired      Boolean                @default(true)
+  status            ShiftStatus            @default(SUBMITTED)
+  
+  tripPassengers    TripPassenger[]
+
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+
+  @@unique([employeeId, shiftDate])
+  @@index([corporateClientId, shiftDate])
+}
+
+model Trip {
+  id                  String             @id @default(uuid())
+  tripCode            String             @unique // e.g. "ATH-8821"
+  type                TripType
+  status              TripStatus         @default(SCHEDULED)
+  
+  scheduledStartTime  DateTime
+  scheduledEndTime    DateTime
+  actualStartTime     DateTime?
+  actualEndTime       DateTime?
+  
+  vehicleId           String
+  vehicle             Vehicle            @relation(fields: [vehicleId], references: [id])
+  
+  driverId            String
+  driver              User               @relation("DriverAssignedTrips", fields: [driverId], references: [id])
+  
+  plannedRoutePolyline String?           @db.Text
+  totalDistanceKm     Float?
+  estimatedMinutes    Int?
+
+  passengers          TripPassenger[]
+  locationLogs        LocationAuditLog[]
+  emergencyAlerts     EmergencyAlert[]
+
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  @@index([tripCode])
+  @@index([driverId, status])
+  @@index([scheduledStartTime])
+}
+
+model TripPassenger {
+  id                   String                       @id @default(uuid())
+  tripId               String
+  trip                 Trip                         @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  
+  employeeId           String
+  employee             User                         @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  
+  rosterId             String?
+  roster               ShiftRoster?                 @relation(fields: [rosterId], references: [id])
+
+  stopSequence         Int                          // Stop 1, Stop 2, etc.
+  scheduledPickupTime  DateTime
+  actualPickupTime     DateTime?
+  
+  // Geolocation Nodes
+  pickupAddress        String
+  pickupLatitude       Float
+  pickupLongitude      Float
+  
+  dropAddress          String
+  dropLatitude         Float
+  dropLongitude        Float
+  
+  // Boarding Verification via Driver App
+  boardingOtp          String                       // 4-digit PIN e.g. "7492"
+  boardingStatus       BoardingStatus               @default(SCHEDULED)
+  boardedAt            DateTime?
+
+  // Dynamic Geolocation Reassignment & Issue Handling
+  isLocationReassigned Boolean                      @default(false)
+  reassignmentEvents   LocationReassignmentEvent[]
+
+  createdAt            DateTime                     @default(now())
+  updatedAt            DateTime                     @updatedAt
+
+  @@unique([tripId, employeeId])
+  @@index([tripId, stopSequence])
+  @@index([employeeId, boardingStatus])
+}
+
+// ----------------------------------------------------
+// DYNAMIC GEO REASSIGNMENT & TELEMETRY
+// ----------------------------------------------------
+
+model LocationReassignmentEvent {
+  id              String        @id @default(uuid())
+  tripPassengerId String
+  tripPassenger   TripPassenger @relation(fields: [tripPassengerId], references: [id], onDelete: Cascade)
+  
+  driverId        String        // Driver whose app receives the pushed waypoint
+  
+  previousLat     Float
+  previousLng     Float
+  newLat          Float
+  newLng          Float
+  updatedAddress  String
+  
+  reason          String        // e.g. "Employee shifted 300m due to gate barrier"
+  initiatedByRole UserRole      @default(EMPLOYEE)
+  notifiedDriver  Boolean       @default(false)
+  
+  createdAt       DateTime      @default(now())
+
+  @@index([tripPassengerId])
+  @@index([driverId])
+}
+
+model LocationAuditLog {
+  id         String   @id @default(uuid())
+  tripId     String
+  trip       Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  
+  driverId   String
+  latitude   Float
+  longitude  Float
+  heading    Float?
+  speed      Float?
+  timestamp  DateTime @default(now())
+
+  @@index([tripId, timestamp])
+}
+
+// ----------------------------------------------------
+// SAFETY, EMERGENCY (SOS) & PUSH NOTIFICATIONS
+// ----------------------------------------------------
+
+model EmergencyAlert {
+  id                 String      @id @default(uuid())
+  tripId             String?
+  trip               Trip?       @relation(fields: [tripId], references: [id])
+  
+  employeeId         String
+  employee           User        @relation(fields: [employeeId], references: [id])
+  
+  reportedLatitude   Float
+  reportedLongitude  Float
+  status             AlertStatus @default(ACTIVE)
+  
+  triggeredAt        DateTime    @default(now())
+  acknowledgedAt     DateTime?
+  resolvedAt         DateTime?
+  
+  resolvedByAdminId  String?
+  resolvedByAdmin    User?       @relation("AdminResolvedAlerts", fields: [resolvedByAdminId], references: [id])
+  
+  incidentNotes      String?     @db.Text
+
+  @@index([status, triggeredAt])
+}
+
+model PushNotificationLog {
+  id              String   @id @default(uuid())
+  recipientUserId String
+  recipient       User     @relation(fields: [recipientUserId], references: [id], onDelete: Cascade)
+  
+  title           String
+  body            String
+  payloadJson     String?  @db.Text
+  status          String   @default("SENT") // SENT, DELIVERED, FAILED
+  sentAt          DateTime @default(now())
+
+  @@index([recipientUserId, sentAt])
+}
