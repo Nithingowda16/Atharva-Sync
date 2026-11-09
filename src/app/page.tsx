@@ -723,7 +723,7 @@ export default function ETSPortal() {
                 
                 <div className="border-b border-slate-300 focus-within:border-[#0f5fc2] transition-colors pb-1">
                   <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">
-                    {loginRole === 'admin' ? 'Super Admin Staff Code / Email' : 'Vendor Alias / Team Staff ID'}
+                    {loginRole === 'admin' ? 'Email Address or Staff Code' : 'Email Address or Staff ID'}
                   </label>
                   <input
                     type="text"
@@ -731,7 +731,7 @@ export default function ETSPortal() {
                     autoComplete="off"
                     value={identifier}
                     onChange={(e) => setIdentifier(e.target.value)}
-                    placeholder={loginRole === 'admin' ? 'ATH-ADMIN-01 or admin@atharvatravels.com' : 'vendor.lead@enterprise.internal'}
+                    placeholder="name@company.com"
                     className="w-full text-sm text-slate-800 bg-transparent placeholder:text-slate-400 focus:outline-none py-1.5 font-normal"
                   />
                 </div>
