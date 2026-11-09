@@ -1,24 +1,17 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Wrench,
   Clock,
   ShieldCheck,
-  Radio,
-  Sparkles,
-  Lock,
-  ArrowRight,
   CheckCircle2,
-  AlertTriangle,
   Mail,
-  Phone,
   RefreshCw,
   Server,
   Zap,
   LogOut,
   UserCheck,
-  Shield,
 } from 'lucide-react';
 
 interface UnderMaintenanceProps {
@@ -31,27 +24,10 @@ interface UnderMaintenanceProps {
     staffCode?: string;
   } | null;
   onLogout: () => void;
-  onBypass: () => void;
+  onBypass?: () => void;
 }
 
-export function UnderMaintenance({ currentUser, onLogout, onBypass }: UnderMaintenanceProps) {
-  const [showPassModal, setShowPassModal] = useState(false);
-  const [passcode, setPasscode] = useState('');
-  const [passError, setPassError] = useState(false);
-
-  const isAdmin = currentUser?.staffCode === 'ATH-ADMIN-01' || currentUser?.email === 'admin@atharvatravels.com' || currentUser?.role === 'SUPER_ADMIN';
-
-  const handlePasscodeSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Authorized developer/staff bypass code
-    const validCodes = ['ATHARVA', 'ATH-SYNC', 'DEVELOPER', 'ADMIN123', 'PREVIEW'];
-    if (validCodes.includes(passcode.trim().toUpperCase())) {
-      onBypass();
-    } else {
-      setPassError(true);
-    }
-  };
-
+export function UnderMaintenance({ currentUser, onLogout }: UnderMaintenanceProps) {
   return (
     <div className="min-h-screen flex flex-col justify-between bg-[#f8fafc] text-slate-800 font-sans selection:bg-blue-100 selection:text-blue-900 relative overflow-hidden">
       
@@ -128,9 +104,9 @@ export function UnderMaintenance({ currentUser, onLogout, onBypass }: UnderMaint
         <p className="text-sm sm:text-base text-slate-600 max-w-2xl leading-relaxed mb-8">
           {currentUser ? (
             <>
-              Welcome, <strong className="text-slate-800">{currentUser.fullName}</strong>. Your account has been authenticated, 
-              but the operational dispatch dashboards and fleet monitoring modules are currently 
-              offline for planned production upgrades.
+              Welcome, <strong className="text-slate-800">{currentUser.fullName}</strong>. Your account has been authenticated successfully.
+              The operational dispatch dashboards and fleet monitoring modules are currently 
+              offline for scheduled system upgrades and database optimization.
             </>
           ) : (
             <>
@@ -176,34 +152,23 @@ export function UnderMaintenance({ currentUser, onLogout, onBypass }: UnderMaint
 
         </div>
 
-        {/* Quick Actions (Sign Out + Admin Direct Bypass) */}
-        <div className="flex flex-wrap items-center justify-center gap-3 mb-8">
+        {/* Quick Actions (Sign Out Only - Zero Dashboard Access) */}
+        <div className="flex items-center justify-center mb-8">
           <button
             type="button"
             onClick={onLogout}
-            className="px-5 py-2.5 text-xs font-bold bg-white text-slate-700 hover:bg-slate-100 border border-slate-300 shadow-sm flex items-center space-x-2"
+            className="px-6 py-2.5 text-xs font-bold bg-white text-slate-700 hover:bg-slate-100 border border-slate-300 shadow-sm flex items-center space-x-2 transition-colors"
           >
             <LogOut className="w-3.5 h-3.5 text-slate-500" />
             <span>Return to Login Screen</span>
           </button>
-
-          {isAdmin && (
-            <button
-              type="button"
-              onClick={onBypass}
-              className="px-5 py-2.5 text-xs font-bold bg-[#0f5fc2] text-white hover:bg-blue-700 shadow-sm flex items-center space-x-2"
-            >
-              <Shield className="w-3.5 h-3.5 text-amber-400" />
-              <span>Admin Preview Access (Open Dashboard)</span>
-            </button>
-          )}
         </div>
 
         {/* Estimated Restoration & Helpdesk Contact */}
         <div className="w-full max-w-2xl bg-white border border-slate-200/90 p-4 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-600">
           <div className="flex items-center space-x-2 text-slate-700 font-medium">
             <Clock className="w-4 h-4 text-[#0f5fc2]" />
-            <span>Expected Go-Live: <strong>Next Production Deployment</strong></span>
+            <span>Expected Go-Live: <strong>Within 72 Hours</strong></span>
           </div>
           
           <div className="flex items-center space-x-4 border-t sm:border-t-0 sm:border-l border-slate-200 pt-3 sm:pt-0 sm:pl-4">
@@ -219,108 +184,10 @@ export function UnderMaintenance({ currentUser, onLogout, onBypass }: UnderMaint
 
       </main>
 
-      {/* Footer Bar with Discreet Authorized Personnel Access */}
-      <footer className="relative z-10 border-t border-slate-200 bg-white px-6 py-3.5 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-400">
-        <div>
-          &copy; {new Date().getFullYear()} Atharva Travels. All rights reserved. Enterprise Transport System.
-        </div>
-
-        <div>
-          <button
-            type="button"
-            onClick={() => setShowPassModal(true)}
-            className="flex items-center space-x-1.5 text-slate-400 hover:text-slate-700 transition-colors py-1 px-2 border border-transparent hover:border-slate-200"
-            title="Authorized Developers & Staff"
-          >
-            <Lock className="w-3 h-3" />
-            <span className="text-[11px]">Developer Bypass</span>
-          </button>
-        </div>
+      {/* Clean Footer Bar */}
+      <footer className="relative z-10 border-t border-slate-200 bg-white px-6 py-3.5 text-center text-xs text-slate-400">
+        &copy; {new Date().getFullYear()} Atharva Travels. All rights reserved. Enterprise Transport System.
       </footer>
-
-      {/* Authorized Staff Passcode Modal */}
-      {showPassModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
-          <div className="bg-white border border-slate-200 shadow-2xl max-w-sm w-full p-6 space-y-4">
-            
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center space-x-2 text-slate-800 font-bold text-sm">
-                <Lock className="w-4 h-4 text-[#0f5fc2]" />
-                <span>Developer &amp; Staff Bypass</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowPassModal(false);
-                  setPassError(false);
-                  setPasscode('');
-                }}
-                className="text-slate-400 hover:text-slate-600 text-sm font-bold"
-              >
-                ✕
-              </button>
-            </div>
-
-            <p className="text-xs text-slate-500 leading-normal">
-              Enter developer access code to preview the dashboard while building in production.
-            </p>
-
-            <form onSubmit={handlePasscodeSubmit} className="space-y-4">
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
-                  Access Code
-                </label>
-                <input
-                  type="password"
-                  autoFocus
-                  required
-                  value={passcode}
-                  onChange={(e) => {
-                    setPasscode(e.target.value);
-                    setPassError(false);
-                  }}
-                  placeholder="Enter access code"
-                  className="w-full text-sm border border-slate-300 px-3 py-2 focus:outline-none focus:border-[#0f5fc2] font-mono"
-                />
-                {passError && (
-                  <p className="text-[11px] text-red-600 font-medium mt-1 flex items-center space-x-1">
-                    <AlertTriangle className="w-3 h-3" />
-                    <span>Invalid access code. Please try again.</span>
-                  </p>
-                )}
-              </div>
-
-              <div className="flex justify-end space-x-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowPassModal(false);
-                    setPassError(false);
-                    setPasscode('');
-                  }}
-                  className="px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 text-xs font-bold text-white bg-[#0f5fc2] hover:bg-blue-700 shadow-sm flex items-center space-x-1.5"
-                >
-                  <span>Unlock Dashboard</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </form>
-
-            <div className="border-t border-slate-100 pt-3 text-center">
-              <span className="text-[11px] text-slate-400">
-                Staff passcode: <code className="bg-slate-100 px-1 py-0.5 text-slate-600 font-mono">ATHARVA</code> or <code className="bg-slate-100 px-1 py-0.5 text-slate-600 font-mono">ADMIN123</code>
-              </span>
-            </div>
-
-          </div>
-        </div>
-      )}
 
     </div>
   );
