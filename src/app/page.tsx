@@ -48,12 +48,10 @@ import {
 import { LocationIssueModal } from '@/components/LocationIssueModal';
 import { GoogleMapsTracker } from '@/components/GoogleMapsTracker';
 import { SettingsModule, SettingsSubTab } from '@/components/SettingsModule';
-import { EmployeeMobileApp } from '@/components/EmployeeMobileApp';
-import { DriverMobileApp } from '@/components/DriverMobileApp';
 import { getStoredItem, setStoredItem, STORAGE_KEYS } from '@/lib/storage';
 
-type LoginRole = 'vendor' | 'admin' | 'employee' | 'driver';
-type ViewState = 'login' | 'vendor-portal' | 'admin-portal' | 'employee-app' | 'driver-app';
+type LoginRole = 'vendor' | 'admin';
+type ViewState = 'login' | 'vendor-portal' | 'admin-portal';
 
 interface AuthUser {
   id: string;
@@ -681,70 +679,42 @@ export default function ETSPortal() {
 
             <div className="bg-white rounded-none shadow-[0_4px_30px_rgba(0,0,0,0.06)] border border-slate-100/80 w-full max-w-[430px] p-8 sm:p-9 transition-all">
               
-              {/* 4-ROLE TAB SWITCHER: ADMIN, VENDOR, EMPLOYEE, DRIVER */}
-              <div className="grid grid-cols-4 border-b border-slate-200 mb-6 text-center">
+              {/* DUAL ROLE TAB SWITCHER - ADMIN & VENDOR */}
+              <div className="flex items-center border-b border-slate-200 mb-6">
                 <button
                   type="button"
                   onClick={() => handleTabChange('admin')}
-                  className={`pb-2.5 text-[11px] sm:text-xs font-bold transition-all relative ${
+                  className={`flex-1 pb-3 text-xs sm:text-sm font-bold transition-all relative ${
                     loginRole === 'admin'
                       ? 'text-[#0f5fc2]'
                       : 'text-slate-400 hover:text-slate-600'
                   }`}
                 >
-                  <span className="flex flex-col items-center justify-center space-y-0.5">
+                  <span className="flex items-center justify-center space-x-1.5">
                     <Shield className="w-3.5 h-3.5 text-amber-600" />
-                    <span>Admin</span>
+                    <span>Atharva Admin</span>
                   </span>
                   {loginRole === 'admin' && (
-                    <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#0f5fc2]" />
+                    <span className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-[#0f5fc2]" />
                   )}
                 </button>
 
                 <button
                   type="button"
                   onClick={() => handleTabChange('vendor')}
-                  className={`pb-2.5 text-[11px] sm:text-xs font-bold transition-all relative ${
+                  className={`flex-1 pb-3 text-xs sm:text-sm font-bold transition-all relative ${
                     loginRole === 'vendor'
                       ? 'text-[#0f5fc2]'
                       : 'text-slate-400 hover:text-slate-600'
                   }`}
                 >
-                  <span className="flex flex-col items-center justify-center space-y-0.5">
-                    <Building2 className="w-3.5 h-3.5 text-blue-600" />
-                    <span>Vendor</span>
+                  <span className="flex items-center justify-center space-x-1.5">
+                    <Building2 className="w-3.5 h-3.5" />
+                    <span>Vendor & Team</span>
                   </span>
                   {loginRole === 'vendor' && (
-                    <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#0f5fc2]" />
+                    <span className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-[#0f5fc2]" />
                   )}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setViewState('employee-app');
-                    showToast('Opening Employee Commuter App (Dynamic QR Boarding Pass)');
-                  }}
-                  className="pb-2.5 text-[11px] sm:text-xs font-bold text-slate-500 hover:text-emerald-700 transition-all"
-                >
-                  <span className="flex flex-col items-center justify-center space-y-0.5">
-                    <Smartphone className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>Employee</span>
-                  </span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setViewState('driver-app');
-                    showToast('Opening Driver Operations Terminal (QR Scanner)');
-                  }}
-                  className="pb-2.5 text-[11px] sm:text-xs font-bold text-slate-500 hover:text-amber-700 transition-all"
-                >
-                  <span className="flex flex-col items-center justify-center space-y-0.5">
-                    <Car className="w-3.5 h-3.5 text-amber-600" />
-                    <span>Driver</span>
-                  </span>
                 </button>
               </div>
 
@@ -827,37 +797,6 @@ export default function ETSPortal() {
                   </button>
                 </div>
               </form>
-
-              {/* 4-APP DIRECT PREVIEW / ROLE LAUNCHER */}
-              <div className="mt-6 pt-5 border-t border-slate-200">
-                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-2 text-center">
-                  Direct Launch: ETS Multi-App Ecosystem
-                </span>
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setViewState('employee-app');
-                      showToast('Launching Employee App with QR Boarding Pass');
-                    }}
-                    className="p-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-900 font-bold flex items-center justify-center space-x-1.5 transition-colors"
-                  >
-                    <Smartphone className="w-3.5 h-3.5 text-emerald-700" />
-                    <span>📱 Employee App</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setViewState('driver-app');
-                      showToast('Launching Driver App with Live Camera & QR Scanner');
-                    }}
-                    className="p-2 bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-950 font-bold flex items-center justify-center space-x-1.5 transition-colors"
-                  >
-                    <Car className="w-3.5 h-3.5 text-amber-700" />
-                    <span>🚖 Driver Terminal</span>
-                  </button>
-                </div>
-              </div>
             </div>
           </main>
 
@@ -1123,36 +1062,14 @@ export default function ETSPortal() {
                 </div>
               </div>
 
-              {/* Multi-App Role Switcher */}
-              <div className="hidden lg:flex items-center space-x-1 bg-slate-100 p-0.5 border border-slate-200 text-xs">
-                <button
-                  onClick={() => {
-                    setViewState('employee-app');
-                    showToast('Switched to Employee Commuter App (QR Boarding Pass)');
-                  }}
-                  className="px-2.5 py-1 font-bold text-slate-700 hover:text-emerald-700 hover:bg-white flex items-center space-x-1 transition-all"
-                  title="Open Employee Commuter App with QR Boarding Pass"
-                >
-                  <Smartphone className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Employee App</span>
-                </button>
-                <button
-                  onClick={() => {
-                    setViewState('driver-app');
-                    showToast('Switched to Driver Operations Terminal (QR Scanner)');
-                  }}
-                  className="px-2.5 py-1 font-bold text-slate-700 hover:text-amber-700 hover:bg-white flex items-center space-x-1 transition-all"
-                  title="Open Driver Terminal with QR Scanner"
-                >
-                  <Car className="w-3.5 h-3.5 text-amber-600" />
-                  <span>Driver App</span>
-                </button>
+              {/* Web Portal Switcher */}
+              <div className="hidden lg:flex items-center space-x-1 text-xs">
                 <button
                   onClick={() => {
                     setViewState('admin-portal');
                     showToast('Switched to Atharva Admin Command Center');
                   }}
-                  className="px-2.5 py-1 font-bold text-slate-700 hover:text-blue-700 hover:bg-white flex items-center space-x-1 transition-all"
+                  className="px-3 py-1.5 font-bold text-slate-700 hover:text-blue-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 flex items-center space-x-1.5 transition-all shadow-sm"
                   title="Open Atharva Admin Operations Command"
                 >
                   <Shield className="w-3.5 h-3.5 text-blue-600" />
@@ -2278,32 +2195,6 @@ export default function ETSPortal() {
               </div>
 
               <div className="flex items-center space-x-2.5 text-xs">
-                {/* Multi-App Role Switcher */}
-                <div className="hidden lg:flex items-center space-x-1 bg-slate-100 p-0.5 border border-slate-200">
-                  <button
-                    onClick={() => {
-                      setViewState('employee-app');
-                      showToast('Switched to Employee Commuter App (QR Boarding Pass)');
-                    }}
-                    className="px-2.5 py-1.5 font-bold text-slate-700 hover:text-emerald-700 hover:bg-white flex items-center space-x-1 transition-all"
-                    title="Open Employee Commuter App with QR Boarding Pass"
-                  >
-                    <Smartphone className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>Employee App</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setViewState('driver-app');
-                      showToast('Switched to Driver Operations Terminal (QR Scanner)');
-                    }}
-                    className="px-2.5 py-1.5 font-bold text-slate-700 hover:text-amber-700 hover:bg-white flex items-center space-x-1 transition-all"
-                    title="Open Driver Terminal with QR Scanner"
-                  >
-                    <Car className="w-3.5 h-3.5 text-amber-600" />
-                    <span>Driver App</span>
-                  </button>
-                </div>
-
                 <button
                   onClick={() => {
                     setViewState('vendor-portal');
@@ -2326,7 +2217,7 @@ export default function ETSPortal() {
                   className="bg-[#0f5fc2] hover:bg-blue-700 text-white font-bold text-xs px-3.5 py-2 shadow-sm transition-colors flex items-center space-x-1.5"
                 >
                   <Layers className="w-3.5 h-3.5" />
-                  <span>Vendor Portal</span>
+                  <span>Open Vendor Portal</span>
                 </button>
 
                 <div className="h-6 w-px bg-slate-200" />
@@ -2515,86 +2406,6 @@ export default function ETSPortal() {
 
           </main>
         </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* 4. EMPLOYEE COMMUTER MOBILE APP (DYNAMIC QR BOARDING PASS)                 */}
-      {/* ========================================================================= */}
-      {viewState === 'employee-app' && (
-        <EmployeeMobileApp
-          employeeName={currentUser?.fullName || 'Harish R.'}
-          employeeCode={currentUser?.staffCode || 'EMP-8492'}
-          pickupAddress={passengerState.pickupAddress}
-          pickupCoords={passengerState.pickupCoords}
-          vehiclePlate={activeTripData.vehiclePlate}
-          vehicleModel={activeTripData.vehicleModel}
-          driverName={activeTripData.driverName}
-          driverPhone={activeTripData.driverPhone}
-          boardingPin="8492"
-          isBoarded={isPassengerBoarded}
-          onSimulateBoarding={() => {
-            setIsPassengerBoarded(!isPassengerBoarded);
-            showToast(isPassengerBoarded ? 'Commuter status reverted to Waiting' : '✅ Commuter Boarding Verified by Driver!');
-          }}
-          onRequestLocationChange={() => setIsLocationModalOpen(true)}
-          onTriggerSOS={() => {
-            setIsSosActive(true);
-            showToast('🚨 EMERGENCY SOS: Broadcast sent to Atharva Command Center!');
-          }}
-          onSwitchPortal={(portal) => setViewState(portal)}
-        />
-      )}
-
-      {/* ========================================================================= */}
-      {/* 5. DRIVER OPERATIONS MOBILE APP (LIVE QR SCANNER & ROSTER)                 */}
-      {/* ========================================================================= */}
-      {viewState === 'driver-app' && (
-        <DriverMobileApp
-          driverName={activeTripData.driverName}
-          vehiclePlate={activeTripData.vehiclePlate}
-          vehicleModel={activeTripData.vehicleModel}
-          tripId={activeTripData.tripId}
-          initialPassengers={[
-            {
-              empCode: 'EMP-8492',
-              name: currentUser?.fullName || 'Harish R.',
-              phone: '+91 98450 11200',
-              pickup: passengerState.pickupAddress,
-              seat: '1A',
-              pin: '8492',
-              status: isPassengerBoarded ? 'BOARDED' : 'WAITING',
-            },
-            {
-              empCode: 'EMP-8493',
-              name: 'Bhaskar N.',
-              phone: '+91 98450 11201',
-              pickup: 'Koramangala 4th Block (Sony World Jxn)',
-              seat: '1B',
-              pin: '5120',
-              status: 'WAITING',
-            },
-            {
-              empCode: 'EMP-8494',
-              name: 'Hemaraj K.',
-              phone: '+91 98450 11202',
-              pickup: 'HSR Layout Sector 1 (Ring Rd)',
-              seat: '2A',
-              pin: '3914',
-              status: 'WAITING',
-            },
-          ]}
-          onPassengerBoarded={(empCode, pin) => {
-            if (empCode === 'EMP-8492' || pin === '8492') {
-              setIsPassengerBoarded(true);
-            }
-            showToast(`✅ Driver verified & boarded ${empCode}! Roster updated.`);
-          }}
-          onSwitchPortal={(portal) => setViewState(portal)}
-          onTriggerSOS={() => {
-            setIsSosActive(true);
-            showToast('🚨 DRIVER SOS: Alert beacon broadcasted to Dispatch Command!');
-          }}
-        />
       )}
 
       {/* ========================================================================= */}
