@@ -2209,17 +2209,6 @@ export default function ETSPortal() {
                   alt="Atharva Travels"
                   className="h-8 w-auto object-contain mix-blend-multiply"
                 />
-                <div className="border-l border-slate-200 pl-3">
-                  <div className="flex items-center space-x-2">
-                    <span className="font-black text-sm text-slate-900 tracking-tight">CENTRAL OPERATIONS COMMAND</span>
-                    <span className="bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-black px-2 py-0.5 uppercase">
-                      Super Admin Main
-                    </span>
-                  </div>
-                  <span className="text-[11px] text-slate-500 font-medium">
-                    Operator: <strong>ATH-ADMIN-01</strong> • Bengaluru Central Fleet Command & Vendor Access Control
-                  </span>
-                </div>
               </div>
 
               <div className="flex items-center space-x-2.5 text-xs">
