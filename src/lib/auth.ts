@@ -262,3 +262,18 @@ export async function getCurrentUserSession(): Promise<UserSessionPayload | null
   return verifySessionToken(token);
 }
 
+// STRICT RESTRICTED ACCESS: Designated Super Administrators Only
+export const AUTHORIZED_ADMIN_EMAILS = [
+  'harish.admin@atharvatravels.com',
+  'bhaskar.admin@atharvatravels.com',
+  'hemaraj.admin@atharvatravels.com',
+];
+
+export async function validateAdminSession(): Promise<UserSessionPayload | null> {
+  const session = await getCurrentUserSession();
+  if (!session || !session.email) return null;
+  const isAuth = AUTHORIZED_ADMIN_EMAILS.includes(session.email.toLowerCase().trim());
+  return isAuth ? session : null;
+}
+
+

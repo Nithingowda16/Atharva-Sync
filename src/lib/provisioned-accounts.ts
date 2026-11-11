@@ -112,12 +112,7 @@ export function findAccount(identifier: string): ProvisionedAccount | undefined 
     (u) =>
       u.email.toLowerCase() === trimmed ||
       u.aliasCode.toLowerCase() === trimmed ||
-      (u.staffCode && u.staffCode.toLowerCase() === trimmed) ||
-      (u.clientCode && u.clientCode.toLowerCase() === trimmed) ||
-      // Support common aliases (e.g. "harish.admin", "bhaskar.admin", "hemaraj.admin")
-      (trimmed.includes('harish') && u.email.includes('harish')) ||
-      (trimmed.includes('bhaskar') && u.email.includes('bhaskar')) ||
-      (trimmed.includes('hemaraj') && u.email.includes('hemaraj'))
+      (u.staffCode && u.staffCode.toLowerCase() === trimmed)
   );
 }
 

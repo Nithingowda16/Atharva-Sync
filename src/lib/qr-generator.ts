@@ -286,3 +286,4 @@ export function generateQRCode(text: string): QRCodeData {
 
   return { size, matrix, svg };
 }
+

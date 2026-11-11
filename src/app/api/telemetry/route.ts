@@ -1,9 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { validateAdminSession } from '@/lib/auth';
 import { TelemetryUpdatePayload } from '@/types/ets';
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await validateAdminSession();
+    if (!session) {
+      return NextResponse.json(
+        { error: 'Access Denied: Restricted access portal. Authorized administrator session required.' },
+        { status: 403 }
+      );
+    }
+
     const body: TelemetryUpdatePayload = await request.json();
     const { tripId, driverId, latitude, longitude, heading, speed } = body;
 

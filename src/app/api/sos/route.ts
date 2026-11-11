@@ -1,9 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { validateAdminSession } from '@/lib/auth';
 import { dispatchPushNotification } from '@/lib/push-service';
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await validateAdminSession();
+    if (!session) {
+      return NextResponse.json(
+        { error: 'Access Denied: Restricted access portal. Authorized administrator session required.' },
+        { status: 403 }
+      );
+    }
+
     const { employeeId, tripId, latitude, longitude, incidentNotes } = await request.json();
 
     if (!employeeId || latitude === undefined || longitude === undefined) {

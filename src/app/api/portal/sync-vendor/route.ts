@@ -1,10 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { registerAccount, updateAccountAccess, ProvisionedAccount } from '@/lib/provisioned-accounts';
+import { validateAdminSession } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await validateAdminSession();
+    if (!session) {
+      return NextResponse.json(
+        { error: 'Access Denied: Restricted access portal. Authorized administrator session required.' },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     const { action, account, id, isAccessGranted } = body;
 

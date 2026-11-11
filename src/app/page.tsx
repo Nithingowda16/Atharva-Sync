@@ -470,23 +470,30 @@ export default function ETSPortal() {
       setPassengerState(savedPassenger);
     }
 
-    // 2. Verify Session
+    // 2. Strict Session Verification (Restricted Solely to 3 Authorized Admins)
     async function checkSession() {
       try {
         const res = await fetch('/api/auth/me');
         if (res.ok) {
           const data = await res.json();
-          if (data.authenticated && data.user) {
+          const allowedAdmins = [
+            'harish.admin@atharvatravels.com',
+            'bhaskar.admin@atharvatravels.com',
+            'hemaraj.admin@atharvatravels.com',
+          ];
+          if (data.authenticated && data.user && allowedAdmins.includes(data.user.email?.toLowerCase())) {
             setCurrentUser(data.user);
-            if (data.user.role === 'CORPORATE_CLIENT') {
-              setViewState('vendor-portal');
-            } else if (data.user.role === 'ATHARVA_ADMIN') {
-              setViewState('admin-portal');
-            }
+            setViewState('admin-portal');
+            return;
           }
         }
+        // If not strictly authorized, enforce login state
+        setCurrentUser(null);
+        setViewState('login');
       } catch (err) {
         console.error('Session verify error:', err);
+        setCurrentUser(null);
+        setViewState('login');
       }
     }
     checkSession();
@@ -517,15 +524,23 @@ export default function ETSPortal() {
       const data = await response.json();
 
       if (response.ok && data.success) {
+        const allowedAdmins = [
+          'harish.admin@atharvatravels.com',
+          'bhaskar.admin@atharvatravels.com',
+          'hemaraj.admin@atharvatravels.com',
+        ];
+        if (!data.user || !allowedAdmins.includes(data.user.email?.toLowerCase())) {
+          setAuthError('Access Denied: Restricted access portal. Access is strictly limited to authorized Atharva administrators.');
+          setCurrentUser(null);
+          setViewState('login');
+          return;
+        }
+
         setCurrentUser(data.user);
         showToast(`Authentication verified: Welcome ${data.user.fullName}`);
-        if (data.targetPortal === 'admin-portal' || data.user.role === 'ATHARVA_ADMIN') {
-          setViewState('admin-portal');
-        } else {
-          setViewState('vendor-portal');
-        }
+        setViewState('admin-portal');
       } else {
-        setAuthError(data.error || 'Invalid credentials. Please verify your alias and password.');
+        setAuthError(data.error || 'Access Denied: Invalid credentials or unauthorized account.');
       }
     } catch (err) {
       setAuthError('Connection error: Unable to verify credentials with the authentication service. Please check your network or try again.');
@@ -679,6 +694,19 @@ export default function ETSPortal() {
 
             <div className="bg-white rounded-none shadow-[0_4px_30px_rgba(0,0,0,0.06)] border border-slate-100/80 w-full max-w-[430px] p-8 sm:p-9 transition-all">
               
+              {/* RESTRICTED ACCESS SECURITY NOTICE */}
+              <div className="mb-5 p-3 bg-slate-900 text-white flex items-start space-x-2.5 text-xs shadow-sm border-l-4 border-amber-500">
+                <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-extrabold uppercase tracking-wide text-[11px] text-amber-400 block leading-tight">
+                    Restricted Enterprise Access
+                  </span>
+                  <p className="text-[10px] text-slate-300 mt-0.5 leading-normal">
+                    Access is restricted solely to authorized Atharva Administrators. All unauthorized connection attempts are blocked and audited.
+                  </p>
+                </div>
+              </div>
+
               {/* DUAL ROLE TAB SWITCHER - ADMIN & VENDOR */}
               <div className="flex items-center border-b border-slate-200 mb-6">
                 <button
@@ -729,7 +757,7 @@ export default function ETSPortal() {
                 
                 <div className="border-b border-slate-300 focus-within:border-[#0f5fc2] transition-colors pb-1">
                   <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">
-                    {loginRole === 'admin' ? 'Email Address or Staff Code' : 'Email Address or Staff ID'}
+                    {loginRole === 'admin' ? 'Authorized Admin Email' : 'Authorized Personnel Email'}
                   </label>
                   <input
                     type="text"
@@ -737,7 +765,7 @@ export default function ETSPortal() {
                     autoComplete="off"
                     value={identifier}
                     onChange={(e) => setIdentifier(e.target.value)}
-                    placeholder="name@company.com"
+                    placeholder="name.admin@atharvatravels.com"
                     className="w-full text-sm text-slate-800 bg-transparent placeholder:text-slate-400 focus:outline-none py-1.5 font-normal"
                   />
                 </div>

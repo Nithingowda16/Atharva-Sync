@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { dispatchPushNotification } from '@/lib/push-service';
+import { validateAdminSession } from '@/lib/auth';
 import { VerifyOtpRequest, VerifyOtpResponse } from '@/types/ets';
 
 export async function POST(
@@ -8,6 +9,14 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
+    const session = await validateAdminSession();
+    if (!session) {
+      return NextResponse.json(
+        { error: 'Access Denied: Restricted access portal. Authorized administrator session required.' },
+        { status: 403 }
+      );
+    }
+
     const tripId = params.id;
     const body: VerifyOtpRequest = await request.json();
     const { employeeId, boardingOtp } = body;

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { calculateDistanceKm } from '@/lib/geolocation';
 import { notifyDriverLocationReassigned } from '@/lib/push-service';
+import { validateAdminSession } from '@/lib/auth';
 import { ReassignLocationRequest, ReassignLocationResponse } from '@/types/ets';
 
 export async function POST(
@@ -9,6 +10,14 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
+    const session = await validateAdminSession();
+    if (!session) {
+      return NextResponse.json(
+        { error: 'Access Denied: Restricted access portal. Authorized administrator session required.' },
+        { status: 403 }
+      );
+    }
+
     const tripId = params.id;
     const body: ReassignLocationRequest = await request.json();
 
