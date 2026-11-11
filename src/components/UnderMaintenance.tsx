@@ -27,7 +27,7 @@ interface UnderMaintenanceProps {
   onBypass?: () => void;
 }
 
-export function UnderMaintenance({ currentUser, onLogout }: UnderMaintenanceProps) {
+export function UnderMaintenance({ currentUser, onLogout, onBypass }: UnderMaintenanceProps) {
   return (
     <div className="min-h-screen flex flex-col justify-between bg-[#f8fafc] text-slate-800 font-sans selection:bg-blue-100 selection:text-blue-900 relative overflow-hidden">
       
@@ -152,8 +152,8 @@ export function UnderMaintenance({ currentUser, onLogout }: UnderMaintenanceProp
 
         </div>
 
-        {/* Quick Actions (Sign Out Only - Zero Dashboard Access) */}
-        <div className="flex items-center justify-center mb-8">
+        {/* Quick Actions (Sign Out + Super Admin Dashboard Entry) */}
+        <div className="flex flex-wrap items-center justify-center gap-3 mb-8">
           <button
             type="button"
             onClick={onLogout}
@@ -162,6 +162,17 @@ export function UnderMaintenance({ currentUser, onLogout }: UnderMaintenanceProp
             <LogOut className="w-3.5 h-3.5 text-slate-500" />
             <span>Return to Login Screen</span>
           </button>
+
+          {onBypass && (
+            <button
+              type="button"
+              onClick={onBypass}
+              className="px-6 py-2.5 text-xs font-bold bg-[#0f5fc2] text-white hover:bg-blue-700 shadow-sm flex items-center space-x-2 transition-colors"
+            >
+              <ShieldCheck className="w-4 h-4 text-emerald-300" />
+              <span>Enter Operations Command (Super Admin)</span>
+            </button>
+          )}
         </div>
 
         {/* Estimated Restoration & Helpdesk Contact */}

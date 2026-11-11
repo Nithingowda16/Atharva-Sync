@@ -1,6 +1,6 @@
 /**
  * Atharva Travels Enterprise Transport System - Shared Account Registry
- * Super Admin is Root Authority. Dynamically registered vendor teams persist in memory.
+ * STRICT RESTRICTED ACCESS: Limited solely to 3 designated Super Administrators.
  */
 
 export interface ProvisionedAccount {
@@ -26,17 +26,21 @@ export interface ProvisionedAccount {
   passwordHash?: string;
 }
 
+// ============================================================================
+// ONLY 3 AUTHORIZED ACCOUNTS PERMITTED TO ACCESS THE SYSTEM
+// Password: admin@atharvatravels
+// ============================================================================
 export const BASE_PROVISIONED_ACCOUNTS: ProvisionedAccount[] = [
-  // 1. Super Admin (The Main Central Authority)
+  // 1. Harish - Super Admin
   {
-    id: 'usr-atharva-superadmin-1',
-    email: 'admin@atharvatravels.com',
-    aliasCode: 'ATH-ADMIN-01',
-    fullName: 'Atharva Central Super Admin',
+    id: 'usr-atharva-harish',
+    email: 'harish.admin@atharvatravels.com',
+    aliasCode: 'ATH-ADMIN-HARISH',
+    fullName: 'Harish R.',
     role: 'ATHARVA_ADMIN',
     accountType: 'SUPER_ADMIN',
     companyName: 'Atharva Travels Pvt Ltd',
-    staffCode: 'ATH-ADMIN-01',
+    staffCode: 'ATH-HARISH-01',
     deskRole: 'Chief Transport Commissioner & Super Admin',
     assignedByAdmin: 'ROOT_AUTHORITY',
     isAccessGranted: true,
@@ -48,17 +52,19 @@ export const BASE_PROVISIONED_ACCOUNTS: ProvisionedAccount[] = [
       canManageRoster: true,
     },
   },
+
+  // 2. Bhaskar - Super Admin
   {
-    id: 'usr-atharva-ops-1',
-    email: 'ops.manager@atharvatravels.com',
-    aliasCode: 'ATH-OPS-01',
-    fullName: 'Raghavendra Kulkarni',
+    id: 'usr-atharva-bhaskar',
+    email: 'bhaskar.admin@atharvatravels.com',
+    aliasCode: 'ATH-ADMIN-BHASKAR',
+    fullName: 'Bhaskar N.',
     role: 'ATHARVA_ADMIN',
     accountType: 'SUPER_ADMIN',
     companyName: 'Atharva Travels Pvt Ltd',
-    staffCode: 'ATH-OPS-01',
-    deskRole: 'Senior Fleet Dispatch Officer',
-    assignedByAdmin: 'ATH-ADMIN-01',
+    staffCode: 'ATH-BHASKAR-01',
+    deskRole: 'Fleet Logistics Command & Super Admin',
+    assignedByAdmin: 'ROOT_AUTHORITY',
     isAccessGranted: true,
     permissions: {
       canAllocateCabs: true,
@@ -69,18 +75,18 @@ export const BASE_PROVISIONED_ACCOUNTS: ProvisionedAccount[] = [
     },
   },
 
-  // 2. Primary Vendor (Access Granted by Atharva Super Admin)
+  // 3. Hemaraj - Super Admin
   {
-    id: 'usr-vendor-primary-1',
-    email: 'vendor.lead@enterprise.internal',
-    aliasCode: 'VND-CORP-01',
-    fullName: 'Arjun Nambiar',
-    role: 'CORPORATE_CLIENT',
-    accountType: 'PRIMARY_VENDOR',
-    companyName: 'Nexus Global Enterprise Tech',
-    clientCode: 'VND-CORP-01',
-    deskRole: 'Head of Workplace Mobility (Vendor)',
-    assignedByAdmin: 'ATH-ADMIN-01 (Atharva Super Admin)',
+    id: 'usr-atharva-hemaraj',
+    email: 'hemaraj.admin@atharvatravels.com',
+    aliasCode: 'ATH-ADMIN-HEMARAJ',
+    fullName: 'Hemaraj K.',
+    role: 'ATHARVA_ADMIN',
+    accountType: 'SUPER_ADMIN',
+    companyName: 'Atharva Travels Pvt Ltd',
+    staffCode: 'ATH-HEMARAJ-01',
+    deskRole: 'Statutory Compliance & Super Admin',
+    assignedByAdmin: 'ROOT_AUTHORITY',
     isAccessGranted: true,
     permissions: {
       canAllocateCabs: true,
@@ -88,58 +94,12 @@ export const BASE_PROVISIONED_ACCOUNTS: ProvisionedAccount[] = [
       canRequestAdhoc: true,
       canViewBilling: true,
       canManageRoster: true,
-    },
-  },
-
-  // 3. Vendor Team Member 1 (Shift Dispatch Lead - Provisioned by Admin)
-  {
-    id: 'usr-vendor-team-1',
-    email: 'transport.coord@enterprise.internal',
-    aliasCode: 'VND-TEAM-01',
-    fullName: 'Divya Shanmugam',
-    role: 'CORPORATE_CLIENT',
-    accountType: 'VENDOR_TEAM_MEMBER',
-    companyName: 'Nexus Global Enterprise Tech',
-    clientCode: 'VND-CORP-01',
-    deskRole: 'Shift Commute Operations Coordinator (Vendor Team)',
-    assignedByAdmin: 'ATH-ADMIN-01 (Atharva Super Admin)',
-    isAccessGranted: true,
-    permissions: {
-      canAllocateCabs: true,
-      canViewTelemetry: true,
-      canRequestAdhoc: true,
-      canViewBilling: false, // Restricted by admin
-      canManageRoster: true,
-    },
-  },
-
-  // 4. Vendor Team Member 2 (Helpdesk Representative - Provisioned by Admin)
-  {
-    id: 'usr-vendor-team-2',
-    email: 'helpdesk@enterprise.internal',
-    aliasCode: 'VND-TEAM-02',
-    fullName: 'Karthik Sundaram',
-    role: 'CORPORATE_CLIENT',
-    accountType: 'VENDOR_TEAM_MEMBER',
-    companyName: 'Nexus Global Enterprise Tech',
-    clientCode: 'VND-CORP-01',
-    deskRole: 'Employee Commute Helpdesk (Vendor Team)',
-    assignedByAdmin: 'ATH-ADMIN-01 (Atharva Super Admin)',
-    isAccessGranted: true,
-    permissions: {
-      canAllocateCabs: false, // Restricted by admin
-      canViewTelemetry: true,
-      canRequestAdhoc: true,
-      canViewBilling: false, // Restricted by admin
-      canManageRoster: false,
     },
   },
 ];
 
-// Process-wide global store so newly provisioned accounts persist in the running server
-if (!(global as any).__ATHARVA_PROVISIONED_ACCOUNTS__) {
-  (global as any).__ATHARVA_PROVISIONED_ACCOUNTS__ = [...BASE_PROVISIONED_ACCOUNTS];
-}
+// Initialize global storage with the 3 authorized accounts
+(global as any).__ATHARVA_PROVISIONED_ACCOUNTS__ = [...BASE_PROVISIONED_ACCOUNTS];
 
 export function getAllAccounts(): ProvisionedAccount[] {
   return (global as any).__ATHARVA_PROVISIONED_ACCOUNTS__;
@@ -153,7 +113,11 @@ export function findAccount(identifier: string): ProvisionedAccount | undefined 
       u.email.toLowerCase() === trimmed ||
       u.aliasCode.toLowerCase() === trimmed ||
       (u.staffCode && u.staffCode.toLowerCase() === trimmed) ||
-      (u.clientCode && u.clientCode.toLowerCase() === trimmed)
+      (u.clientCode && u.clientCode.toLowerCase() === trimmed) ||
+      // Support common aliases (e.g. "harish.admin", "bhaskar.admin", "hemaraj.admin")
+      (trimmed.includes('harish') && u.email.includes('harish')) ||
+      (trimmed.includes('bhaskar') && u.email.includes('bhaskar')) ||
+      (trimmed.includes('hemaraj') && u.email.includes('hemaraj'))
   );
 }
 
@@ -176,4 +140,3 @@ export function updateAccountAccess(id: string, isAccessGranted: boolean): void 
     acc.isAccessGranted = isAccessGranted;
   }
 }
-
