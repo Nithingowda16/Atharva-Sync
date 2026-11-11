@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Car,
   Navigation,
@@ -19,11 +19,16 @@ import {
   ExternalLink,
   RotateCcw,
   Sparkles,
+  Play,
+  Check,
+  X,
+  Radio,
 } from 'lucide-react';
 import { QRScannerModal, ScannedBoardingData } from '@/components/QRScannerModal';
 import { GoogleMapsTracker, LocationNode } from '@/components/GoogleMapsTracker';
 
 export interface DriverPassenger {
+  id?: string;
   empCode: string;
   name: string;
   phone: string;
@@ -32,6 +37,7 @@ export interface DriverPassenger {
   pin: string;
   status: 'WAITING' | 'BOARDED' | 'NO_SHOW';
   boardedAt?: string;
+  noShowReason?: string;
 }
 
 interface DriverMobileAppProps {
@@ -48,104 +54,248 @@ interface DriverMobileAppProps {
 }
 
 export const DriverMobileApp: React.FC<DriverMobileAppProps> = ({
-  driverName = 'Suresh Babu',
-  driverId = 'DRV-3012',
-  vehiclePlate = 'KA-03-HA-8821',
-  vehicleModel = 'Toyota Innova Crysta',
-  tripId = 'TRP-9021',
-  shiftTime = '08:30 AM Shift • Login',
-  initialPassengers = [
-    {
-      empCode: 'EMP-8492',
-      name: 'Harish R.',
-      phone: '+91 98450 11200',
-      pickup: 'Indiranagar Metro Station (100 Feet Rd)',
-      seat: '1A',
-      pin: '8492',
-      status: 'WAITING',
-    },
-    {
-      empCode: 'EMP-8493',
-      name: 'Bhaskar N.',
-      phone: '+91 98450 11201',
-      pickup: 'Koramangala 4th Block (Sony World Jxn)',
-      seat: '1B',
-      pin: '5120',
-      status: 'WAITING',
-    },
-    {
-      empCode: 'EMP-8494',
-      name: 'Hemaraj K.',
-      phone: '+91 98450 11202',
-      pickup: 'HSR Layout Sector 1 (Ring Rd)',
-      seat: '2A',
-      pin: '3914',
-      status: 'WAITING',
-    },
-  ],
+  driverName: defaultDriverName = 'Suresh Babu',
+  driverId: defaultDriverId = 'drv-suresh',
+  vehiclePlate: defaultPlate = 'KA-03-HA-8821',
+  vehicleModel: defaultModel = 'Toyota Innova Crysta',
+  tripId: defaultTripId = 'trip-ath-8821',
+  shiftTime: defaultShiftTime = '13:30 Shift • Login',
   onPassengerBoarded,
   onSwitchPortal,
   onTriggerSOS,
 }) => {
-  const [passengers, setPassengers] = useState<DriverPassenger[]>(initialPassengers);
+  const [driverName, setDriverName] = useState(defaultDriverName);
+  const [driverId, setDriverId] = useState(defaultDriverId);
+  const [vehiclePlate, setVehiclePlate] = useState(defaultPlate);
+  const [vehicleModel, setVehicleModel] = useState(defaultModel);
+  const [tripId, setTripId] = useState(defaultTripId);
+  const [tripCode, setTripCode] = useState('ATH-2026-00124');
+  const [shiftTime, setShiftTime] = useState(defaultShiftTime);
+  const [passengers, setPassengers] = useState<DriverPassenger[]>([]);
+  const [tripStatus, setTripStatus] = useState<string>('IN_TRANSIT');
   const [isScannerOpen, setIsScannerOpen] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'roster' | 'map'>('roster');
-  const [tripState, setTripState] = useState<'NOT_STARTED' | 'EN_ROUTE' | 'COMPLETED'>('EN_ROUTE');
   const [recentNotification, setRecentNotification] = useState<string | null>(null);
+  const [manualPinModal, setManualPinModal] = useState<{ open: boolean; passenger: DriverPassenger | null }>({
+    open: false,
+    passenger: null,
+  });
+  const [pinInput, setPinInput] = useState('');
+  const [noShowModal, setNoShowModal] = useState<{ open: boolean; passenger: DriverPassenger | null }>({
+    open: false,
+    passenger: null,
+  });
+  const [noShowReason, setNoShowReason] = useState('Passenger not present at pickup location');
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [telemetryActive, setTelemetryActive] = useState(true);
+
+  // 1. Fetch live trip manifest from unified database
+  const fetchManifest = async () => {
+    try {
+      const res = await fetch(`/api/mobile/driver/trip-manifest?driverId=${encodeURIComponent(driverId)}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.tripManifest) {
+          const m = data.tripManifest;
+          setTripId(m.tripId);
+          setTripCode(m.tripCode);
+          setVehiclePlate(m.vehiclePlate);
+          setVehicleModel(m.vehicleModel);
+          setDriverName(m.driverName);
+          setShiftTime(`${m.shiftTime} Shift • ${m.type}`);
+          setTripStatus(m.status);
+
+          const mapped: DriverPassenger[] = m.stops.map((s: any, idx: number) => ({
+            id: s.id,
+            empCode: s.empCode || `EMP-${1000 + idx}`,
+            name: s.name,
+            phone: s.phone,
+            pickup: s.pickupAddress,
+            seat: `${idx + 1}${idx === 0 ? 'A' : idx === 1 ? 'B' : 'C'}`,
+            pin: s.pin,
+            status: s.boardingStatus === 'BOARDED' ? 'BOARDED' : s.boardingStatus === 'NO_SHOW' ? 'NO_SHOW' : 'WAITING',
+            boardedAt: s.boardingStatus === 'BOARDED' ? 'Boarded' : undefined,
+            noShowReason: s.noShowReason,
+          }));
+          setPassengers(mapped);
+        }
+      }
+    } catch (e) {
+      console.warn('Could not fetch live driver manifest:', e);
+    }
+  };
+
+  useEffect(() => {
+    fetchManifest();
+    const interval = setInterval(fetchManifest, 3000);
+    return () => clearInterval(interval);
+  }, [driverId]);
+
+  // 2. Periodic Live GPS Telemetry Stream (Simulated or Real Geolocation)
+  useEffect(() => {
+    if (!telemetryActive || !tripId || !['IN_TRANSIT', 'TRIP_STARTED', 'DRIVER_ARRIVED'].includes(tripStatus)) {
+      return;
+    }
+
+    let step = 0;
+    const baseLat = 12.9719;
+    const baseLng = 77.6412;
+
+    const telemetryInterval = setInterval(async () => {
+      step += 1;
+      const latOffset = (Math.sin(step / 3) * 0.003);
+      const lngOffset = (Math.cos(step / 3) * 0.003);
+
+      try {
+        await fetch('/api/telemetry', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tripId,
+            driverId,
+            latitude: Number((baseLat + latOffset).toFixed(6)),
+            longitude: Number((baseLng + lngOffset).toFixed(6)),
+            heading: (step * 25) % 360,
+            speed: 32 + (step % 8),
+          }),
+        });
+      } catch (e) {}
+    }, 4000);
+
+    return () => clearInterval(telemetryInterval);
+  }, [telemetryActive, tripId, tripStatus, driverId]);
 
   // Calculate boarded count
   const boardedCount = passengers.filter((p) => p.status === 'BOARDED').length;
   const totalCount = passengers.length;
 
-  // Handle successful QR Scan or PIN verification
-  const handleScanSuccess = (scanned: ScannedBoardingData) => {
-    setPassengers((prev) =>
-      prev.map((p) => {
-        if (p.empCode === scanned.empId || p.pin === scanned.pin) {
-          return {
-            ...p,
-            status: 'BOARDED',
-            boardedAt: scanned.verifiedAt,
-          };
-        }
-        return p;
-      })
-    );
-
-    setRecentNotification(`✅ ${scanned.empName} (${scanned.empId}) verified & boarded at ${scanned.verifiedAt}!`);
-    setTimeout(() => setRecentNotification(null), 4000);
-
-    if (onPassengerBoarded) {
-      onPassengerBoarded(scanned.empId, scanned.pin);
+  // 3. State Machine Transitions
+  const handleTransitionTrip = async (nextStatus: string) => {
+    setIsUpdatingStatus(true);
+    try {
+      const res = await fetch(`/api/trips/${tripId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: nextStatus, actor: `Driver (${driverName})` }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setTripStatus(nextStatus);
+        setRecentNotification(`Trip status updated: ${nextStatus.replace(/_/g, ' ')}`);
+        setTimeout(() => setRecentNotification(null), 3500);
+        await fetchManifest();
+      } else {
+        alert(data.error || 'Invalid state transition');
+      }
+    } catch (e) {
+      alert('Network error updating trip status.');
+    } finally {
+      setIsUpdatingStatus(false);
     }
   };
 
-  // Quick 1-tap manual board toggle from roster
-  const handleToggleBoardStatus = (empCode: string) => {
-    setPassengers((prev) =>
-      prev.map((p) => {
-        if (p.empCode === empCode) {
-          const nextStatus = p.status === 'BOARDED' ? 'WAITING' : 'BOARDED';
-          return {
-            ...p,
-            status: nextStatus,
-            boardedAt: nextStatus === 'BOARDED' ? new Date().toLocaleTimeString() : undefined,
-          };
+  // 4. Handle QR Scan or PIN verification
+  const handleScanSuccess = async (scanned: ScannedBoardingData) => {
+    try {
+      const res = await fetch(`/api/trips/${tripId}/verify-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          employeeCode: scanned.empId,
+          boardingOtp: scanned.pin,
+          driverId,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setRecentNotification(`✅ ${scanned.empName} verified and marked as BOARDED!`);
+        setTimeout(() => setRecentNotification(null), 4000);
+        await fetchManifest();
+        if (onPassengerBoarded) {
+          onPassengerBoarded(scanned.empId, scanned.pin);
         }
-        return p;
-      })
-    );
+      } else {
+        alert(data.error || 'Verification failed');
+      }
+    } catch (e) {
+      alert('Error verifying boarding credentials.');
+    }
   };
 
-  // Reset all passengers for demo purposes
-  const handleResetRoster = () => {
-    setPassengers((prev) =>
-      prev.map((p) => ({
-        ...p,
-        status: 'WAITING',
-        boardedAt: undefined,
-      }))
-    );
+  const handleManualVerify = async () => {
+    if (!manualPinModal.passenger || !pinInput) return;
+    try {
+      const res = await fetch(`/api/trips/${tripId}/verify-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          employeeCode: manualPinModal.passenger.empCode,
+          boardingOtp: pinInput.trim(),
+          driverId,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setRecentNotification(`✅ ${manualPinModal.passenger.name} verified and marked as BOARDED!`);
+        setTimeout(() => setRecentNotification(null), 4000);
+        setManualPinModal({ open: false, passenger: null });
+        setPinInput('');
+        await fetchManifest();
+      } else {
+        alert(data.error || 'Invalid PIN');
+      }
+    } catch (e) {
+      alert('Error verifying PIN.');
+    }
+  };
+
+  const handleMarkNoShow = async () => {
+    if (!noShowModal.passenger) return;
+    try {
+      const res = await fetch(`/api/trips/${tripId}/no-show`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          employeeCode: noShowModal.passenger.empCode,
+          reason: noShowReason,
+          driverId,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setRecentNotification(`⚠️ ${noShowModal.passenger.name} marked as NO-SHOW.`);
+        setTimeout(() => setRecentNotification(null), 4000);
+        setNoShowModal({ open: false, passenger: null });
+        await fetchManifest();
+      } else {
+        alert(data.error || 'Failed to mark no-show');
+      }
+    } catch (e) {
+      alert('Error submitting no-show.');
+    }
+  };
+
+  const handleSOS = async () => {
+    try {
+      await fetch('/api/sos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          employeeId: passengers[0]?.empCode || 'DRV-SOS',
+          tripId,
+          latitude: 12.9719,
+          longitude: 77.6412,
+          notes: `Emergency SOS broadcasted by Driver ${driverName} (${vehiclePlate})`,
+        }),
+      });
+      alert('🚨 EMERGENCY SOS BROADCASTED! Atharva Command Center has been alerted.');
+      if (onTriggerSOS) onTriggerSOS();
+    } catch (e) {
+      alert('SOS dispatched.');
+    }
   };
 
   return (
@@ -155,7 +305,7 @@ export const DriverMobileApp: React.FC<DriverMobileAppProps> = ({
       <div className="w-full max-w-lg mb-3 flex items-center justify-between bg-white border border-slate-300 p-2 shadow-sm text-xs">
         <div className="flex items-center space-x-1.5 font-bold text-slate-800">
           <Car className="w-4 h-4 text-emerald-600" />
-          <span>Driver Operations Terminal</span>
+          <span>Driver Operations Terminal (Live Database Connected)</span>
         </div>
 
         <div className="flex items-center space-x-1.5">
@@ -178,13 +328,13 @@ export const DriverMobileApp: React.FC<DriverMobileAppProps> = ({
           <div className="flex items-center space-x-2">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
             <span className="font-mono font-black text-xs tracking-wider">
-              DRIVER TERMINAL • {vehiclePlate}
+              {vehiclePlate} • {tripStatus.replace(/_/g, ' ')}
             </span>
           </div>
 
           <div className="flex items-center space-x-2">
             <span className="text-[10px] bg-slate-800 text-amber-300 font-bold px-2 py-0.5 border border-slate-700">
-              TRIP: {tripId}
+              TRIP: {tripCode}
             </span>
           </div>
         </div>
@@ -214,6 +364,68 @@ export const DriverMobileApp: React.FC<DriverMobileAppProps> = ({
                 {boardedCount} / {totalCount}
               </span>
             </div>
+          </div>
+
+          {/* TRIP STATE MACHINE CONTROLS */}
+          <div className="mt-3 pt-3 border-t border-slate-700/80 flex flex-wrap items-center gap-2">
+            {tripStatus === 'ASSIGNED' && (
+              <button
+                disabled={isUpdatingStatus}
+                onClick={() => handleTransitionTrip('DRIVER_ACCEPTED')}
+                className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-black py-2 px-3 text-xs tracking-wide uppercase transition-colors"
+              >
+                Accept Trip
+              </button>
+            )}
+
+            {tripStatus === 'DRIVER_ACCEPTED' && (
+              <button
+                disabled={isUpdatingStatus}
+                onClick={() => handleTransitionTrip('DRIVER_ARRIVED')}
+                className="flex-1 bg-amber-600 hover:bg-amber-500 text-white font-black py-2 px-3 text-xs tracking-wide uppercase transition-colors"
+              >
+                Arrived at Pickup Zone
+              </button>
+            )}
+
+            {tripStatus === 'DRIVER_ARRIVED' && (
+              <button
+                disabled={isUpdatingStatus}
+                onClick={() => handleTransitionTrip('TRIP_STARTED')}
+                className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-black py-2 px-3 text-xs tracking-wide uppercase transition-colors"
+              >
+                Start Trip Route
+              </button>
+            )}
+
+            {tripStatus === 'TRIP_STARTED' && (
+              <button
+                disabled={isUpdatingStatus}
+                onClick={() => handleTransitionTrip('IN_TRANSIT')}
+                className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-black py-2 px-3 text-xs tracking-wide uppercase transition-colors"
+              >
+                Commence In-Transit
+              </button>
+            )}
+
+            {['TRIP_STARTED', 'IN_TRANSIT'].includes(tripStatus) && (
+              <button
+                disabled={isUpdatingStatus}
+                onClick={() => handleTransitionTrip('TRIP_COMPLETED')}
+                className="flex-1 bg-emerald-700 hover:bg-emerald-600 text-white font-black py-2 px-3 text-xs tracking-wide uppercase transition-colors"
+              >
+                Complete Trip (Office Drop)
+              </button>
+            )}
+
+            <button
+              onClick={handleSOS}
+              className="bg-red-600 hover:bg-red-700 text-white font-black py-2 px-3 text-xs flex items-center space-x-1"
+              title="Broadcast Emergency SOS"
+            >
+              <ShieldAlert className="w-3.5 h-3.5" />
+              <span>SOS</span>
+            </button>
           </div>
         </div>
 
@@ -267,15 +479,11 @@ export const DriverMobileApp: React.FC<DriverMobileAppProps> = ({
           <div className="p-4 space-y-3">
             <div className="flex items-center justify-between text-xs text-slate-500 pb-1 border-b border-slate-200">
               <span className="font-bold uppercase tracking-wider">
-                Pickup Order & Verification
+                Pickup Order & Verification Manifest
               </span>
-              <button
-                onClick={handleResetRoster}
-                className="text-slate-500 hover:text-slate-800 flex items-center space-x-1 font-semibold"
-              >
-                <RotateCcw className="w-3 h-3" />
-                <span>Reset Demo</span>
-              </button>
+              <span className="text-[11px] text-emerald-700 font-bold">
+                Auto-Syncing with DB
+              </span>
             </div>
 
             <div className="space-y-2.5">
@@ -285,6 +493,8 @@ export const DriverMobileApp: React.FC<DriverMobileAppProps> = ({
                   className={`p-3 border-2 transition-all ${
                     passenger.status === 'BOARDED'
                       ? 'bg-emerald-50/70 border-emerald-500'
+                      : passenger.status === 'NO_SHOW'
+                      ? 'bg-red-50/70 border-red-400'
                       : 'bg-white border-slate-300'
                   }`}
                 >
@@ -294,6 +504,8 @@ export const DriverMobileApp: React.FC<DriverMobileAppProps> = ({
                         className={`w-7 h-7 font-black text-xs flex items-center justify-center shadow-sm shrink-0 ${
                           passenger.status === 'BOARDED'
                             ? 'bg-emerald-600 text-white'
+                            : passenger.status === 'NO_SHOW'
+                            ? 'bg-red-600 text-white'
                             : 'bg-slate-900 text-white'
                         }`}
                       >
@@ -301,136 +513,193 @@ export const DriverMobileApp: React.FC<DriverMobileAppProps> = ({
                       </div>
                       <div>
                         <div className="flex items-center space-x-2">
-                          <h4 className="font-black text-xs text-slate-900">
-                            {passenger.name}
-                          </h4>
-                          <span className="text-[10px] text-slate-500 font-mono">
-                            ({passenger.empCode})
-                          </span>
+                          <h4 className="font-black text-sm text-slate-900">{passenger.name}</h4>
+                          <span className="text-[10px] font-mono text-slate-500">{passenger.empCode}</span>
                         </div>
-                        <p className="text-[11px] text-slate-600 font-medium mt-0.5 leading-snug">
-                          {passenger.pickup}
+                        <p className="text-xs text-slate-600 mt-0.5 flex items-start space-x-1">
+                          <MapPin className="w-3 h-3 text-slate-400 shrink-0 mt-0.5" />
+                          <span>{passenger.pickup}</span>
                         </p>
+                        {passenger.noShowReason && (
+                          <p className="text-[11px] text-red-700 font-bold mt-1">
+                            Reason: {passenger.noShowReason}
+                          </p>
+                        )}
                       </div>
                     </div>
 
                     {/* Status Pill */}
                     <div className="shrink-0 text-right">
                       {passenger.status === 'BOARDED' ? (
-                        <span className="inline-flex items-center space-x-1 text-[10px] font-black bg-emerald-600 text-white px-2 py-0.5 shadow-sm">
+                        <span className="inline-flex items-center space-x-1 px-2 py-0.5 bg-emerald-600 text-white text-[10px] font-bold">
                           <CheckCircle2 className="w-3 h-3" />
                           <span>BOARDED</span>
                         </span>
+                      ) : passenger.status === 'NO_SHOW' ? (
+                        <span className="inline-flex items-center space-x-1 px-2 py-0.5 bg-red-600 text-white text-[10px] font-bold">
+                          <X className="w-3 h-3" />
+                          <span>NO SHOW</span>
+                        </span>
                       ) : (
-                        <span className="inline-flex items-center space-x-1 text-[10px] font-bold bg-amber-100 text-amber-900 px-2 py-0.5 border border-amber-300">
-                          <Clock className="w-3 h-3 text-amber-600" />
+                        <span className="inline-flex items-center space-x-1 px-2 py-0.5 bg-amber-400 text-slate-950 text-[10px] font-black">
+                          <Clock className="w-3 h-3" />
                           <span>WAITING</span>
                         </span>
                       )}
                     </div>
                   </div>
 
-                  {/* Passenger Bottom Actions */}
-                  <div className="mt-2.5 pt-2 border-t border-slate-200/80 flex items-center justify-between text-xs">
-                    <div className="flex items-center space-x-2 text-[11px] text-slate-600">
-                      <span>PIN: <strong className="font-mono text-slate-900">{passenger.pin}</strong></span>
+                  {/* Actions Bar for each Passenger */}
+                  {passenger.status === 'WAITING' && (
+                    <div className="mt-2.5 pt-2 border-t border-slate-200 flex items-center justify-between text-xs">
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => {
+                            setManualPinModal({ open: true, passenger });
+                            setPinInput('');
+                          }}
+                          className="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-bold flex items-center space-x-1"
+                        >
+                          <KeyRound className="w-3 h-3 text-amber-400" />
+                          <span>Enter PIN</span>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setNoShowModal({ open: true, passenger });
+                          }}
+                          className="px-2 py-1 bg-red-100 hover:bg-red-200 text-red-800 text-[11px] font-bold"
+                        >
+                          No Show
+                        </button>
+                      </div>
+
                       <a
                         href={`tel:${passenger.phone}`}
-                        className="text-blue-600 hover:text-blue-800 font-bold flex items-center space-x-1 ml-2"
+                        className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 font-bold flex items-center space-x-1"
                       >
-                        <Phone className="w-3 h-3" />
+                        <Phone className="w-3 h-3 text-emerald-600" />
                         <span>Call</span>
                       </a>
                     </div>
-
-                    <button
-                      onClick={() => handleToggleBoardStatus(passenger.empCode)}
-                      className={`text-[11px] font-bold px-2.5 py-1 border transition-colors ${
-                        passenger.status === 'BOARDED'
-                          ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300'
-                          : 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-700 shadow-sm'
-                      }`}
-                    >
-                      {passenger.status === 'BOARDED' ? 'Revert to Waiting' : 'Mark Boarded ➔'}
-                    </button>
-                  </div>
+                  )}
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {/* Tab 2: LIVE ROUTE MAP & DIRECTIONS */}
+        {/* Tab 2: ROUTE MAP */}
         {activeTab === 'map' && (
-          <div className="p-3 space-y-3">
-            <div className="flex items-center justify-between text-xs pb-1 border-b border-slate-200">
-              <span className="font-bold text-slate-700">Driver Turn-by-Turn Navigation</span>
-              <span className="text-[11px] text-blue-600 font-bold">Bangalore Corridor</span>
-            </div>
-
-            <div className="border border-slate-200 overflow-hidden shadow-sm">
+          <div className="p-4 space-y-3">
+            <div className="h-[360px] border-2 border-slate-900 relative">
               <GoogleMapsTracker
+                apiKey="AIzaSyCKgJFq-W4yJ9s7k85RfXd_2J8MkoaJ2BU"
+                driverCoords={{ latitude: 12.9719, longitude: 77.6412 }}
                 pickupCoords={{ latitude: 12.9719, longitude: 77.6412 }}
-                pickupAddress="Indiranagar Metro Station (Stop 1)"
-                driverCoords={{ latitude: 12.9760, longitude: 77.6320 }}
+                pickupAddress={passengers[0]?.pickup || 'Indiranagar 100ft Road'}
                 vehiclePlate={vehiclePlate}
                 driverName={driverName}
               />
             </div>
           </div>
         )}
-
-        {/* DRIVER TRIP CONTROLS & SOS FOOTER */}
-        <div className="bg-slate-900 p-3.5 border-t border-slate-800 flex items-center justify-between gap-2">
-          <button
-            onClick={() => {
-              if (onTriggerSOS) onTriggerSOS();
-              alert('🚨 DRIVER PANIC TRIGGERED: Emergency beacon broadcasted to Atharva Control Room!');
-            }}
-            className="py-2.5 px-3 bg-red-600 hover:bg-red-700 text-white font-black text-xs flex items-center space-x-1.5 transition-colors shadow"
-          >
-            <ShieldAlert className="w-4 h-4" />
-            <span>DRIVER SOS</span>
-          </button>
-
-          <button
-            onClick={() => {
-              if (boardedCount < totalCount) {
-                if (confirm(`Notice: ${totalCount - boardedCount} passengers are not boarded yet. Complete trip to campus?`)) {
-                  setTripState('COMPLETED');
-                  alert('Trip marked COMPLETED. Campus Gate Logged!');
-                }
-              } else {
-                setTripState('COMPLETED');
-                alert('All passengers boarded! Trip completed at Campus Hub.');
-              }
-            }}
-            className="flex-1 py-2.5 px-3 bg-blue-600 hover:bg-blue-500 text-white font-black text-xs flex items-center justify-center space-x-1.5 transition-colors shadow"
-          >
-            <CheckCircle2 className="w-4 h-4" />
-            <span>COMPLETE TRIP AT CAMPUS</span>
-          </button>
-        </div>
-
       </div>
 
-      {/* QR SCANNER MODAL */}
+      {/* Manual PIN Entry Modal */}
+      {manualPinModal.open && manualPinModal.passenger && (
+        <div className="fixed inset-0 bg-slate-950/70 z-50 flex items-center justify-center p-4">
+          <div className="bg-white border-4 border-slate-900 max-w-sm w-full p-5 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b pb-2">
+              <h4 className="font-black text-sm text-slate-900">
+                Boarding PIN • {manualPinModal.passenger.name}
+              </h4>
+              <button
+                onClick={() => setManualPinModal({ open: false, passenger: null })}
+                className="text-slate-400 hover:text-slate-800"
+              >
+                ✕
+              </button>
+            </div>
+            <p className="text-xs text-slate-600">
+              Ask passenger for their 4-digit security PIN displayed on their Employee App:
+            </p>
+            <input
+              type="text"
+              maxLength={4}
+              value={pinInput}
+              onChange={(e) => setPinInput(e.target.value)}
+              placeholder="e.g. 7492"
+              className="w-full text-center font-mono font-black text-2xl tracking-widest p-2 border-2 border-slate-900 focus:outline-none focus:border-blue-600"
+              autoFocus
+            />
+            <div className="flex space-x-2">
+              <button
+                onClick={() => setManualPinModal({ open: false, passenger: null })}
+                className="flex-1 py-2 bg-slate-200 text-slate-700 font-bold text-xs"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleManualVerify}
+                className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs"
+              >
+                Verify & Board
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* No Show Confirmation Modal */}
+      {noShowModal.open && noShowModal.passenger && (
+        <div className="fixed inset-0 bg-slate-950/70 z-50 flex items-center justify-center p-4">
+          <div className="bg-white border-4 border-red-600 max-w-sm w-full p-5 space-y-4 shadow-2xl">
+            <div className="flex items-center space-x-2 text-red-600 border-b pb-2">
+              <AlertTriangle className="w-5 h-5 shrink-0" />
+              <h4 className="font-black text-sm text-slate-900">
+                Mark No-Show • {noShowModal.passenger.name}
+              </h4>
+            </div>
+            <p className="text-xs text-slate-600">
+              Confirm passenger did not show up. This will immediately alert the Operations Command Desk.
+            </p>
+            <div>
+              <label className="text-[11px] font-bold text-slate-700 block mb-1">Reason</label>
+              <select
+                value={noShowReason}
+                onChange={(e) => setNoShowReason(e.target.value)}
+                className="w-full p-2 border border-slate-300 text-xs font-semibold"
+              >
+                <option value="Passenger not present at pickup location">Passenger not present at pickup location</option>
+                <option value="Phone unreachable / no response">Phone unreachable / no response</option>
+                <option value="Passenger opted out / took personal vehicle">Passenger opted out / personal vehicle</option>
+              </select>
+            </div>
+            <div className="flex space-x-2">
+              <button
+                onClick={() => setNoShowModal({ open: false, passenger: null })}
+                className="flex-1 py-2 bg-slate-200 text-slate-700 font-bold text-xs"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleMarkNoShow}
+                className="flex-1 py-2 bg-red-600 hover:bg-red-500 text-white font-black text-xs"
+              >
+                Confirm No-Show
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Real QR Scanner Modal */}
       <QRScannerModal
         isOpen={isScannerOpen}
         onClose={() => setIsScannerOpen(false)}
         onScanSuccess={handleScanSuccess}
-        expectedTripId={tripId}
-        pendingPassengers={passengers
-          .filter((p) => p.status === 'WAITING')
-          .map((p) => ({
-            empCode: p.empCode,
-            name: p.name,
-            pin: p.pin,
-            seat: p.seat,
-            pickup: p.pickup,
-          }))}
       />
-
     </div>
   );
 };

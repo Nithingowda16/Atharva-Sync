@@ -1,19 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
-import { validateAdminSession } from '@/lib/auth';
-import { dispatchPushNotification } from '@/lib/push-service';
+import db from '@/lib/db-store';
+
+export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await validateAdminSession();
-    if (!session) {
-      return NextResponse.json(
-        { error: 'Access Denied: Restricted access portal. Authorized administrator session required.' },
-        { status: 403 }
-      );
-    }
-
-    const { employeeId, tripId, latitude, longitude, incidentNotes } = await request.json();
+    const { employeeId, tripId, latitude, longitude, notes } = await request.json();
 
     if (!employeeId || latitude === undefined || longitude === undefined) {
       return NextResponse.json(
@@ -22,59 +14,50 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 1. Create emergency alert record
-    const alert = await prisma.emergencyAlert.create({
-      data: {
-        employeeId,
-        tripId: tripId || null,
-        reportedLatitude: latitude,
-        reportedLongitude: longitude,
-        status: 'ACTIVE',
-        incidentNotes: incidentNotes || 'SOS triggered by employee from mobile/portal interface.',
-      },
-      include: {
-        employee: {
-          include: {
-            employeeProfile: true,
-          },
-        },
-      },
+    const alert = await db.triggerSOS({
+      tripId,
+      employeeId,
+      latitude: Number(latitude),
+      longitude: Number(longitude),
+      notes,
     });
-
-    // 2. Alert all active Admins via push notification
-    const admins = await prisma.user.findMany({
-      where: { role: 'ATHARVA_ADMIN', isActive: true },
-      select: { id: true },
-    });
-
-    for (const admin of admins) {
-      await dispatchPushNotification({
-        recipientUserId: admin.id,
-        title: '🚨 CRITICAL: SOS ALERT TRIGGERED',
-        body: `SOS triggered by ${alert.employee.fullName} (${alert.employee.phoneNumber}) at ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`,
-        data: {
-          type: 'EMERGENCY_SOS',
-          alertId: alert.id,
-          employeeId,
-          latitude,
-          longitude,
-        },
-      });
-    }
 
     return NextResponse.json({
       success: true,
-      alertId: alert.id,
-      status: alert.status,
-      emergencyContact: {
-        name: alert.employee.employeeProfile?.emergencyContactName,
-        phone: alert.employee.employeeProfile?.emergencyContactPhone,
-      },
-      message: 'SOS successfully registered. Transport Command Center alerted.',
+      alert,
+      message: '🚨 Emergency SOS broadcasted. Operations Command Center alerted.',
     });
-  } catch (error) {
-    console.error('Error in SOS route:', error);
-    return NextResponse.json({ error: 'Failed to process SOS alert' }, { status: 500 });
+  } catch (error: any) {
+    console.error('Error processing SOS:', error);
+    return NextResponse.json({ error: error.message || 'Failed to process SOS' }, { status: 500 });
   }
 }
 
+export async function GET() {
+  try {
+    const alerts = await db.getSOSAlerts();
+    return NextResponse.json({ success: true, count: alerts.length, alerts });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { alertId, status, adminName, notes } = body;
+
+    if (!alertId || !status) {
+      return NextResponse.json({ error: 'alertId and status are required' }, { status: 400 });
+    }
+
+    const updated = await db.updateSOSStatus(alertId, status, adminName, notes);
+    return NextResponse.json({
+      success: true,
+      alert: updated,
+      message: `SOS incident status changed to ${status}.`,
+    });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 400 });
+  }
+}

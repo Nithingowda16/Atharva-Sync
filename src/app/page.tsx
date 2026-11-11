@@ -48,10 +48,12 @@ import {
 import { LocationIssueModal } from '@/components/LocationIssueModal';
 import { GoogleMapsTracker } from '@/components/GoogleMapsTracker';
 import { SettingsModule, SettingsSubTab } from '@/components/SettingsModule';
+import { DriverMobileApp } from '@/components/DriverMobileApp';
+import { EmployeeMobileApp } from '@/components/EmployeeMobileApp';
 import { getStoredItem, setStoredItem, STORAGE_KEYS } from '@/lib/storage';
 
 type LoginRole = 'vendor' | 'admin';
-type ViewState = 'login' | 'vendor-portal' | 'admin-portal';
+type ViewState = 'login' | 'vendor-portal' | 'admin-portal' | 'driver-app' | 'employee-app';
 
 interface AuthUser {
   id: string;
@@ -436,6 +438,89 @@ export default function ETSPortal() {
   const [isSosActive, setIsSosActive] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  // Live Database Synchronized State (Trips, Telemetry & SOS Alerts)
+  const [dbTrips, setDbTrips] = useState<any[]>([]);
+  const [liveFleet, setLiveFleet] = useState<any[]>([]);
+  const [activeAlerts, setActiveAlerts] = useState<any[]>([]);
+
+  const fetchLiveBackendTrips = async () => {
+    try {
+      const [tripsRes, telemRes, sosRes] = await Promise.all([
+        fetch('/api/trips'),
+        fetch('/api/telemetry'),
+        fetch('/api/sos'),
+      ]);
+
+      if (tripsRes.ok) {
+        const data = await tripsRes.json();
+        if (data.trips) setDbTrips(data.trips);
+      }
+
+      if (telemRes.ok) {
+        const data = await telemRes.json();
+        if (data.fleet) setLiveFleet(data.fleet);
+      }
+
+      if (sosRes.ok) {
+        const data = await sosRes.json();
+        if (data.alerts) {
+          const actives = data.alerts.filter(
+            (a: any) => a.status === 'ACTIVE' || a.status === 'ACKNOWLEDGED' || a.status === 'QRT_DISPATCHED'
+          );
+          setActiveAlerts(actives);
+        }
+      }
+    } catch (e) {}
+  };
+
+  useEffect(() => {
+    fetchLiveBackendTrips();
+    const interval = setInterval(fetchLiveBackendTrips, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleAcknowledgeSOS = async (alertId: string) => {
+    try {
+      const res = await fetch('/api/sos', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ alertId, status: 'ACKNOWLEDGED', adminName: currentUser?.fullName }),
+      });
+      if (res.ok) {
+        showToast('SOS Incident ACKNOWLEDGED by Operations Lead.');
+        fetchLiveBackendTrips();
+      }
+    } catch (e) {}
+  };
+
+  const handleDispatchQRT = async (alertId: string) => {
+    try {
+      const res = await fetch('/api/sos', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ alertId, status: 'QRT_DISPATCHED', adminName: currentUser?.fullName }),
+      });
+      if (res.ok) {
+        showToast('🚨 Quick Response Team (QRT) & Escort Dispatched!');
+        fetchLiveBackendTrips();
+      }
+    } catch (e) {}
+  };
+
+  const handleResolveSOS = async (alertId: string) => {
+    try {
+      const res = await fetch('/api/sos', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ alertId, status: 'RESOLVED', adminName: currentUser?.fullName }),
+      });
+      if (res.ok) {
+        showToast('✅ SOS Incident RESOLVED and closed.');
+        fetchLiveBackendTrips();
+      }
+    } catch (e) {}
+  };
+
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 4500);
@@ -558,8 +643,62 @@ export default function ETSPortal() {
     showToast('Securely logged out.');
   };
 
-  // Cab Allocation Handler (Persisted Permanently)
-  const handleAllocateCabToRoute = (routeId: string, cab: typeof AVAILABLE_CABS[0]) => {
+  // Cab Allocation Handler (Persisted in PostgreSQL/Prisma Unified DB)
+  const handleAllocateCabToRoute = async (routeId: string, cab: typeof AVAILABLE_CABS[0]) => {
+    try {
+      const selectedRoute = routesList.find(r => r.routeId === routeId);
+      const res = await fetch('/api/trips', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          shiftDate: new Date().toISOString().split('T')[0],
+          shiftTime: selectedShift || '13:30',
+          type: tripDirection,
+          corporateClient: selectedBusinessUnit,
+          routeName: selectedRoute ? `${selectedRoute.firstPickup} → ${selectedRoute.drop}` : 'Indiranagar → Campus',
+          vehicleId: cab.plate === 'KA-03-HA-8821' ? 'veh-8821' : cab.plate === 'KA-05-MJ-4310' ? 'veh-4310' : 'veh-9011',
+          driverId: cab.driver.includes('Suresh') ? 'drv-suresh' : cab.driver.includes('Mahesh') ? 'drv-mahesh' : 'drv-venkatesh',
+          passengers: selectedRoute ? selectedRoute.passengers.map((e, idx) => ({
+            employeeId: `emp-${e.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`,
+            employeeCode: e.empCode,
+            fullName: e.name,
+            phone: e.phone,
+            gender: 'MALE',
+            femaleSafeguard: false,
+            department: 'Operations',
+            pickupAddress: e.pickupNode,
+            pickupCoords: { latitude: 12.9719 + idx * 0.003, longitude: 77.6412 + idx * 0.002 },
+            dropAddress: selectedRoute.drop,
+            dropCoords: { latitude: 12.9352, longitude: 77.6946 },
+            scheduledPickupTime: e.pickupTime,
+          })) : [
+            {
+              employeeId: 'emp-amrutha',
+              employeeCode: 'EMP-9042',
+              fullName: 'Amrutha Rao',
+              phone: '+91 98450 11223',
+              gender: 'FEMALE',
+              femaleSafeguard: true,
+              pickupAddress: 'Gate 2, Golden Palms Apts, Indiranagar',
+              pickupCoords: { latitude: 12.9719, longitude: 77.6412 },
+              dropAddress: 'Enterprise Tech Park, Tower B',
+              dropCoords: { latitude: 12.9352, longitude: 77.6946 },
+              scheduledPickupTime: '13:00',
+            }
+          ],
+          actor: currentUser ? `${currentUser.fullName} (${currentUser.staffCode || currentUser.email})` : 'Atharva Super Admin',
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        showToast(`✅ Trip #${data.trip?.tripCode || routeId} created in Database! Cab ${cab.plate} allocated & dispatched to Driver ${cab.driver}.`);
+        fetchLiveBackendTrips();
+      }
+    } catch (e) {
+      console.warn('Backend trip creation notice:', e);
+    }
+
     setRoutesList(prev => {
       const updated = prev.map(r => {
         if (r.routeId === routeId) {
@@ -577,7 +716,6 @@ export default function ETSPortal() {
       setStoredItem(STORAGE_KEYS.ROUTES, updated);
       return updated;
     });
-    showToast(`✅ Cab ${cab.plate} allocated to Route #${routeId}! Waypoint pushed to Driver ${cab.driver}.`);
   };
 
   // Cab Deallocation Handler (Persisted Permanently)
@@ -656,7 +794,22 @@ export default function ETSPortal() {
     ? Object.values(TRIPS_DATA).find((t) => t.tripId.includes(effectiveTripQuery))
     : null;
 
-  const activeTripData = TRIPS_DATA[selectedActiveTripId] || TRIPS_DATA['ATH-8821'];
+  const currentDbTrip = dbTrips.find((t) => t.id === selectedActiveTripId || t.tripCode === selectedActiveTripId) || dbTrips[0];
+
+  const activeTripData = currentDbTrip
+    ? {
+        tripId: currentDbTrip.tripCode,
+        vehiclePlate: currentDbTrip.vehicle.plateNumber,
+        driverName: currentDbTrip.driver.fullName,
+        driverPhone: currentDbTrip.driver.phone,
+        route: currentDbTrip.routeName,
+        currentLat: currentDbTrip.currentLocation?.latitude || 12.9719,
+        currentLng: currentDbTrip.currentLocation?.longitude || 77.6412,
+        status: currentDbTrip.status,
+        passengersCount: currentDbTrip.passengers.length,
+        boardedCount: currentDbTrip.passengers.filter((p: any) => p.boardingStatus === 'BOARDED').length,
+      }
+    : (TRIPS_DATA[selectedActiveTripId] || TRIPS_DATA['ATH-8821']);
 
   // Current active route for Allocate Cabs
   const currentSelectedRoute = routesList.find(r => r.routeId === selectedRouteId) || routesList[0];
@@ -1091,13 +1244,37 @@ export default function ETSPortal() {
               </div>
 
               {/* Web Portal Switcher */}
-              <div className="hidden lg:flex items-center space-x-1 text-xs">
+              <div className="hidden lg:flex items-center space-x-1.5 text-xs">
+                <button
+                  onClick={() => {
+                    setViewState('driver-app');
+                    showToast('Switched to Driver Operations Terminal');
+                  }}
+                  className="px-2.5 py-1.5 font-bold text-slate-700 hover:text-emerald-700 bg-slate-100 hover:bg-emerald-50 border border-slate-300 flex items-center space-x-1.5 transition-all shadow-sm"
+                  title="Open Driver Mobile App"
+                >
+                  <Car className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Driver Terminal</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setViewState('employee-app');
+                    showToast('Switched to Employee Commuter App');
+                  }}
+                  className="px-2.5 py-1.5 font-bold text-slate-700 hover:text-blue-700 bg-slate-100 hover:bg-blue-50 border border-slate-300 flex items-center space-x-1.5 transition-all shadow-sm"
+                  title="Open Employee Mobile App"
+                >
+                  <Smartphone className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Employee App</span>
+                </button>
+
                 <button
                   onClick={() => {
                     setViewState('admin-portal');
                     showToast('Switched to Atharva Admin Command Center');
                   }}
-                  className="px-3 py-1.5 font-bold text-slate-700 hover:text-blue-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 flex items-center space-x-1.5 transition-all shadow-sm"
+                  className="px-2.5 py-1.5 font-bold text-slate-700 hover:text-blue-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 flex items-center space-x-1.5 transition-all shadow-sm"
                   title="Open Atharva Admin Operations Command"
                 >
                   <Shield className="w-3.5 h-3.5 text-blue-600" />
@@ -1133,6 +1310,55 @@ export default function ETSPortal() {
 
             </div>
           </header>
+
+          {/* CRITICAL SOS ACTIVE INCIDENTS BANNER */}
+          {activeAlerts.length > 0 && (
+            <div className="bg-red-50 border-b-2 border-red-500 px-6 py-3 shadow-md animate-in fade-in flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center space-x-3">
+                <div className="bg-red-600 text-white p-2 rounded-none animate-pulse">
+                  <ShieldAlert className="w-6 h-6" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-black text-red-950 uppercase tracking-wide flex items-center space-x-2">
+                    <span>🚨 CRITICAL: EMERGENCY SOS INCIDENT ACTIVE ({activeAlerts.length})</span>
+                    <span className="bg-red-200 text-red-900 text-[10px] px-2 py-0.5 font-black uppercase">
+                      {activeAlerts[0].status}
+                    </span>
+                  </h4>
+                  <p className="text-xs text-red-900 mt-0.5">
+                    Passenger: <strong>{activeAlerts[0].employeeName}</strong> ({activeAlerts[0].employeePhone}) • Vehicle: <strong>{activeAlerts[0].vehiclePlate || 'KA-03-HA-8821'}</strong> • Chauffeur: {activeAlerts[0].driverName || 'Suresh Babu'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2 text-xs">
+                {activeAlerts[0].status === 'ACTIVE' && (
+                  <button
+                    onClick={() => handleAcknowledgeSOS(activeAlerts[0].id)}
+                    className="bg-amber-600 hover:bg-amber-500 text-white font-bold px-3 py-1.5 transition-colors shadow-sm"
+                  >
+                    Acknowledge
+                  </button>
+                )}
+
+                {['ACTIVE', 'ACKNOWLEDGED'].includes(activeAlerts[0].status) && (
+                  <button
+                    onClick={() => handleDispatchQRT(activeAlerts[0].id)}
+                    className="bg-red-700 hover:bg-red-600 text-white font-black px-3.5 py-1.5 transition-colors shadow-sm animate-pulse"
+                  >
+                    Dispatch QRT Escort
+                  </button>
+                )}
+
+                <button
+                  onClick={() => handleResolveSOS(activeAlerts[0].id)}
+                  className="bg-emerald-700 hover:bg-emerald-600 text-white font-bold px-3 py-1.5 transition-colors shadow-sm"
+                >
+                  Mark Resolved
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* ========================================================================= */}
           {/* TAB 1: DASHBOARD VIEW (From previous screenshot)                           */}
@@ -1372,55 +1598,68 @@ export default function ETSPortal() {
                             </thead>
                             <tbody className="divide-y divide-slate-100">
                               {filteredCommuters.length > 0 ? (
-                                filteredCommuters.map((commuter) => (
-                                  <tr key={commuter.id} className="hover:bg-slate-50 transition-colors">
-                                    <td className="py-2.5 px-3 font-semibold text-slate-800">
-                                      <div className="flex items-center space-x-1.5">
-                                        <span className="font-mono text-blue-700 font-bold">{commuter.empCode}</span>
-                                        <span>•</span>
-                                        <span>{commuter.name}</span>
-                                      </div>
-                                      <span className="text-slate-400 font-normal text-[11px] block">{commuter.department}</span>
-                                    </td>
-                                    <td className="py-2.5 px-3 font-mono font-bold text-slate-800">
-                                      <button
-                                        onClick={() => {
-                                          setSelectedActiveTripId(commuter.tripId);
-                                          setSearchTripInput(commuter.tripId);
-                                          showToast(`Selected Trip #${commuter.tripId} for live tracking`);
-                                        }}
-                                        className="hover:text-blue-600 hover:underline"
-                                      >
-                                        #{commuter.tripId}
-                                      </button>
-                                    </td>
-                                    <td className="py-2.5 px-3 text-slate-600 max-w-xs truncate">
-                                      {commuter.address}
-                                      {commuter.hasEscortGuard && (
-                                        <span className="block text-[10px] text-purple-700 font-semibold mt-0.5">
-                                          🛡️ Escort: {commuter.escortGuardName}
-                                        </span>
-                                      )}
-                                    </td>
-                                    <td className="py-2.5 px-3 font-semibold text-slate-800">
-                                      <div>{commuter.vehiclePlate}</div>
-                                      <span className="text-slate-400 text-[11px] font-normal block">{commuter.driverName}</span>
-                                    </td>
-                                    <td className="py-2.5 px-3 font-mono font-bold text-blue-700">{commuter.boardingOtp}</td>
-                                    <td className="py-2.5 px-3">
-                                      {commuter.status === 'BOARDED' ? (
-                                        <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 font-bold text-[10px]">Boarded ✓</span>
-                                      ) : (
-                                        <span className="bg-blue-100 text-blue-800 px-2 py-0.5 font-bold text-[10px]">{commuter.eta}</span>
-                                      )}
-                                    </td>
-                                    <td className="py-2.5 px-3 text-right">
-                                      <button onClick={() => setIsLocationModalOpen(true)} className="text-[#0f5fc2] hover:underline font-bold text-xs">
-                                        Update Node
-                                      </button>
-                                    </td>
-                                  </tr>
-                                ))
+                                filteredCommuters.map((commuter) => {
+                                  const livePax = currentDbTrip?.passengers?.find(
+                                    (p: any) =>
+                                      p.employeeCode === commuter.empCode ||
+                                      p.fullName?.toLowerCase().includes(commuter.name.toLowerCase())
+                                  );
+                                  const isBoarded = livePax ? livePax.boardingStatus === 'BOARDED' : commuter.status === 'BOARDED';
+                                  const isNoShow = livePax?.boardingStatus === 'NO_SHOW';
+                                  const displayPin = livePax ? livePax.boardingOtp : commuter.boardingOtp;
+
+                                  return (
+                                    <tr key={commuter.id} className="hover:bg-slate-50 transition-colors">
+                                      <td className="py-2.5 px-3 font-semibold text-slate-800">
+                                        <div className="flex items-center space-x-1.5">
+                                          <span className="font-mono text-blue-700 font-bold">{commuter.empCode}</span>
+                                          <span>•</span>
+                                          <span>{commuter.name}</span>
+                                        </div>
+                                        <span className="text-slate-400 font-normal text-[11px] block">{commuter.department}</span>
+                                      </td>
+                                      <td className="py-2.5 px-3 font-mono font-bold text-slate-800">
+                                        <button
+                                          onClick={() => {
+                                            setSelectedActiveTripId(commuter.tripId);
+                                            setSearchTripInput(commuter.tripId);
+                                            showToast(`Selected Trip #${commuter.tripId} for live tracking`);
+                                          }}
+                                          className="hover:text-blue-600 hover:underline"
+                                        >
+                                          #{commuter.tripId}
+                                        </button>
+                                      </td>
+                                      <td className="py-2.5 px-3 text-slate-600 max-w-xs truncate">
+                                        {commuter.address}
+                                        {commuter.hasEscortGuard && (
+                                          <span className="block text-[10px] text-purple-700 font-semibold mt-0.5">
+                                            🛡️ Escort: {commuter.escortGuardName}
+                                          </span>
+                                        )}
+                                      </td>
+                                      <td className="py-2.5 px-3 font-semibold text-slate-800">
+                                        <div>{commuter.vehiclePlate}</div>
+                                        <span className="text-slate-400 text-[11px] font-normal block">{commuter.driverName}</span>
+                                      </td>
+                                      <td className="py-2.5 px-3 font-mono font-bold text-blue-700">{displayPin}</td>
+                                      <td className="py-2.5 px-3">
+                                        {isBoarded ? (
+                                          <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 font-bold text-[10px]">Boarded ✓</span>
+                                        ) : isNoShow ? (
+                                          <span className="bg-red-100 text-red-800 px-2 py-0.5 font-bold text-[10px]">No Show ✕</span>
+                                        ) : (
+                                          <span className="bg-blue-100 text-blue-800 px-2 py-0.5 font-bold text-[10px]">{commuter.eta}</span>
+                                        )}
+                                      </td>
+                                      <td className="py-2.5 px-3 text-right">
+                                        <button onClick={() => setIsLocationModalOpen(true)} className="text-[#0f5fc2] hover:underline font-bold text-xs">
+                                          Update Node
+                                        </button>
+                                      </td>
+                                    </tr>
+                                  );
+                                })
                               ) : (
                                 <tr>
                                   <td colSpan={7} className="py-6 text-center text-xs text-slate-400">
@@ -2211,7 +2450,29 @@ export default function ETSPortal() {
                 />
               </div>
 
-              <div className="flex items-center space-x-2.5 text-xs">
+              <div className="flex items-center space-x-2 text-xs">
+                <button
+                  onClick={() => {
+                    setViewState('driver-app');
+                    showToast('Switched to Driver Operations Terminal');
+                  }}
+                  className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs px-3 py-2 shadow-sm transition-colors flex items-center space-x-1.5"
+                >
+                  <Car className="w-3.5 h-3.5" />
+                  <span>Driver Terminal</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setViewState('employee-app');
+                    showToast('Switched to Employee Commuter App');
+                  }}
+                  className="bg-indigo-700 hover:bg-indigo-800 text-white font-bold text-xs px-3 py-2 shadow-sm transition-colors flex items-center space-x-1.5"
+                >
+                  <Smartphone className="w-3.5 h-3.5" />
+                  <span>Employee App</span>
+                </button>
+
                 <button
                   onClick={() => {
                     setViewState('vendor-portal');
@@ -2219,7 +2480,7 @@ export default function ETSPortal() {
                     setSettingsSubTab('MANAGE_VENDOR_ACCESS');
                     showToast('Opening Super Admin Access & Vendor Teams Console');
                   }}
-                  className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs px-3.5 py-2 shadow-sm transition-colors flex items-center space-x-1.5"
+                  className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs px-3 py-2 shadow-sm transition-colors flex items-center space-x-1.5"
                 >
                   <KeyRound className="w-3.5 h-3.5" />
                   <span>Manage Vendors</span>
@@ -2231,7 +2492,7 @@ export default function ETSPortal() {
                     setActiveHeaderTab('DASHBOARD');
                     showToast('Switched to Corporate Vendor Portal View');
                   }}
-                  className="bg-[#0f5fc2] hover:bg-blue-700 text-white font-bold text-xs px-3.5 py-2 shadow-sm transition-colors flex items-center space-x-1.5"
+                  className="bg-[#0f5fc2] hover:bg-blue-700 text-white font-bold text-xs px-3 py-2 shadow-sm transition-colors flex items-center space-x-1.5"
                 >
                   <Layers className="w-3.5 h-3.5" />
                   <span>Open Vendor Portal</span>
@@ -2513,6 +2774,20 @@ export default function ETSPortal() {
             )}
           </div>
         </div>
+      )}
+
+      {/* 4. DRIVER MOBILE TERMINAL VIEW */}
+      {viewState === 'driver-app' && (
+        <DriverMobileApp
+          onSwitchPortal={(portal) => setViewState(portal)}
+        />
+      )}
+
+      {/* 5. EMPLOYEE COMMUTER APP VIEW */}
+      {viewState === 'employee-app' && (
+        <EmployeeMobileApp
+          onSwitchPortal={(portal) => setViewState(portal)}
+        />
       )}
 
     </div>
