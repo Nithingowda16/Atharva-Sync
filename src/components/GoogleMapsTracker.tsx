@@ -18,11 +18,12 @@ declare global {
   interface Window {
     google: any;
     initGoogleMaps?: () => void;
+    gm_authFailure?: () => void;
   }
 }
 
 export const GoogleMapsTracker: React.FC<GoogleMapsTrackerProps> = ({
-  apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
+  apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || 'AIzaSyCKgJFq-W4yJ9s7k85RfXd_2J8MkoaJ2BU',
   pickupCoords,
   pickupAddress,
   driverCoords = { latitude: 12.9760, longitude: 77.6320 },
@@ -32,7 +33,9 @@ export const GoogleMapsTracker: React.FC<GoogleMapsTrackerProps> = ({
   interactive = true,
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const [activeKey, setActiveKey] = useState<string>(apiKey);
+  const [activeKey, setActiveKey] = useState<string>(
+    apiKey || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || 'AIzaSyCKgJFq-W4yJ9s7k85RfXd_2J8MkoaJ2BU'
+  );
   const [inputKey, setInputKey] = useState<string>('');
   const [mapLoaded, setMapLoaded] = useState<boolean>(false);
   const [mapError, setMapError] = useState<string | null>(null);
@@ -51,6 +54,14 @@ export const GoogleMapsTracker: React.FC<GoogleMapsTrackerProps> = ({
   // Load Google Maps JavaScript API
   useEffect(() => {
     if (!activeKey) return;
+
+    // Handle Google Maps authentication failures gracefully
+    if (typeof window !== 'undefined') {
+      window.gm_authFailure = () => {
+        console.warn('Google Maps API key authentication error.');
+        setMapError('Google Maps API key warning: check Google Cloud Console referrer settings or billing.');
+      };
+    }
 
     if (window.google && window.google.maps) {
       initMap();
