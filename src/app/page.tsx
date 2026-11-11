@@ -46,17 +46,7 @@ import {
 import { LocationIssueModal } from '@/components/LocationIssueModal';
 import { GoogleMapsTracker } from '@/components/GoogleMapsTracker';
 import { SettingsModule, SettingsSubTab } from '@/components/SettingsModule';
-import { UnderMaintenance } from '@/components/UnderMaintenance';
 import { getStoredItem, setStoredItem, STORAGE_KEYS } from '@/lib/storage';
-
-// ============================================================================
-// MAINTENANCE MODE TOGGLE
-// Set to true while developing in production so public visitors see the 
-// Under Maintenance screen.
-// Once project development is complete, set this to false to make the 
-// full portal visible to everyone.
-// ============================================================================
-const IS_UNDER_MAINTENANCE = true;
 
 type LoginRole = 'vendor' | 'admin';
 type ViewState = 'login' | 'vendor-portal' | 'admin-portal';
@@ -382,23 +372,6 @@ const AVAILABLE_CABS = [
 
 export default function ETSPortal() {
   // Maintenance mode bypass state (persisted in localStorage so developers stay unlocked)
-  const [isMaintenanceBypassed, setIsMaintenanceBypassed] = useState<boolean>(false);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get('bypass') === 'true' || urlParams.get('preview') === 'true') {
-        localStorage.setItem('ATH_MAINTENANCE_BYPASS', 'true');
-        setIsMaintenanceBypassed(true);
-      } else {
-        const storedBypass = localStorage.getItem('ATH_MAINTENANCE_BYPASS');
-        if (storedBypass === 'true') {
-          setIsMaintenanceBypassed(true);
-        }
-      }
-    }
-  }, []);
-
   // Navigation / View State
   const [viewState, setViewState] = useState<ViewState>('login');
   const [loginRole, setLoginRole] = useState<LoginRole>('admin');
@@ -673,28 +646,6 @@ export default function ETSPortal() {
   return (
     <div className="min-h-screen flex flex-col bg-[#fbfcfe] text-slate-800 font-sans selection:bg-blue-100 selection:text-blue-900">
       
-      {/* Developer Preview Banner when Maintenance Mode is Active */}
-      {IS_UNDER_MAINTENANCE && isMaintenanceBypassed && viewState !== 'login' && (
-        <div className="bg-amber-500 text-slate-900 text-xs px-4 py-2 flex flex-wrap items-center justify-between font-semibold shadow-md z-50 sticky top-0 border-b border-amber-600">
-          <div className="flex items-center space-x-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-slate-900 animate-ping" />
-            <span>DEVELOPER PREVIEW MODE: Other logged-in users currently see the Under Maintenance page.</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              if (typeof window !== 'undefined') {
-                localStorage.removeItem('ATH_MAINTENANCE_BYPASS');
-              }
-              setIsMaintenanceBypassed(false);
-            }}
-            className="bg-slate-900 text-white px-3 py-1 hover:bg-slate-800 text-[11px] font-bold uppercase tracking-wider transition-colors"
-          >
-            Lock &amp; Exit to Maintenance View
-          </button>
-        </div>
-      )}
-      
       {/* Toast Alert */}
       {toastMessage && (
         <div className="fixed top-5 right-5 z-50 bg-slate-900 text-white px-5 py-3.5 rounded-none shadow-2xl border border-slate-700 flex items-center space-x-3 text-sm animate-in fade-in slide-in-from-top-4">
@@ -885,25 +836,9 @@ export default function ETSPortal() {
       )}
 
       {/* ========================================================================= */}
-      {/* 1.5. UNDER MAINTENANCE SCREEN (SHOWN AFTER LOGIN WHILE DEVELOPING)        */}
-      {/* ========================================================================= */}
-      {IS_UNDER_MAINTENANCE && !isMaintenanceBypassed && viewState !== 'login' && (
-        <UnderMaintenance
-          currentUser={currentUser}
-          onLogout={handleLogout}
-          onBypass={() => {
-            if (typeof window !== 'undefined') {
-              localStorage.setItem('ATH_MAINTENANCE_BYPASS', 'true');
-            }
-            setIsMaintenanceBypassed(true);
-          }}
-        />
-      )}
-
-      {/* ========================================================================= */}
       {/* 2. CORPORATE VENDOR PORTAL (DASHBOARD & ALLOCATE CABS TABS)                */}
       {/* ========================================================================= */}
-      {(!IS_UNDER_MAINTENANCE || isMaintenanceBypassed) && viewState === 'vendor-portal' && (
+      {viewState === 'vendor-portal' && (
         <div className="flex-1 flex flex-col bg-[#f4f7fb] text-slate-800">
           
           {/* Vertical Sticky Left Tab: "Contact Support" */}
@@ -2214,7 +2149,7 @@ export default function ETSPortal() {
       {/* ========================================================================= */}
       {/* 3. ATHARVA TRAVELS ADMIN COMMAND PORTAL (LIGHT BACKGROUND THEME)          */}
       {/* ========================================================================= */}
-      {(!IS_UNDER_MAINTENANCE || isMaintenanceBypassed) && viewState === 'admin-portal' && (
+      {viewState === 'admin-portal' && (
         <div className="flex-1 flex flex-col bg-[#f4f7fb] text-slate-800 font-sans">
           
           <header className="bg-white border-b border-slate-200 sticky top-0 z-40 px-6 py-2.5 shadow-sm">
