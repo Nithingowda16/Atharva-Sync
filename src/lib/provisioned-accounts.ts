@@ -99,9 +99,14 @@ export const BASE_PROVISIONED_ACCOUNTS: ProvisionedAccount[] = [
 ];
 
 // Initialize global storage with the 3 authorized accounts
-(global as any).__ATHARVA_PROVISIONED_ACCOUNTS__ = [...BASE_PROVISIONED_ACCOUNTS];
+if (!(global as any).__ATHARVA_PROVISIONED_ACCOUNTS__) {
+  (global as any).__ATHARVA_PROVISIONED_ACCOUNTS__ = [...BASE_PROVISIONED_ACCOUNTS];
+}
 
 export function getAllAccounts(): ProvisionedAccount[] {
+  if (!(global as any).__ATHARVA_PROVISIONED_ACCOUNTS__) {
+    (global as any).__ATHARVA_PROVISIONED_ACCOUNTS__ = [...BASE_PROVISIONED_ACCOUNTS];
+  }
   return (global as any).__ATHARVA_PROVISIONED_ACCOUNTS__;
 }
 
