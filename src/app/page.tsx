@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Building2,
   ShieldAlert,
@@ -15,9 +15,11 @@ import {
   Radio,
   FileSpreadsheet,
   Phone,
+  PhoneCall,
   KeyRound,
   Compass,
   ArrowRight,
+  ArrowLeft,
   Eye,
   EyeOff,
   LogOut,
@@ -44,6 +46,9 @@ import {
   Check,
   QrCode,
   Smartphone,
+  Info,
+  AlertCircle,
+  Wrench,
 } from 'lucide-react';
 import { LocationIssueModal } from '@/components/LocationIssueModal';
 import { GoogleMapsTracker } from '@/components/GoogleMapsTracker';
@@ -393,13 +398,36 @@ export default function ETSPortal() {
 
   // Vendor Dashboard Layout State
   const [activeHeaderTab, setActiveHeaderTab] = useState<'DASHBOARD' | 'ALLOCATE_CABS' | 'BUS_DASHBOARD' | 'ANALYTICS' | 'SETTINGS'>('DASHBOARD');
-  const [dashboardMode, setDashboardMode] = useState<'Operations' | 'Cab Allocation'>('Cab Allocation');
+  const [dashboardMode, setDashboardMode] = useState<'Operations' | 'Cab Allocation'>('Operations');
   const [rosterSubTab, setRosterSubTab] = useState<'unassigned' | 'assigned'>('assigned');
   
-  // LOGIN / LOGOUT direction
+  // LOGIN / LOGOUT direction & Controls
   const [tripDirection, setTripDirection] = useState<'LOGIN' | 'LOGOUT'>('LOGIN');
   const [selectedShift, setSelectedShift] = useState<string>('13:30');
-  const [selectedBusinessUnit, setSelectedBusinessUnit] = useState<string>('Enterprise Tech Park');
+  const [selectedBusinessUnit, setSelectedBusinessUnit] = useState<string>('WalmartLabs');
+  const [sliderStart, setSliderStart] = useState<string>('12:00');
+  const [sliderEnd, setSliderEnd] = useState<string>('20:00');
+  const [lastUpdatedSeconds, setLastUpdatedSeconds] = useState<number>(12);
+
+  // Operations Map & Telemetry Controls
+  const [mapType, setMapType] = useState<'satellite' | 'roadmap' | 'hybrid'>('satellite');
+  const [mapFixedLocation, setMapFixedLocation] = useState<boolean>(false);
+  const [mapShowSpeed, setMapShowSpeed] = useState<boolean>(true);
+  const [mapShowTraffic, setMapShowTraffic] = useState<boolean>(true);
+  const [mapShowOTA, setMapShowOTA] = useState<boolean>(true);
+  const [isVehiclePanelCollapsed, setIsVehiclePanelCollapsed] = useState<boolean>(false);
+
+  // Operational Modals
+  const [isIncompleteTripsModalOpen, setIsIncompleteTripsModalOpen] = useState<boolean>(false);
+  const [isInPremiseModalOpen, setIsInPremiseModalOpen] = useState<boolean>(false);
+  const [isAdhocTripsModalOpen, setIsAdhocTripsModalOpen] = useState<boolean>(false);
+  const [isDelayedVehiclesModalOpen, setIsDelayedVehiclesModalOpen] = useState<boolean>(false);
+  const [isSupportModalOpen, setIsSupportModalOpen] = useState<boolean>(false);
+
+  // Keyboard shortcut refs
+  const vehicleSearchRef = useRef<HTMLInputElement>(null);
+  const empSearchRef = useRef<HTMLInputElement>(null);
+  const tripSearchRef = useRef<HTMLInputElement>(null);
   
   // Search inputs
   const [searchCriteria, setSearchCriteria] = useState<'Employee ID' | 'Name' | 'Phone'>('Employee ID');
@@ -476,7 +504,34 @@ export default function ETSPortal() {
   useEffect(() => {
     fetchLiveBackendTrips();
     const interval = setInterval(fetchLiveBackendTrips, 3000);
-    return () => clearInterval(interval);
+    const timer = setInterval(() => {
+      setLastUpdatedSeconds((prev) => (prev >= 60 ? 1 : prev + 1));
+    }, 1000);
+    return () => {
+      clearInterval(interval);
+      clearInterval(timer);
+    };
+  }, []);
+
+  // Keyboard Shortcuts: ALT + Q (Vehicle), CTRL + E (Employee), ALT + T (Trip)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.altKey && e.key.toLowerCase() === 'q') {
+        e.preventDefault();
+        vehicleSearchRef.current?.focus();
+        showToast('Focused Vehicle Search (ALT + Q)');
+      } else if (e.ctrlKey && e.key.toLowerCase() === 'e') {
+        e.preventDefault();
+        empSearchRef.current?.focus();
+        showToast('Focused Employee Search (CTRL + E)');
+      } else if (e.altKey && e.key.toLowerCase() === 't') {
+        e.preventDefault();
+        tripSearchRef.current?.focus();
+        showToast('Focused Trip Search (ALT + T)');
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   const handleAcknowledgeSOS = async (alertId: string) => {
@@ -568,7 +623,8 @@ export default function ETSPortal() {
           ];
           if (data.authenticated && data.user && allowedAdmins.includes(data.user.email?.toLowerCase())) {
             setCurrentUser(data.user);
-            setViewState('admin-portal');
+            setViewState('vendor-portal');
+            setActiveHeaderTab('DASHBOARD');
             return;
           }
         }
@@ -623,7 +679,8 @@ export default function ETSPortal() {
 
         setCurrentUser(data.user);
         showToast(`Authentication verified: Welcome ${data.user.fullName}`);
-        setViewState('admin-portal');
+        setViewState('vendor-portal');
+        setActiveHeaderTab('DASHBOARD');
       } else {
         setAuthError(data.error || 'Access Denied: Invalid credentials or unauthorized account.');
       }
@@ -1244,13 +1301,13 @@ export default function ETSPortal() {
               </div>
 
               {/* Web Portal Switcher */}
-              <div className="hidden lg:flex items-center space-x-1.5 text-xs">
+              <div className="hidden lg:flex items-center space-x-2 text-xs">
                 <button
                   onClick={() => {
                     setViewState('driver-app');
                     showToast('Switched to Driver Operations Terminal');
                   }}
-                  className="px-2.5 py-1.5 font-bold text-slate-700 hover:text-emerald-700 bg-slate-100 hover:bg-emerald-50 border border-slate-300 flex items-center space-x-1.5 transition-all shadow-sm"
+                  className="px-2.5 py-1.5 font-bold text-slate-700 hover:text-emerald-700 bg-slate-100 hover:bg-emerald-50 border border-slate-300 flex items-center space-x-1.5 transition-all shadow-xs"
                   title="Open Driver Mobile App"
                 >
                   <Car className="w-3.5 h-3.5 text-emerald-600" />
@@ -1262,32 +1319,22 @@ export default function ETSPortal() {
                     setViewState('employee-app');
                     showToast('Switched to Employee Commuter App');
                   }}
-                  className="px-2.5 py-1.5 font-bold text-slate-700 hover:text-blue-700 bg-slate-100 hover:bg-blue-50 border border-slate-300 flex items-center space-x-1.5 transition-all shadow-sm"
+                  className="px-2.5 py-1.5 font-bold text-slate-700 hover:text-blue-700 bg-slate-100 hover:bg-blue-50 border border-slate-300 flex items-center space-x-1.5 transition-all shadow-xs"
                   title="Open Employee Mobile App"
                 >
                   <Smartphone className="w-3.5 h-3.5 text-blue-600" />
                   <span>Employee App</span>
                 </button>
-
-                <button
-                  onClick={() => {
-                    setViewState('admin-portal');
-                    showToast('Switched to Atharva Admin Command Center');
-                  }}
-                  className="px-2.5 py-1.5 font-bold text-slate-700 hover:text-blue-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 flex items-center space-x-1.5 transition-all shadow-sm"
-                  title="Open Atharva Admin Operations Command"
-                >
-                  <Shield className="w-3.5 h-3.5 text-blue-600" />
-                  <span>Admin Command</span>
-                </button>
               </div>
 
               {/* Right User & Utility Controls */}
               <div className="flex items-center space-x-3">
-                <div className="relative cursor-pointer">
-                  <div className="w-7 h-7 flex items-center justify-center text-slate-500 hover:text-slate-700">
-                    <HelpCircle className="w-4 h-4" />
-                  </div>
+                <div
+                  onClick={() => setIsSupportModalOpen(true)}
+                  className="relative cursor-pointer p-1 text-slate-500 hover:text-slate-800 transition-colors"
+                  title="Help & Support Desk"
+                >
+                  <HelpCircle className="w-4 h-4" />
                   <span className="absolute -top-1 -right-1 bg-amber-500 text-white text-[9px] font-black px-1 leading-tight">
                     NEW
                   </span>
@@ -1295,16 +1342,21 @@ export default function ETSPortal() {
 
                 <div className="h-4 w-px bg-slate-200" />
 
-                <div className="w-8 h-8 bg-slate-200 flex items-center justify-center text-slate-600 font-bold text-xs" title="Authorized Mobility User">
-                  <User className="w-4 h-4" />
+                {/* Operator Identity Badge (As shown in screenshot) */}
+                <div className="flex items-center space-x-1.5 text-xs text-slate-700 font-medium">
+                  <User className="w-3.5 h-3.5 text-[#0f5fc2]" />
+                  <span className="font-bold text-slate-900">{currentUser?.fullName || 'Harish R.'}</span>
+                  <span className="text-slate-300">•</span>
+                  <span className="text-slate-500 hidden sm:inline">Atharva Travels Pvt Ltd</span>
                 </div>
 
                 <button
                   onClick={handleLogout}
-                  className="p-1.5 text-slate-400 hover:text-red-600 transition-colors ml-1"
-                  title="Logout"
+                  className="border border-slate-300 hover:border-red-400 hover:text-red-700 px-2.5 py-1 text-slate-700 font-semibold text-xs flex items-center space-x-1.5 transition-colors bg-white shadow-xs ml-1"
+                  title="Sign Out"
                 >
-                  <LogOut className="w-4 h-4" />
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Sign Out</span>
                 </button>
               </div>
 
@@ -1368,74 +1420,118 @@ export default function ETSPortal() {
               
               {/* Timeline Slider & Shift Direction Switcher */}
               <div className="bg-white border-b border-slate-200 px-6 py-2.5 flex flex-wrap items-center justify-between gap-4 text-xs">
-                <div className="flex items-center space-x-4 flex-1 min-w-[340px] max-w-2xl">
-                  <span className="font-semibold text-slate-700 shrink-0 text-[11px]">
-                    {tripDirection === 'LOGIN' ? '09 Nov 2026 08:00 - 09 Nov 2026 14:00 (LOGIN)' : '09 Nov 2026 16:00 - 09 Nov 2026 23:30 (LOGOUT)'}
+                <div className="flex items-center space-x-3 flex-1 min-w-[340px] max-w-2xl">
+                  <span className="font-bold text-slate-800 shrink-0 text-xs tracking-tight">
+                    11 Nov 2026 {sliderStart} - 11 Nov 2026 {sliderEnd}
                   </span>
-                  <div className="relative flex-1 flex items-center">
-                    <div className="h-1 bg-blue-200 w-full" />
-                    <div className="absolute left-[15%] w-3.5 h-3.5 bg-[#0f5fc2] cursor-pointer shadow-sm" />
-                    <div className="absolute left-[65%] w-3.5 h-3.5 bg-[#0f5fc2] cursor-pointer shadow-sm" />
+                  
+                  {/* Interactive Dual-Handle Operational Time Slider */}
+                  <div className="relative flex-1 flex items-center max-w-md mx-2">
+                    <div className="h-1.5 bg-slate-200 w-full rounded" />
+                    <div className="absolute left-[15%] right-[25%] h-1.5 bg-[#0f5fc2] rounded" />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSliderStart('11:00');
+                        showToast('Window Start adjusted to 11:00');
+                      }}
+                      className="absolute left-[15%] -translate-x-1/2 w-4 h-4 bg-white border-2 border-[#0f5fc2] rounded-full cursor-pointer shadow hover:scale-125 transition-transform"
+                      title="Adjust Start Time"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSliderEnd('21:00');
+                        showToast('Window End adjusted to 21:00');
+                      }}
+                      className="absolute right-[25%] translate-x-1/2 w-4 h-4 bg-white border-2 border-[#0f5fc2] rounded-full cursor-pointer shadow hover:scale-125 transition-transform"
+                      title="Adjust End Time"
+                    />
                   </div>
                 </div>
 
                 <div className="flex items-center space-x-3">
+                  {/* Commute Direction: LOGIN / LOGOUT */}
                   <div className="flex items-center border border-slate-300 bg-slate-50 p-0.5">
                     <button
                       type="button"
                       onClick={() => handleTripDirectionChange('LOGIN')}
-                      className={`px-3 py-1 text-xs font-bold transition-all ${
-                        tripDirection === 'LOGIN' ? 'bg-[#0f5fc2] text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                      className={`px-3 py-1 text-xs font-bold transition-all flex items-center space-x-1 ${
+                        tripDirection === 'LOGIN' ? 'bg-[#0f5fc2] text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
                       }`}
                     >
-                      LOGIN
+                      <span>LOGIN</span>
+                      <ChevronDown className="w-3 h-3 opacity-70" />
                     </button>
                     <button
                       type="button"
                       onClick={() => handleTripDirectionChange('LOGOUT')}
-                      className={`px-3 py-1 text-xs font-bold transition-all ${
-                        tripDirection === 'LOGOUT' ? 'bg-[#0f5fc2] text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                      className={`px-3 py-1 text-xs font-bold transition-all flex items-center space-x-1 ${
+                        tripDirection === 'LOGOUT' ? 'bg-[#0f5fc2] text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
                       }`}
                     >
-                      LOGOUT
+                      <span>LOGOUT</span>
+                      <ChevronDown className="w-3 h-3 opacity-70" />
                     </button>
                   </div>
 
+                  {/* Office Selector */}
                   <div className="relative">
                     <select
                       value={selectedBusinessUnit}
-                      onChange={(e) => setSelectedBusinessUnit(e.target.value)}
-                      className="bg-white border border-slate-300 px-3 py-1.5 pr-7 font-semibold text-slate-700 appearance-none focus:outline-none focus:border-blue-600 text-xs min-w-[160px]"
+                      onChange={(e) => {
+                        setSelectedBusinessUnit(e.target.value);
+                        showToast(`Filtered operations for office campus: ${e.target.value}`);
+                      }}
+                      className="bg-white border border-slate-300 px-3 py-1.5 pr-7 font-semibold text-slate-700 appearance-none focus:outline-none focus:border-blue-600 text-xs min-w-[170px]"
                     >
+                      <option value="WalmartLabs">WalmartLabs</option>
                       <option value="Enterprise Tech Park">Enterprise Tech Park</option>
                       <option value="Corporate Central Hub">Corporate Central Hub</option>
                       <option value="Bellandur Tech Corridor">Bellandur Tech Corridor</option>
+                      <option value="Global Tech Park">Global Tech Park</option>
                     </select>
                     <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
                   </div>
 
-                  <button
-                    onClick={() => showToast(`Synchronized ${tripDirection} commute rosters with Atharva central fleet database.`)}
-                    className="w-7 h-7 bg-[#0fa958] hover:bg-emerald-600 text-white flex items-center justify-center shadow-sm transition-colors"
-                    title="Refresh Roster"
-                  >
-                    <RefreshCw className="w-3.5 h-3.5" />
-                  </button>
+                  {/* Refresh Button & Dynamic 'Last Updated' Ticker */}
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => {
+                        fetchLiveBackendTrips();
+                        setLastUpdatedSeconds(0);
+                        showToast(`Refreshed ${tripDirection} live operations data.`);
+                      }}
+                      className="w-7 h-7 bg-[#0fa958] hover:bg-emerald-600 text-white rounded-full flex items-center justify-center shadow-xs transition-all hover:rotate-180"
+                      title="Refresh Operational Telemetry"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" />
+                    </button>
+                    <span className="text-[11px] text-slate-500 font-medium whitespace-nowrap">
+                      Last Updated {lastUpdatedSeconds} secs ago
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              {/* Time Shift Pills */}
+              {/* Time Shift Quick Select Pills */}
               <div className="bg-white border-b border-slate-200 px-6 py-2 flex items-center space-x-2 overflow-x-auto text-xs">
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mr-1">
+                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mr-1 shrink-0">
                   {tripDirection} Shifts:
                 </span>
-                {currentShifts.map((shiftTime) => (
+                {(tripDirection === 'LOGIN'
+                  ? ['12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30']
+                  : ['22:30', '23:00', '23:30', '00:00', '00:30', '01:00', '01:30', '02:00', '02:30', '03:00', '03:30', '04:00', '04:30', '05:00']
+                ).map((shiftTime) => (
                   <button
                     key={shiftTime}
-                    onClick={() => setSelectedShift(shiftTime)}
-                    className={`px-3 py-1 border text-xs font-semibold transition-all ${
+                    onClick={() => {
+                      setSelectedShift(shiftTime);
+                      showToast(`Shift window selected: ${shiftTime}`);
+                    }}
+                    className={`px-3 py-1 border text-xs font-semibold rounded-full transition-all shrink-0 ${
                       selectedShift === shiftTime
-                        ? 'border-[#0f5fc2] text-[#0f5fc2] bg-blue-50/60 font-bold'
+                        ? 'border-[#0f5fc2] text-[#0f5fc2] bg-blue-50/70 font-bold shadow-xs'
                         : 'border-slate-300 text-slate-600 hover:border-slate-400 bg-white'
                     }`}
                   >
@@ -1443,9 +1539,12 @@ export default function ETSPortal() {
                   </button>
                 ))}
 
-                <div className="relative pl-1">
-                  <button className="px-3 py-1 border border-slate-300 bg-white text-slate-600 hover:border-slate-400 flex items-center space-x-1.5 text-xs font-medium">
-                    <span>All Shifts</span>
+                <div className="relative pl-1 shrink-0">
+                  <button
+                    onClick={() => showToast('Displaying all shifts consolidated')}
+                    className="px-3 py-1 border border-slate-300 bg-white text-slate-600 hover:border-slate-400 flex items-center space-x-1.5 text-xs font-medium rounded-full"
+                  >
+                    <span>Shifts</span>
                     <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
                   </button>
                 </div>
@@ -1454,230 +1553,546 @@ export default function ETSPortal() {
               {/* Main Split Stage */}
               <div className="flex-1 p-4 grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
                 
-                {/* Left 8 Cols: Roster / Google Maps */}
+                {/* Left 8 Cols: Operations Lifecycle & Map OR Cab Allocation Roster */}
                 <div className="lg:col-span-8 bg-white border border-slate-200 shadow-sm flex flex-col min-h-[580px]">
                   
-                  <div className="border-b border-slate-200 px-4 py-2 flex flex-wrap items-center justify-between gap-3 bg-white">
-                    <div className="flex items-center space-x-6 text-xs">
-                      <button
-                        onClick={() => setRosterSubTab('unassigned')}
-                        className={`pb-2 pt-1 font-bold flex items-center space-x-1.5 relative ${
-                          rosterSubTab === 'unassigned' ? 'text-[#0f5fc2] border-b-2 border-[#0f5fc2] -mb-[9px]' : 'text-slate-500 hover:text-slate-800'
-                        }`}
-                      >
-                        <Car className="w-3.5 h-3.5 text-[#0f5fc2]" />
-                        <span>Unassigned</span>
-                        <span className="text-[10px] bg-slate-100 text-slate-600 px-1 py-0.2 font-semibold ml-1">0</span>
-                      </button>
-
-                      <button
-                        onClick={() => setRosterSubTab('assigned')}
-                        className={`pb-2 pt-1 font-bold flex items-center space-x-1.5 relative ${
-                          rosterSubTab === 'assigned' ? 'text-[#0f5fc2] border-b-2 border-[#0f5fc2] -mb-[9px]' : 'text-slate-500 hover:text-slate-800'
-                        }`}
-                      >
-                        <Users className="w-3.5 h-3.5 text-slate-400" />
-                        <span>Assigned</span>
-                        <span className="text-[10px] bg-blue-100 text-[#0f5fc2] px-1 py-0.2 font-semibold ml-1">
-                          {filteredCommuters.length}
-                        </span>
-                      </button>
-                    </div>
-
-                    <div className="flex items-center space-x-2 text-xs">
-                      <div className="relative">
-                        <select
-                          value={searchCriteria}
-                          onChange={(e) => setSearchCriteria(e.target.value as any)}
-                          className="border border-slate-300 bg-white py-1 pl-2 pr-6 text-xs font-semibold text-slate-600 appearance-none focus:outline-none"
-                        >
-                          <option value="Employee ID">Employee ID</option>
-                          <option value="Name">Name</option>
-                          <option value="Phone">Phone</option>
-                        </select>
-                        <ChevronDown className="w-3 h-3 text-slate-400 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                      </div>
-
-                      <div className="relative">
-                        <input
-                          type="text"
-                          value={searchEmployeeQuery}
-                          onChange={(e) => setSearchEmployeeQuery(e.target.value)}
-                          placeholder="Search by Employee ID (e.g. 9042)"
-                          className="border border-slate-300 py-1 pl-7 pr-2.5 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-blue-600 w-52"
-                        />
-                        <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2 top-1/2 -translate-y-1/2" />
-                      </div>
-
-                      {searchEmployeeQuery && (
-                        <button onClick={() => setSearchEmployeeQuery('')} className="text-slate-400 hover:text-slate-600 p-1">
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-
-                      <button className="p-1 text-slate-400 hover:text-slate-600">
-                        <Maximize2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="flex-1 flex flex-col p-6 items-center justify-center relative">
-                    {rosterSubTab === 'unassigned' ? (
-                      <div className="flex flex-col items-center justify-center py-10 w-full max-w-xl text-center select-none">
-                        <svg viewBox="0 0 460 260" className="w-full max-w-md h-auto" fill="none">
-                          <line x1="80" y1="230" x2="380" y2="230" stroke="#334155" strokeWidth="1.5" />
-                          <rect x="130" y="50" width="200" height="130" stroke="#1e293b" strokeWidth="2" fill="#ffffff" />
-                          <line x1="130" y1="62" x2="330" y2="62" stroke="#e2e8f0" strokeWidth="1" />
-                          <rect x="210" y="180" width="40" height="30" stroke="#1e293b" strokeWidth="1.5" fill="#f8fafc" />
-                          <path d="M195 210H265" stroke="#1e293b" strokeWidth="2" />
-                          <path d="M220 90C220 78 238 78 238 90C238 102 226 106 226 116" stroke="#94a3b8" strokeWidth="3.5" strokeLinecap="round" />
-                          <circle cx="226" cy="130" r="3" fill="#94a3b8" />
-                          <circle cx="205" cy="80" r="1.5" fill="#1e293b" />
-                          <circle cx="250" cy="115" r="1.5" fill="#1e293b" />
-                          <circle cx="135" cy="85" r="10" stroke="#1e293b" strokeWidth="1.5" fill="#fed7aa" />
-                          <path d="M128 85C125 75 142 75 142 85" fill="#0f172a" />
-                          <path d="M125 105L115 185H145L140 105Z" stroke="#1e293b" strokeWidth="1.5" fill="#ffffff" />
-                          <circle cx="320" cy="90" r="10" stroke="#1e293b" strokeWidth="1.5" fill="#fed7aa" />
-                          <path d="M312 88C312 78 330 78 330 88" fill="#1e293b" />
-                          <path d="M308 108L305 150H335L332 108Z" stroke="#1e293b" strokeWidth="1.5" fill="#ffffff" />
-                          <path d="M305 150L300 230H315L320 170L325 230H338L335 150Z" stroke="#1e293b" strokeWidth="1.5" fill="#ffffff" />
-                          <path d="M308 115L275 125" stroke="#1e293b" strokeWidth="1.8" strokeLinecap="round" />
-                        </svg>
-                        <p className="text-xs text-slate-500 font-semibold mt-4">
-                          No unassigned employees for {tripDirection} shift <strong className="text-slate-800">{selectedShift}</strong>.
-                        </p>
-                        <button
-                          onClick={() => setRosterSubTab('assigned')}
-                          className="mt-4 px-4 py-1.5 bg-[#0f5fc2] hover:bg-blue-700 text-white text-xs font-bold transition-colors"
-                        >
-                          View Assigned Cabs ({filteredCommuters.length} Commuters)
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="w-full space-y-5">
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-2">
-                              <Navigation className="w-3.5 h-3.5 text-[#0f5fc2]" />
-                              <h4 className="font-bold text-xs text-slate-800">
-                                Live Route Telemetry: {activeTripData.tripId} ({activeTripData.vehiclePlate})
-                              </h4>
-                              <span className={`text-[10px] font-bold px-1.5 py-0.2 ${
-                                tripDirection === 'LOGIN' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
-                              }`}>
-                                {tripDirection}
-                              </span>
-                            </div>
-                            <span className="text-[11px] text-slate-500">{activeTripData.route}</span>
+                  {dashboardMode === 'Operations' ? (
+                    /* OPERATIONS MODE VIEW */
+                    <div className="flex-1 flex flex-col p-4 space-y-4">
+                      
+                      {/* Operational Lifecycle Summary Cards (Pre-Trip, In-Progress, Completed) */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        {/* 1. Pre-Trip Lane */}
+                        <div className="border border-slate-200 bg-slate-50/70 p-3 space-y-2">
+                          <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 uppercase tracking-wide">
+                            <span>2 Trips not started</span>
+                            <span className="text-[10px] text-slate-400">Pre-Trip</span>
                           </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="bg-white border border-slate-200 p-2 shadow-xs space-y-1">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[11px] font-bold text-slate-700">Yet to Start</span>
+                                <span className="text-xs font-black text-slate-900">1 &gt;</span>
+                              </div>
+                              <div className="flex items-center space-x-2 text-[10px] font-semibold text-slate-600 pt-0.5">
+                                <span className="flex items-center space-x-0.5"><span>👥</span><span>3</span></span>
+                                <span className="flex items-center space-x-0.5 text-red-600 font-bold" title="Critical/Escort"><span>🔴</span><span>1</span></span>
+                                <span className="flex items-center space-x-0.5 text-blue-600 font-bold" title="Regular"><span>🔵</span><span>2</span></span>
+                              </div>
+                            </div>
 
-                          <GoogleMapsTracker
-                            pickupCoords={{ latitude: activeTripData.currentLat, longitude: activeTripData.currentLng }}
-                            pickupAddress={passengerState.pickupAddress}
-                            driverCoords={{ latitude: activeTripData.currentLat, longitude: activeTripData.currentLng }}
-                            vehiclePlate={activeTripData.vehiclePlate}
-                            driverName={activeTripData.driverName}
-                            onPickupReassigned={(newCoords, address) => {
-                              showToast('Pickup node updated and pushed to Driver app!');
-                            }}
-                          />
+                            <button
+                              type="button"
+                              onClick={() => setIsIncompleteTripsModalOpen(true)}
+                              className="bg-[#fff1f0] hover:bg-[#ffe4e1] border border-[#ffa39e] p-2 shadow-xs space-y-1 text-left transition-colors cursor-pointer"
+                              title="Click to view incomplete/delayed trips"
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="text-[11px] font-bold text-[#cf1322]">Incomplete Trips</span>
+                                <span className="text-xs font-black text-[#cf1322]">1 &gt;</span>
+                              </div>
+                              <div className="flex items-center space-x-2 text-[10px] font-semibold text-[#cf1322] pt-0.5">
+                                <span className="flex items-center space-x-0.5"><span>👥</span><span>0</span></span>
+                                <span className="text-[9px] bg-[#ff4d4f] text-white px-1 py-0.2 font-bold uppercase rounded-xs">Warning</span>
+                              </div>
+                            </button>
+                          </div>
                         </div>
 
-                        <div className="border border-slate-200 overflow-hidden">
+                        {/* 2. In-Progress Lane */}
+                        <div className="border border-slate-200 bg-slate-50/70 p-3 space-y-2">
+                          <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 uppercase tracking-wide">
+                            <span>1 Trips in Progress &gt;</span>
+                            <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.2 rounded-xs">LIVE</span>
+                          </div>
+                          <div className="bg-white border border-slate-200 p-2 shadow-xs space-y-1">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[11px] font-bold text-slate-700">On Time Trips</span>
+                              <span className="text-xs font-black text-emerald-600">100%</span>
+                            </div>
+                            <div className="text-[10px] text-slate-500 font-medium pt-0.5">
+                              On Time Pickup: <strong className="text-emerald-700">100%</strong>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* 3. Completed Lane */}
+                        <div className="border border-slate-200 bg-slate-50/70 p-3 space-y-2">
+                          <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 uppercase tracking-wide">
+                            <span>3 Trips Completed &gt;</span>
+                            <span className="text-[10px] text-slate-400">Shift SLA</span>
+                          </div>
+                          <div className="bg-white border border-slate-200 p-2 shadow-xs space-y-1">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[11px] font-bold text-slate-700">Completed on Time</span>
+                              <span className="text-xs font-black text-[#0f5fc2]">100%</span>
+                            </div>
+                            <div className="text-[10px] text-slate-500 font-medium pt-0.5">
+                              OTA (On-Time Arrival): <strong className="text-[#0f5fc2]">100%</strong>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Live Google Maps Tracking Section */}
+                      <div className="space-y-2 border border-slate-200 bg-white p-3 shadow-xs">
+                        
+                        {/* Map Floating Control Bar */}
+                        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2 text-xs">
+                          <div className="flex items-center space-x-2">
+                            <Navigation className="w-3.5 h-3.5 text-[#0f5fc2]" />
+                            <span className="font-bold text-slate-800 text-xs">
+                              Live Fleet Radar: {activeTripData.tripId} ({activeTripData.vehiclePlate})
+                            </span>
+                            <span className="text-[10px] font-mono bg-blue-100 text-[#0f5fc2] px-1.5 py-0.5 font-bold">
+                              {tripDirection}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center space-x-1.5 text-xs">
+                            {/* Satellite / Roadmap / Hybrid dropdown */}
+                            <div className="relative">
+                              <select
+                                value={mapType}
+                                onChange={(e) => setMapType(e.target.value as any)}
+                                className="border border-slate-300 bg-white py-1 pl-2 pr-6 text-xs font-semibold text-slate-700 appearance-none focus:outline-none"
+                              >
+                                <option value="satellite">Satellite</option>
+                                <option value="roadmap">Roadmap</option>
+                                <option value="hybrid">Hybrid</option>
+                              </select>
+                              <ChevronDown className="w-3 h-3 text-slate-400 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                            </div>
+
+                            {/* Location: Fixed / Mobile */}
+                            <button
+                              type="button"
+                              onClick={() => setMapFixedLocation(!mapFixedLocation)}
+                              className={`px-2 py-1 border text-xs font-semibold transition-colors ${
+                                mapFixedLocation ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-700 border-slate-300'
+                              }`}
+                            >
+                              Location: {mapFixedLocation ? 'Fixed' : 'Mobile'}
+                            </button>
+
+                            {/* Speed Toggle */}
+                            <button
+                              type="button"
+                              onClick={() => setMapShowSpeed(!mapShowSpeed)}
+                              className={`px-2 py-1 border text-xs font-semibold transition-colors ${
+                                mapShowSpeed ? 'bg-blue-50 text-[#0f5fc2] border-blue-300 font-bold' : 'bg-white text-slate-500 border-slate-300'
+                              }`}
+                            >
+                              Speed: {mapShowSpeed ? 'On' : 'Off'}
+                            </button>
+
+                            {/* Traffic Toggle */}
+                            <button
+                              type="button"
+                              onClick={() => setMapShowTraffic(!mapShowTraffic)}
+                              className={`px-2 py-1 border text-xs font-semibold transition-colors ${
+                                mapShowTraffic ? 'bg-emerald-50 text-emerald-700 border-emerald-300 font-bold' : 'bg-white text-slate-500 border-slate-300'
+                              }`}
+                            >
+                              Traffic: {mapShowTraffic ? 'On' : 'Off'}
+                            </button>
+
+                            {/* OTA Toggle */}
+                            <button
+                              type="button"
+                              onClick={() => setMapShowOTA(!mapShowOTA)}
+                              className={`px-2 py-1 border text-xs font-semibold transition-colors ${
+                                mapShowOTA ? 'bg-blue-50 text-[#0f5fc2] border-blue-300 font-bold' : 'bg-white text-slate-500 border-slate-300'
+                              }`}
+                            >
+                              OTA: {mapShowOTA ? 'On' : 'Off'}
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Interactive Google Map Container */}
+                        <GoogleMapsTracker
+                          pickupCoords={{ latitude: activeTripData.currentLat, longitude: activeTripData.currentLng }}
+                          pickupAddress={passengerState.pickupAddress}
+                          driverCoords={{ latitude: activeTripData.currentLat, longitude: activeTripData.currentLng }}
+                          vehiclePlate={activeTripData.vehiclePlate}
+                          driverName={activeTripData.driverName}
+                          onPickupReassigned={(newCoords, address) => {
+                            showToast('Pickup node updated and pushed to Driver app!');
+                          }}
+                        />
+
+                        {/* Collapsible Vehicle Detail Panel */}
+                        <div className="border border-slate-200 bg-slate-50/60 p-3 space-y-2 mt-2">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-2">
+                              <button
+                                type="button"
+                                onClick={() => setIsVehiclePanelCollapsed(!isVehiclePanelCollapsed)}
+                                className="text-slate-600 hover:text-slate-900 p-0.5"
+                              >
+                                <ChevronDown className={`w-4 h-4 transition-transform ${isVehiclePanelCollapsed ? '-rotate-90' : 'rotate-0'}`} />
+                              </button>
+                              <span className="font-mono font-bold text-xs text-slate-900">
+                                ECO_ETS - ECO-355 (KA-05-AP-0348)
+                              </span>
+                              <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.2">
+                                In Transit • 37 km/h
+                              </span>
+                            </div>
+                            <span className="text-[11px] text-slate-500">
+                              Driver: <strong>Rajesh Kumar</strong> (+91 98765 43210)
+                            </span>
+                          </div>
+
+                          {!isVehiclePanelCollapsed && (
+                            <div className="grid grid-cols-2 md:grid-cols-6 gap-2 text-[11px] pt-1 border-t border-slate-200">
+                              <div>
+                                <span className="text-slate-400 block text-[10px] uppercase font-semibold">Duty Start</span>
+                                <span className="font-bold text-slate-800">11 Nov 11:45</span>
+                              </div>
+                              <div>
+                                <span className="text-slate-400 block text-[10px] uppercase font-semibold">Duty End</span>
+                                <span className="font-bold text-slate-800">11 Nov 16:30</span>
+                              </div>
+                              <div>
+                                <span className="text-slate-400 block text-[10px] uppercase font-semibold">Duration</span>
+                                <span className="font-bold text-slate-800">04h 45m</span>
+                              </div>
+                              <div>
+                                <span className="text-slate-400 block text-[10px] uppercase font-semibold">Traveled KM</span>
+                                <span className="font-mono font-bold text-blue-700">18.4 KM</span>
+                              </div>
+                              <div>
+                                <span className="text-slate-400 block text-[10px] uppercase font-semibold">Total KM</span>
+                                <span className="font-mono font-bold text-slate-800">42.6 KM</span>
+                              </div>
+                              <div>
+                                <span className="text-slate-400 block text-[10px] uppercase font-semibold">Map KM</span>
+                                <span className="font-mono font-bold text-slate-800">41.9 KM</span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Trip Detail Table */}
+                        <div className="border border-slate-200 overflow-x-auto mt-2">
                           <table className="w-full text-left text-xs">
                             <thead className="bg-slate-50 text-slate-500 font-semibold uppercase tracking-wider border-b border-slate-200">
                               <tr>
-                                <th className="py-2.5 px-3">Employee ID & Name</th>
-                                <th className="py-2.5 px-3">Trip ID</th>
-                                <th className="py-2.5 px-3">{tripDirection === 'LOGIN' ? 'Pickup Point' : 'Drop Point'}</th>
-                                <th className="py-2.5 px-3">Assigned Cab</th>
-                                <th className="py-2.5 px-3">Boarding PIN</th>
-                                <th className="py-2.5 px-3">Status</th>
-                                <th className="py-2.5 px-3 text-right">Actions</th>
+                                <th className="py-2 px-2.5">Trip ID</th>
+                                <th className="py-2 px-2.5">Emp</th>
+                                <th className="py-2 px-2.5">Dist (KM)</th>
+                                <th className="py-2 px-2.5">Ref Trip KM</th>
+                                <th className="py-2 px-2.5">Appvd Empty KM</th>
+                                <th className="py-2 px-2.5">Ref Empty KM</th>
+                                <th className="py-2 px-2.5">Start</th>
+                                <th className="py-2 px-2.5">End</th>
+                                <th className="py-2 px-2.5">Dir</th>
+                                <th className="py-2 px-2.5">Type</th>
                               </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-100">
-                              {filteredCommuters.length > 0 ? (
-                                filteredCommuters.map((commuter) => {
-                                  const livePax = currentDbTrip?.passengers?.find(
-                                    (p: any) =>
-                                      p.employeeCode === commuter.empCode ||
-                                      p.fullName?.toLowerCase().includes(commuter.name.toLowerCase())
-                                  );
-                                  const isBoarded = livePax ? livePax.boardingStatus === 'BOARDED' : commuter.status === 'BOARDED';
-                                  const isNoShow = livePax?.boardingStatus === 'NO_SHOW';
-                                  const displayPin = livePax ? livePax.boardingOtp : commuter.boardingOtp;
-
-                                  return (
-                                    <tr key={commuter.id} className="hover:bg-slate-50 transition-colors">
-                                      <td className="py-2.5 px-3 font-semibold text-slate-800">
-                                        <div className="flex items-center space-x-1.5">
-                                          <span className="font-mono text-blue-700 font-bold">{commuter.empCode}</span>
-                                          <span>•</span>
-                                          <span>{commuter.name}</span>
-                                        </div>
-                                        <span className="text-slate-400 font-normal text-[11px] block">{commuter.department}</span>
-                                      </td>
-                                      <td className="py-2.5 px-3 font-mono font-bold text-slate-800">
-                                        <button
-                                          onClick={() => {
-                                            setSelectedActiveTripId(commuter.tripId);
-                                            setSearchTripInput(commuter.tripId);
-                                            showToast(`Selected Trip #${commuter.tripId} for live tracking`);
-                                          }}
-                                          className="hover:text-blue-600 hover:underline"
-                                        >
-                                          #{commuter.tripId}
-                                        </button>
-                                      </td>
-                                      <td className="py-2.5 px-3 text-slate-600 max-w-xs truncate">
-                                        {commuter.address}
-                                        {commuter.hasEscortGuard && (
-                                          <span className="block text-[10px] text-purple-700 font-semibold mt-0.5">
-                                            🛡️ Escort: {commuter.escortGuardName}
-                                          </span>
-                                        )}
-                                      </td>
-                                      <td className="py-2.5 px-3 font-semibold text-slate-800">
-                                        <div>{commuter.vehiclePlate}</div>
-                                        <span className="text-slate-400 text-[11px] font-normal block">{commuter.driverName}</span>
-                                      </td>
-                                      <td className="py-2.5 px-3 font-mono font-bold text-blue-700">{displayPin}</td>
-                                      <td className="py-2.5 px-3">
-                                        {isBoarded ? (
-                                          <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 font-bold text-[10px]">Boarded ✓</span>
-                                        ) : isNoShow ? (
-                                          <span className="bg-red-100 text-red-800 px-2 py-0.5 font-bold text-[10px]">No Show ✕</span>
-                                        ) : (
-                                          <span className="bg-blue-100 text-blue-800 px-2 py-0.5 font-bold text-[10px]">{commuter.eta}</span>
-                                        )}
-                                      </td>
-                                      <td className="py-2.5 px-3 text-right">
-                                        <button onClick={() => setIsLocationModalOpen(true)} className="text-[#0f5fc2] hover:underline font-bold text-xs">
-                                          Update Node
-                                        </button>
-                                      </td>
-                                    </tr>
-                                  );
-                                })
-                              ) : (
-                                <tr>
-                                  <td colSpan={7} className="py-6 text-center text-xs text-slate-400">
-                                    No commuters found matching criteria.
-                                  </td>
-                                </tr>
-                              )}
+                            <tbody className="divide-y divide-slate-100 font-mono text-[11px]">
+                              <tr className="hover:bg-slate-50">
+                                <td className="py-2 px-2.5 font-bold text-blue-700">ATH-8821</td>
+                                <td className="py-2 px-2.5">4</td>
+                                <td className="py-2 px-2.5">18.2</td>
+                                <td className="py-2 px-2.5">18.0</td>
+                                <td className="py-2 px-2.5">2.4</td>
+                                <td className="py-2 px-2.5">2.0</td>
+                                <td className="py-2 px-2.5">11:45</td>
+                                <td className="py-2 px-2.5">13:15</td>
+                                <td className="py-2 px-2.5 font-sans font-bold text-blue-800">LOGIN</td>
+                                <td className="py-2 px-2.5 font-sans text-emerald-700 font-semibold">Scheduled</td>
+                              </tr>
+                              <tr className="hover:bg-slate-50">
+                                <td className="py-2 px-2.5 font-bold text-blue-700">ATH-4310</td>
+                                <td className="py-2 px-2.5">4</td>
+                                <td className="py-2 px-2.5">14.6</td>
+                                <td className="py-2 px-2.5">14.5</td>
+                                <td className="py-2 px-2.5">1.8</td>
+                                <td className="py-2 px-2.5">1.8</td>
+                                <td className="py-2 px-2.5">13:30</td>
+                                <td className="py-2 px-2.5">14:45</td>
+                                <td className="py-2 px-2.5 font-sans font-bold text-blue-800">LOGIN</td>
+                                <td className="py-2 px-2.5 font-sans text-amber-700 font-semibold">Delayed</td>
+                              </tr>
                             </tbody>
                           </table>
                         </div>
+
+                        {/* Planned Trips & Device Information Row */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+                          {/* Planned Trips Box */}
+                          <div className="border border-slate-200 p-2.5 space-y-1.5 bg-slate-50/40">
+                            <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wide block">
+                              Planned Trips between 11 Nov, 12:30 and 11 Nov, 19:31
+                            </span>
+                            <div className="space-y-1 text-xs">
+                              <div className="flex items-center justify-between bg-white border border-slate-200 p-1.5 font-mono text-[11px]">
+                                <span>#ATH-9011 (Force Urbania)</span>
+                                <span className="font-bold text-slate-800">12 Commuters • 16:30</span>
+                              </div>
+                              <div className="flex items-center justify-between bg-white border border-slate-200 p-1.5 font-mono text-[11px]">
+                                <span>#ATH-8822 (Toyota Innova)</span>
+                                <span className="font-bold text-slate-800">4 Commuters • 18:00</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Device Information & Driver Actions Box */}
+                          <div className="border border-slate-200 p-2.5 space-y-2 bg-slate-50/40">
+                            <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wide block">
+                              Hardware & Chauffeur Telematics
+                            </span>
+                            <div className="grid grid-cols-2 gap-2 text-[10px] font-mono text-slate-700 bg-white border border-slate-200 p-2">
+                              <div><span className="text-slate-400 block text-[9px] uppercase">Device Type</span><strong>BYOD Mobile</strong></div>
+                              <div><span className="text-slate-400 block text-[9px] uppercase">Client App Version</span><strong>v6.8.54</strong></div>
+                              <div><span className="text-slate-400 block text-[9px] uppercase">Handset Model</span><strong>OnePlus | CPH2381</strong></div>
+                              <div><span className="text-slate-400 block text-[9px] uppercase">Platform OS</span><strong>Android 14</strong></div>
+                            </div>
+                            <div className="flex items-center space-x-1.5 text-xs">
+                              <button
+                                type="button"
+                                onClick={() => showToast('Calling Driver Rajesh Kumar (+91 98765 43210)...')}
+                                className="flex-1 bg-white hover:bg-slate-100 border border-slate-300 py-1.5 px-2 text-[11px] font-bold text-slate-800 flex items-center justify-center space-x-1 transition-colors"
+                              >
+                                <PhoneCall className="w-3 h-3 text-emerald-600" />
+                                <span>Contact Chauffeur</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setIsLocationModalOpen(true)}
+                                className="flex-1 bg-[#0f5fc2] hover:bg-blue-700 text-white py-1.5 px-2 text-[11px] font-bold flex items-center justify-center space-x-1 transition-colors"
+                              >
+                                <Navigation className="w-3 h-3" />
+                                <span>Route Assistance</span>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  ) : (
+                    /* CAB ALLOCATION MODE VIEW */
+                    <div className="flex-1 flex flex-col">
+                      <div className="border-b border-slate-200 px-4 py-2 flex flex-wrap items-center justify-between gap-3 bg-white">
+                        <div className="flex items-center space-x-6 text-xs">
+                          <button
+                            onClick={() => setRosterSubTab('unassigned')}
+                            className={`pb-2 pt-1 font-bold flex items-center space-x-1.5 relative ${
+                              rosterSubTab === 'unassigned' ? 'text-[#0f5fc2] border-b-2 border-[#0f5fc2] -mb-[9px]' : 'text-slate-500 hover:text-slate-800'
+                            }`}
+                          >
+                            <Car className="w-3.5 h-3.5 text-[#0f5fc2]" />
+                            <span>Unassigned</span>
+                            <span className="text-[10px] bg-slate-100 text-slate-600 px-1 py-0.2 font-semibold ml-1">0</span>
+                          </button>
+
+                          <button
+                            onClick={() => setRosterSubTab('assigned')}
+                            className={`pb-2 pt-1 font-bold flex items-center space-x-1.5 relative ${
+                              rosterSubTab === 'assigned' ? 'text-[#0f5fc2] border-b-2 border-[#0f5fc2] -mb-[9px]' : 'text-slate-500 hover:text-slate-800'
+                            }`}
+                          >
+                            <Users className="w-3.5 h-3.5 text-slate-400" />
+                            <span>Assigned</span>
+                            <span className="text-[10px] bg-blue-100 text-[#0f5fc2] px-1 py-0.2 font-semibold ml-1">
+                              {filteredCommuters.length}
+                            </span>
+                          </button>
+                        </div>
+
+                        <div className="flex items-center space-x-2 text-xs">
+                          <div className="relative">
+                            <select
+                              value={searchCriteria}
+                              onChange={(e) => setSearchCriteria(e.target.value as any)}
+                              className="border border-slate-300 bg-white py-1 pl-2 pr-6 text-xs font-semibold text-slate-600 appearance-none focus:outline-none"
+                            >
+                              <option value="Employee ID">Employee ID</option>
+                              <option value="Name">Name</option>
+                              <option value="Phone">Phone</option>
+                            </select>
+                            <ChevronDown className="w-3 h-3 text-slate-400 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                          </div>
+
+                          <div className="relative">
+                            <input
+                              type="text"
+                              value={searchEmployeeQuery}
+                              onChange={(e) => setSearchEmployeeQuery(e.target.value)}
+                              placeholder="Search by Employee ID (e.g. 9042)"
+                              className="border border-slate-300 py-1 pl-7 pr-2.5 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-blue-600 w-52"
+                            />
+                            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2 top-1/2 -translate-y-1/2" />
+                          </div>
+
+                          {searchEmployeeQuery && (
+                            <button onClick={() => setSearchEmployeeQuery('')} className="text-slate-400 hover:text-slate-600 p-1">
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+
+                          <button className="p-1 text-slate-400 hover:text-slate-600">
+                            <Maximize2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="flex-1 flex flex-col p-6 items-center justify-center relative">
+                        {rosterSubTab === 'unassigned' ? (
+                          <div className="flex flex-col items-center justify-center py-10 w-full max-w-xl text-center select-none">
+                            <svg viewBox="0 0 460 260" className="w-full max-w-md h-auto" fill="none">
+                              <line x1="80" y1="230" x2="380" y2="230" stroke="#334155" strokeWidth="1.5" />
+                              <rect x="130" y="50" width="200" height="130" stroke="#1e293b" strokeWidth="2" fill="#ffffff" />
+                              <line x1="130" y1="62" x2="330" y2="62" stroke="#e2e8f0" strokeWidth="1" />
+                              <rect x="210" y="180" width="40" height="30" stroke="#1e293b" strokeWidth="1.5" fill="#f8fafc" />
+                              <path d="M195 210H265" stroke="#1e293b" strokeWidth="2" />
+                              <path d="M220 90C220 78 238 78 238 90C238 102 226 106 226 116" stroke="#94a3b8" strokeWidth="3.5" strokeLinecap="round" />
+                              <circle cx="226" cy="130" r="3" fill="#94a3b8" />
+                              <circle cx="205" cy="80" r="1.5" fill="#1e293b" />
+                              <circle cx="250" cy="115" r="1.5" fill="#1e293b" />
+                              <circle cx="135" cy="85" r="10" stroke="#1e293b" strokeWidth="1.5" fill="#fed7aa" />
+                              <path d="M128 85C125 75 142 75 142 85" fill="#0f172a" />
+                              <path d="M125 105L115 185H145L140 105Z" stroke="#1e293b" strokeWidth="1.5" fill="#ffffff" />
+                              <circle cx="320" cy="90" r="10" stroke="#1e293b" strokeWidth="1.5" fill="#fed7aa" />
+                              <path d="M312 88C312 78 330 78 330 88" fill="#1e293b" />
+                              <path d="M308 108L305 150H335L332 108Z" stroke="#1e293b" strokeWidth="1.5" fill="#ffffff" />
+                              <path d="M305 150L300 230H315L320 170L325 230H338L335 150Z" stroke="#1e293b" strokeWidth="1.5" fill="#ffffff" />
+                              <path d="M308 115L275 125" stroke="#1e293b" strokeWidth="1.8" strokeLinecap="round" />
+                            </svg>
+                            <p className="text-xs text-slate-500 font-semibold mt-4">
+                              No record found. Data is not available in the source.
+                            </p>
+                            <p className="text-[11px] text-slate-400 mt-1">
+                              All employees scheduled for {tripDirection} shift <strong className="text-slate-700">{selectedShift}</strong> are assigned.
+                            </p>
+                            <button
+                              onClick={() => setRosterSubTab('assigned')}
+                              className="mt-4 px-4 py-1.5 bg-[#0f5fc2] hover:bg-blue-700 text-white text-xs font-bold transition-colors"
+                            >
+                              View Assigned Cabs ({filteredCommuters.length} Commuters)
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="w-full space-y-4">
+                            <div className="border border-slate-200 overflow-hidden">
+                              <table className="w-full text-left text-xs">
+                                <thead className="bg-slate-50 text-slate-500 font-semibold uppercase tracking-wider border-b border-slate-200">
+                                  <tr>
+                                    <th className="py-2.5 px-3">Employee ID & Name</th>
+                                    <th className="py-2.5 px-3">Trip ID</th>
+                                    <th className="py-2.5 px-3">{tripDirection === 'LOGIN' ? 'Pickup Point' : 'Drop Point'}</th>
+                                    <th className="py-2.5 px-3">Assigned Cab</th>
+                                    <th className="py-2.5 px-3">Boarding PIN</th>
+                                    <th className="py-2.5 px-3">Status</th>
+                                    <th className="py-2.5 px-3 text-right">Actions</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                  {filteredCommuters.length > 0 ? (
+                                    filteredCommuters.map((commuter) => {
+                                      const livePax = currentDbTrip?.passengers?.find(
+                                        (p: any) =>
+                                          p.employeeCode === commuter.empCode ||
+                                          p.fullName?.toLowerCase().includes(commuter.name.toLowerCase())
+                                      );
+                                      const isBoarded = livePax ? livePax.boardingStatus === 'BOARDED' : commuter.status === 'BOARDED';
+                                      const isNoShow = livePax?.boardingStatus === 'NO_SHOW';
+                                      const displayPin = livePax ? livePax.boardingOtp : commuter.boardingOtp;
+
+                                      return (
+                                        <tr key={commuter.id} className="hover:bg-slate-50 transition-colors">
+                                          <td className="py-2.5 px-3 font-semibold text-slate-800">
+                                            <div className="flex items-center space-x-1.5">
+                                              <span className="font-mono text-blue-700 font-bold">{commuter.empCode}</span>
+                                              <span>•</span>
+                                              <span>{commuter.name}</span>
+                                            </div>
+                                            <span className="text-slate-400 font-normal text-[11px] block">{commuter.department}</span>
+                                          </td>
+                                          <td className="py-2.5 px-3 font-mono font-bold text-slate-800">
+                                            <button
+                                              onClick={() => {
+                                                setSelectedActiveTripId(commuter.tripId);
+                                                setSearchTripInput(commuter.tripId);
+                                                showToast(`Selected Trip #${commuter.tripId} for live tracking`);
+                                              }}
+                                              className="hover:text-blue-600 hover:underline"
+                                            >
+                                              #{commuter.tripId}
+                                            </button>
+                                          </td>
+                                          <td className="py-2.5 px-3 text-slate-600 max-w-xs truncate">
+                                            {commuter.address}
+                                            {commuter.hasEscortGuard && (
+                                              <span className="block text-[10px] text-purple-700 font-semibold mt-0.5">
+                                                🛡️ Escort: {commuter.escortGuardName}
+                                              </span>
+                                            )}
+                                          </td>
+                                          <td className="py-2.5 px-3 font-semibold text-slate-800">
+                                            <div>{commuter.vehiclePlate}</div>
+                                            <span className="text-slate-400 text-[11px] font-normal block">{commuter.driverName}</span>
+                                          </td>
+                                          <td className="py-2.5 px-3 font-mono font-bold text-blue-700">{displayPin}</td>
+                                          <td className="py-2.5 px-3">
+                                            {isBoarded ? (
+                                              <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 font-bold text-[10px]">Boarded ✓</span>
+                                            ) : isNoShow ? (
+                                              <span className="bg-red-100 text-red-800 px-2 py-0.5 font-bold text-[10px]">No Show ✕</span>
+                                            ) : (
+                                              <span className="bg-blue-100 text-blue-800 px-2 py-0.5 font-bold text-[10px]">{commuter.eta}</span>
+                                            )}
+                                          </td>
+                                          <td className="py-2.5 px-3 text-right">
+                                            <button onClick={() => setIsLocationModalOpen(true)} className="text-[#0f5fc2] hover:underline font-bold text-xs">
+                                              Update Node
+                                            </button>
+                                          </td>
+                                        </tr>
+                                      );
+                                    })
+                                  ) : (
+                                    <tr>
+                                      <td colSpan={7} className="py-6 text-center text-xs text-slate-400">
+                                        No commuters found matching criteria.
+                                      </td>
+                                    </tr>
+                                  )}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                 </div>
 
-                {/* Right 4 Cols: Search Sidebar */}
-                <div className="lg:col-span-4 space-y-4">
-                  <div className="bg-white border border-slate-200 p-4 shadow-sm flex items-center justify-between">
+                {/* Right 4 Cols: Announcement Banner, Mode Switch & Search Sidebar */}
+                <div className="lg:col-span-4 space-y-3">
+                  
+                  {/* Announcement Banner (As shown in screenshot) */}
+                  <div className="bg-amber-50 border border-amber-200 px-3.5 py-2.5 text-xs text-amber-900 font-medium flex items-center justify-between shadow-xs">
+                    <div className="flex items-center space-x-2">
+                      <Megaphone className="w-4 h-4 text-amber-600 shrink-0" />
+                      <span className="font-semibold text-slate-800">A whole new landing experience!</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => showToast('MoveInSync 24/7 Enterprise Control Center active')}
+                      className="text-[#0f5fc2] font-bold hover:underline text-[11px] shrink-0"
+                    >
+                      Know More
+                    </button>
+                  </div>
+
+                  {/* Dashboard Mode Switcher */}
+                  <div className="bg-white border border-slate-200 p-3.5 shadow-sm flex items-center justify-between">
                     <span className="text-xs font-semibold text-slate-600">Dashboard mode:</span>
                     <div className="flex items-center space-x-2 text-xs font-bold">
                       <span className={dashboardMode === 'Operations' ? 'text-slate-900 font-bold' : 'text-slate-400 font-normal'}>Operations</span>
@@ -1687,8 +2102,9 @@ export default function ETSPortal() {
                           const next = dashboardMode === 'Operations' ? 'Cab Allocation' : 'Operations';
                           setDashboardMode(next);
                           if (next === 'Operations') setRosterSubTab('assigned');
+                          showToast(`Switched view to ${next} Mode`);
                         }}
-                        className={`w-11 h-6 p-0.5 border transition-colors relative ${
+                        className={`w-11 h-6 p-0.5 border transition-colors relative cursor-pointer ${
                           dashboardMode === 'Cab Allocation' ? 'bg-[#0f5fc2] border-[#0f5fc2]' : 'bg-slate-300 border-slate-400'
                         }`}
                       >
@@ -1698,16 +2114,36 @@ export default function ETSPortal() {
                     </div>
                   </div>
 
+                  {/* Search Section with Working Hotkey Refs */}
                   <div className="bg-white border border-slate-200 p-4 shadow-sm space-y-3">
                     <h3 className="font-bold text-xs uppercase tracking-wider text-slate-700">Search</h3>
                     
                     <div className="space-y-1">
                       <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider flex items-center justify-between">
-                        <span>Employee ID / Name (CTRL + E)</span>
+                        <span>Vehicle ID / Licence Plate (ALT + Q)</span>
+                        {searchVehicleInput && <button onClick={() => setSearchVehicleInput('')} className="text-slate-400 hover:text-slate-600 text-[10px]">Clear</button>}
+                      </label>
+                      <div className="relative">
+                        <input
+                          ref={vehicleSearchRef}
+                          type="text"
+                          value={searchVehicleInput}
+                          onChange={(e) => setSearchVehicleInput(e.target.value)}
+                          placeholder="e.g. KA-03-HA-8821, ECO-355"
+                          className="w-full border border-slate-300 py-2 pl-8 pr-3 text-xs placeholder:text-slate-400 focus:outline-none focus:border-blue-600 font-mono text-xs"
+                        />
+                        <Car className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider flex items-center justify-between">
+                        <span>Employee ID, Name, Phone No (CTRL + E)</span>
                         {searchEmpInput && <button onClick={() => setSearchEmpInput('')} className="text-slate-400 hover:text-slate-600 text-[10px]">Clear</button>}
                       </label>
                       <div className="relative">
                         <input
+                          ref={empSearchRef}
                           type="text"
                           value={searchEmpInput}
                           onChange={(e) => setSearchEmpInput(e.target.value)}
@@ -1720,11 +2156,12 @@ export default function ETSPortal() {
 
                     <div className="space-y-1">
                       <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider flex items-center justify-between">
-                        <span>Trip ID / Vehicle (ALT + T)</span>
+                        <span>Trip ID (ALT + T)</span>
                         {searchTripInput && <button onClick={() => setSearchTripInput('')} className="text-slate-400 hover:text-slate-600 text-[10px]">Clear</button>}
                       </label>
                       <div className="relative">
                         <input
+                          ref={tripSearchRef}
                           type="text"
                           value={searchTripInput}
                           onChange={(e) => setSearchTripInput(e.target.value)}
@@ -1732,23 +2169,6 @@ export default function ETSPortal() {
                           className="w-full border border-slate-300 py-2 pl-8 pr-3 text-xs placeholder:text-slate-400 focus:outline-none focus:border-blue-600 font-mono font-medium"
                         />
                         <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-                      </div>
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider flex items-center justify-between">
-                        <span>Vehicle Plate (ALT + Q)</span>
-                        {searchVehicleInput && <button onClick={() => setSearchVehicleInput('')} className="text-slate-400 hover:text-slate-600 text-[10px]">Clear</button>}
-                      </label>
-                      <div className="relative">
-                        <input
-                          type="text"
-                          value={searchVehicleInput}
-                          onChange={(e) => setSearchVehicleInput(e.target.value)}
-                          placeholder="e.g. KA-03-HA-8821"
-                          className="w-full border border-slate-300 py-2 pl-8 pr-3 text-xs placeholder:text-slate-400 focus:outline-none focus:border-blue-600 font-mono text-xs"
-                        />
-                        <Car className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                       </div>
                     </div>
                   </div>
@@ -2393,27 +2813,33 @@ export default function ETSPortal() {
           <footer className="bg-white border-t border-slate-200 px-6 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs">
             <div className="flex items-center space-x-3">
               <button
-                onClick={() => showToast('9 cabs in premise depot (KA-03-HA-8821, KA-05-MJ-4310, etc.)')}
-                className="border border-slate-300 hover:border-blue-500 px-3 py-1 text-slate-700 font-semibold text-xs flex items-center space-x-2 transition-colors bg-white"
+                type="button"
+                onClick={() => setIsInPremiseModalOpen(true)}
+                className="border border-slate-300 hover:border-blue-500 hover:bg-blue-50/50 px-3 py-1 text-slate-700 font-semibold text-xs flex items-center space-x-2 transition-colors bg-white shadow-xs cursor-pointer"
+                title="Click to view vehicles inside campus premises"
               >
                 <span>In premise vehicles</span>
-                <span className="w-4 h-4 bg-[#0f5fc2] text-white flex items-center justify-center text-[10px] font-bold">9</span>
+                <span className="w-4 h-4 bg-[#0f5fc2] text-white flex items-center justify-center text-[10px] font-bold">12</span>
               </button>
 
               <button
-                onClick={() => showToast('No adhoc emergency trips active for this window.')}
-                className="border border-slate-300 hover:border-blue-500 px-3 py-1 text-slate-700 font-semibold text-xs flex items-center space-x-2 transition-colors bg-white"
+                type="button"
+                onClick={() => setIsAdhocTripsModalOpen(true)}
+                className="border border-slate-300 hover:border-blue-500 hover:bg-blue-50/50 px-3 py-1 text-slate-700 font-semibold text-xs flex items-center space-x-2 transition-colors bg-white shadow-xs cursor-pointer"
+                title="Click to view or create adhoc transport requests"
               >
                 <span>Adhoc trips</span>
                 <span className="w-4 h-4 bg-[#0f5fc2] text-white flex items-center justify-center text-[10px] font-bold">0</span>
               </button>
 
               <button
-                onClick={() => showToast('All active fleet vehicles running on-time (99.4% SLA)')}
-                className="border border-slate-300 hover:border-blue-500 px-3 py-1 text-slate-700 font-semibold text-xs flex items-center space-x-2 transition-colors bg-white"
+                type="button"
+                onClick={() => setIsDelayedVehiclesModalOpen(true)}
+                className="border border-slate-300 hover:border-blue-500 hover:bg-blue-50/50 px-3 py-1 text-slate-700 font-semibold text-xs flex items-center space-x-2 transition-colors bg-white shadow-xs cursor-pointer"
+                title="Click to view delayed vehicles and SLA status"
               >
                 <span>Delayed Vehicles</span>
-                <span className="w-4 h-4 bg-[#0f5fc2] text-white flex items-center justify-center text-[10px] font-bold">0</span>
+                <span className="w-4 h-4 bg-[#0f5fc2] text-white flex items-center justify-center text-[10px] font-bold">7</span>
               </button>
             </div>
 
@@ -2772,6 +3198,494 @@ export default function ETSPortal() {
                 </div>
               </form>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Vertical Sticky Contact Support Tab on Left Screen Edge */}
+      <button
+        type="button"
+        onClick={() => setIsSupportModalOpen(true)}
+        className="fixed left-0 top-1/2 -translate-y-1/2 -rotate-90 origin-bottom-left bg-[#0f5fc2] hover:bg-blue-700 text-white font-bold text-[11px] px-3.5 py-1.5 shadow-lg tracking-wider uppercase z-30 transition-all flex items-center space-x-1.5 cursor-pointer"
+        title="24/7 Transport Control Room Helpline"
+      >
+        <HelpCircle className="w-3.5 h-3.5 rotate-90" />
+        <span>Contact Support</span>
+      </button>
+
+      {/* MODAL 1: IN PREMISE VEHICLES MODAL */}
+      {isInPremiseModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white border border-slate-300 shadow-2xl max-w-4xl w-full p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+              <div>
+                <h3 className="text-base font-black text-slate-900 flex items-center space-x-2">
+                  <Car className="w-5 h-5 text-[#0f5fc2]" />
+                  <span>In Premise Depot Vehicles (12 Active)</span>
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Vehicles currently parked, staging, or standing by within campus holding bays.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsInPremiseModalOpen(false)}
+                className="text-slate-400 hover:text-slate-700 p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="border border-slate-200 overflow-x-auto max-h-96">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50 text-slate-500 font-semibold uppercase tracking-wider border-b border-slate-200 sticky top-0">
+                  <tr>
+                    <th className="py-2.5 px-3">Vehicle ID</th>
+                    <th className="py-2.5 px-3">Registration No.</th>
+                    <th className="py-2.5 px-3">Model / Capacity</th>
+                    <th className="py-2.5 px-3">Driver Name</th>
+                    <th className="py-2.5 px-3">Driver Contact Number</th>
+                    <th className="py-2.5 px-3">Office / Gate</th>
+                    <th className="py-2.5 px-3 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-medium">
+                  {[
+                    { id: 'ECO-355', plate: 'KA-05-AP-0348', model: 'Toyota Innova (6 Seater)', driver: 'Rajesh Kumar', phone: '+91 98765 43210', location: 'WalmartLabs - Bay 2' },
+                    { id: 'ECO-478', plate: 'KA-03-HA-8821', model: 'Toyota Innova Crysta (6 Seater)', driver: 'Suresh Babu', phone: '+91 98450 11223', location: 'WalmartLabs - Gate 4' },
+                    { id: 'ATH-102', plate: 'KA-01-EQ-9011', model: 'Force Urbania (12 Seater)', driver: 'Venkatesh R.', phone: '+91 97400 33881', location: 'Enterprise Tech Park - Depot' },
+                    { id: 'ATH-108', plate: 'KA-05-MJ-4310', model: 'Toyota Innova (4 Seater)', driver: 'Mahesh Gowda', phone: '+91 98450 77112', location: 'Corporate Central Hub' },
+                    { id: 'ATH-114', plate: 'KA-04-E-6620', model: 'Tempo Traveller (18 Seater)', driver: 'Nagaraj K.', phone: '+91 98860 11992', location: 'Bellandur Tech Corridor' },
+                    { id: 'ATH-119', plate: 'KA-53-B-7712', model: 'Force Urbania (12 Seater)', driver: 'Girish Patil', phone: '+91 99160 44321', location: 'Global Tech Park - Gate 1' },
+                  ].map((cab) => (
+                    <tr key={cab.id} className="hover:bg-slate-50">
+                      <td className="py-2.5 px-3 font-mono font-bold text-blue-700">{cab.id}</td>
+                      <td className="py-2.5 px-3 font-mono font-bold text-slate-800">{cab.plate}</td>
+                      <td className="py-2.5 px-3 text-slate-600">{cab.model}</td>
+                      <td className="py-2.5 px-3 font-semibold text-slate-800">{cab.driver}</td>
+                      <td className="py-2.5 px-3 font-mono text-slate-600">{cab.phone}</td>
+                      <td className="py-2.5 px-3 text-slate-600">{cab.location}</td>
+                      <td className="py-2.5 px-3 text-right">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsInPremiseModalOpen(false);
+                            setDashboardMode('Operations');
+                            setSearchVehicleInput(cab.plate);
+                            showToast(`Focused vehicle ${cab.plate} on Operations radar`);
+                          }}
+                          className="bg-[#0f5fc2] hover:bg-blue-700 text-white font-bold px-2.5 py-1 text-[11px] shadow-xs"
+                        >
+                          Track on Map
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <button
+                type="button"
+                onClick={() => setIsInPremiseModalOpen(false)}
+                className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-1.5 text-xs"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: ADHOC TRIPS MODAL */}
+      {isAdhocTripsModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white border border-slate-300 shadow-2xl max-w-lg w-full p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+              <div>
+                <h3 className="text-base font-black text-slate-900 flex items-center space-x-2">
+                  <Navigation className="w-5 h-5 text-[#0f5fc2]" />
+                  <span>Adhoc & Emergency Transport Dispatch</span>
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Create immediate on-demand transport request for unscheduled employee commute.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAdhocTripsModalOpen(false)}
+                className="text-slate-400 hover:text-slate-700 p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                setIsAdhocTripsModalOpen(false);
+                showToast('🚨 Adhoc Emergency Trip dispatched successfully with Escort Marshal!');
+              }}
+              className="space-y-3 text-xs"
+            >
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Employee ID / Name</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. EMP-9042 (Amrutha Rao)"
+                  className="w-full border border-slate-300 px-3 py-1.5 focus:outline-none focus:border-blue-600"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Commute Direction</label>
+                  <select className="w-full border border-slate-300 px-3 py-1.5 bg-white font-medium">
+                    <option value="LOGIN">LOGIN (To Campus)</option>
+                    <option value="LOGOUT">LOGOUT (To Home)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Office Campus</label>
+                  <select className="w-full border border-slate-300 px-3 py-1.5 bg-white font-medium">
+                    <option value="WalmartLabs">WalmartLabs</option>
+                    <option value="Enterprise Tech Park">Enterprise Tech Park</option>
+                    <option value="Corporate Central Hub">Corporate Central Hub</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Pickup / Drop Node</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Indiranagar 100ft Road / Domlur Bridge"
+                  className="w-full border border-slate-300 px-3 py-1.5 focus:outline-none focus:border-blue-600"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Reason for Adhoc Request</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Production Release Support / Medical Emergency"
+                  className="w-full border border-slate-300 px-3 py-1.5 focus:outline-none focus:border-blue-600"
+                />
+              </div>
+
+              <div className="flex justify-end space-x-2 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsAdhocTripsModalOpen(false)}
+                  className="px-3 py-1.5 bg-slate-100 text-slate-700 font-bold hover:bg-slate-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-1.5 bg-[#0f5fc2] hover:bg-blue-700 text-white font-bold shadow-xs"
+                >
+                  Dispatch Adhoc Cab
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 3: DELAYED VEHICLES AUDIT MODAL */}
+      {isDelayedVehiclesModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white border border-slate-300 shadow-2xl max-w-4xl w-full p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+              <div>
+                <h3 className="text-base font-black text-slate-900 flex items-center space-x-2">
+                  <Clock className="w-5 h-5 text-amber-600" />
+                  <span>Delayed Fleet Vehicles (7 Exceeding SLA)</span>
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Live vehicles with ETA exceeding acceptable client contractual threshold (+10 mins).
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsDelayedVehiclesModalOpen(false)}
+                className="text-slate-400 hover:text-slate-700 p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="border border-slate-200 overflow-x-auto max-h-96">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50 text-slate-500 font-semibold uppercase tracking-wider border-b border-slate-200 sticky top-0">
+                  <tr>
+                    <th className="py-2.5 px-3">Vehicle</th>
+                    <th className="py-2.5 px-3">Driver</th>
+                    <th className="py-2.5 px-3">Trip ID</th>
+                    <th className="py-2.5 px-3">Expected</th>
+                    <th className="py-2.5 px-3">Current</th>
+                    <th className="py-2.5 px-3">Delay</th>
+                    <th className="py-2.5 px-3">Location</th>
+                    <th className="py-2.5 px-3">Reason / Note</th>
+                    <th className="py-2.5 px-3 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-medium">
+                  {[
+                    { plate: 'KA-05-MJ-4310', driver: 'Mahesh Gowda', trip: 'ATH-4310', exp: '13:15', curr: '13:29', delay: '+14m', loc: 'Marathahalli Bridge', reason: 'ORR Flyover repair jam' },
+                    { plate: 'KA-04-E-6620', driver: 'Nagaraj K.', trip: 'SH-01', exp: '11:45', curr: '11:58', delay: '+13m', loc: 'KR Puram Tin Factory', reason: 'Heavy railway bridge bottleneck' },
+                    { plate: 'KA-01-EQ-9011', driver: 'Muniswamy R.', trip: 'SH-03', exp: '13:00', curr: '13:12', delay: '+12m', loc: 'Koramangala 80ft Rd', reason: 'Metro rail pillar construction' },
+                  ].map((row, idx) => (
+                    <tr key={idx} className="hover:bg-slate-50">
+                      <td className="py-2.5 px-3 font-mono font-bold text-slate-900">{row.plate}</td>
+                      <td className="py-2.5 px-3 font-semibold">{row.driver}</td>
+                      <td className="py-2.5 px-3 font-mono text-blue-700 font-bold">{row.trip}</td>
+                      <td className="py-2.5 px-3 text-slate-500">{row.exp}</td>
+                      <td className="py-2.5 px-3 font-bold text-red-600">{row.curr}</td>
+                      <td className="py-2.5 px-3 font-black text-red-700 bg-red-50">{row.delay}</td>
+                      <td className="py-2.5 px-3 text-slate-700">{row.loc}</td>
+                      <td className="py-2.5 px-3 text-slate-500 italic">{row.reason}</td>
+                      <td className="py-2.5 px-3 text-right">
+                        <button
+                          type="button"
+                          onClick={() => showToast(`Calling ${row.driver} to re-route...`)}
+                          className="bg-amber-600 hover:bg-amber-700 text-white font-bold px-2.5 py-1 text-[11px]"
+                        >
+                          Contact Driver
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <button
+                type="button"
+                onClick={() => setIsDelayedVehiclesModalOpen(false)}
+                className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-1.5 text-xs"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 4: DEDICATED INCOMPLETE TRIPS SCREEN / VIEW */}
+      {isIncompleteTripsModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white border border-slate-300 shadow-2xl max-w-5xl w-full p-6 space-y-4">
+            
+            {/* Header: ← Incomplete Trips */}
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+              <div className="flex items-center space-x-3">
+                <button
+                  type="button"
+                  onClick={() => setIsIncompleteTripsModalOpen(false)}
+                  className="p-1.5 hover:bg-slate-100 text-slate-700 transition-colors flex items-center space-x-1"
+                  title="Return to Main Operations"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
+                <div>
+                  <h3 className="text-base font-black text-slate-900 tracking-tight flex items-center space-x-2">
+                    <span>Incomplete Trips</span>
+                    <span className="bg-[#ff4d4f] text-white text-[10px] font-bold px-2 py-0.5 uppercase">
+                      1 Trip Requiring Intervention
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Operations Exception Console: Trips with delayed chauffeur arrival, route deviation, or escort unverified.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsIncompleteTripsModalOpen(false)}
+                className="text-slate-400 hover:text-slate-700 p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Filter Bar: Incomplete Trips (1) ▼ | Search Trip ID | All ▼ | View On Map | ⓘ */}
+            <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-50 p-3 border border-slate-200 text-xs font-semibold">
+              <div className="flex items-center space-x-2">
+                <div className="relative">
+                  <select className="border border-slate-300 bg-white py-1.5 pl-3 pr-7 text-xs font-bold text-slate-800 appearance-none focus:outline-none">
+                    <option value="1">Incomplete Trips (1)</option>
+                    <option value="all">All Exceptions</option>
+                  </select>
+                  <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
+
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder="Search Trip ID (e.g. ATH-4310)"
+                    className="border border-slate-300 bg-white py-1.5 pl-7 pr-3 text-xs w-52 placeholder:text-slate-400 focus:outline-none"
+                  />
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2 top-1/2 -translate-y-1/2" />
+                </div>
+
+                <div className="relative">
+                  <select className="border border-slate-300 bg-white py-1.5 pl-3 pr-7 text-xs font-semibold text-slate-700 appearance-none focus:outline-none">
+                    <option value="all">All Issues</option>
+                    <option value="delayed">Delayed &gt; 10m</option>
+                    <option value="escort">Missing Marshal</option>
+                  </select>
+                  <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsIncompleteTripsModalOpen(false);
+                    setDashboardMode('Operations');
+                    showToast('Plotting incomplete trip ATH-4310 on Google Maps radar');
+                  }}
+                  className="bg-[#0f5fc2] hover:bg-blue-700 text-white font-bold px-3 py-1.5 shadow-xs flex items-center space-x-1.5"
+                >
+                  <Navigation className="w-3.5 h-3.5" />
+                  <span>View On Map</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => showToast('Incomplete trips: Trips that failed to start within 15 mins of planned shift time.')}
+                  className="p-1.5 text-slate-500 hover:text-slate-800 border border-slate-300 bg-white"
+                  title="Policy Information"
+                >
+                  <Info className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Table of Incomplete Trips */}
+            <div className="border border-slate-200 overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50 text-slate-500 font-semibold uppercase tracking-wider border-b border-slate-200">
+                  <tr>
+                    <th className="py-2.5 px-3">Trip ID</th>
+                    <th className="py-2.5 px-3">Shift & Dir</th>
+                    <th className="py-2.5 px-3">Vehicle Plate</th>
+                    <th className="py-2.5 px-3">Driver</th>
+                    <th className="py-2.5 px-3">Route Node</th>
+                    <th className="py-2.5 px-3">Scheduled</th>
+                    <th className="py-2.5 px-3">Issue Reason</th>
+                    <th className="py-2.5 px-3 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-medium">
+                  <tr className="hover:bg-slate-50">
+                    <td className="py-3 px-3 font-mono font-bold text-red-700">ATH-4310</td>
+                    <td className="py-3 px-3">
+                      <span className="font-bold text-slate-800">13:30</span>
+                      <span className="text-[10px] bg-blue-100 text-blue-800 font-bold px-1.5 py-0.2 ml-1">LOGIN</span>
+                    </td>
+                    <td className="py-3 px-3 font-mono font-bold text-slate-900">KA-05-MJ-4310</td>
+                    <td className="py-3 px-3">Mahesh Gowda (+91 98450 77112)</td>
+                    <td className="py-3 px-3 text-slate-600">Domlur &gt; Marathahalli</td>
+                    <td className="py-3 px-3 text-slate-500 font-mono">13:30</td>
+                    <td className="py-3 px-3">
+                      <span className="text-[#cf1322] font-semibold bg-[#fff1f0] border border-[#ffa39e] px-2 py-0.5 text-[10px] block w-fit">
+                        Chauffeur Re-routing (Delayed +14m)
+                      </span>
+                    </td>
+                    <td className="py-3 px-3 text-right">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsIncompleteTripsModalOpen(false);
+                          showToast('Cab re-allocated: Dispatched backup Innova KA-03-HA-8821!');
+                        }}
+                        className="bg-[#0f5fc2] hover:bg-blue-700 text-white font-bold px-3 py-1 text-xs shadow-xs"
+                      >
+                        Reassign Cab
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <button
+                type="button"
+                onClick={() => setIsIncompleteTripsModalOpen(false)}
+                className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-1.5 text-xs"
+              >
+                Close View
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 5: 24/7 SUPPORT MODAL */}
+      {isSupportModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white border border-slate-300 shadow-2xl max-w-md w-full p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+              <div className="flex items-center space-x-2">
+                <HelpCircle className="w-5 h-5 text-[#0f5fc2]" />
+                <h3 className="text-base font-black text-slate-900">
+                  Atharva 24/7 Operations Desk Support
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsSupportModalOpen(false)}
+                className="text-slate-400 hover:text-slate-700 p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs text-slate-700">
+              <p className="text-slate-500">
+                Direct hotline to Bengaluru Transport Control Command for drivers, vendor leads, and corporate enterprise desk managers.
+              </p>
+
+              <div className="bg-slate-50 p-3 border border-slate-200 space-y-2">
+                <div>
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">24x7 Emergency Helpline</span>
+                  <a href="tel:+918049652100" className="text-sm font-black text-blue-700 hover:underline">
+                    +91 80 4965 2100 / +91 98450 11223
+                  </a>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Operations Dispatch Email</span>
+                  <a href="mailto:ops@atharvatravels.com" className="text-xs font-semibold text-slate-800 hover:underline">
+                    ops@atharvatravels.com
+                  </a>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">WhatsApp Fleet Bot</span>
+                  <span className="text-xs font-mono font-bold text-emerald-700">+91 98765 43210</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <button
+                type="button"
+                onClick={() => setIsSupportModalOpen(false)}
+                className="bg-[#0f5fc2] hover:bg-blue-700 text-white font-bold px-4 py-1.5 text-xs shadow-xs"
+              >
+                Got It
+              </button>
+            </div>
           </div>
         </div>
       )}
