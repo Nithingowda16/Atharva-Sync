@@ -1,0 +1,32 @@
+{
+  "expo": {
+    "name": "Atharva Travels ETS",
+    "slug": "atharva-employee-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FFFFFF"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0B4EA2"
+      },
+      "package": "com.atharvatravels.ets.employee"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
+  }
+}
+
