@@ -1,0 +1,15 @@
+node_modules/
+.expo/
+dist/
+web-build/
+
+# Android build outputs
+android/app/build/
+android/.gradle/
+android/build/
+*.apk
+*.aab
+
+# Keystore files
+*.jks
+*.keystore
