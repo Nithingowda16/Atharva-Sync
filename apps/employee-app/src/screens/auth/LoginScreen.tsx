@@ -21,9 +21,10 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Image,
   ActivityIndicator,
 } from 'react-native';
+import * as RN from 'react-native';
+const Image = (RN as any).Image;
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { authService } from '../../services';
@@ -150,7 +151,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                   placeholder="e.g. EMP-9042 or corporate email"
                   placeholderTextColor="#94A3B8"
                   value={identifier}
-                  onChangeText={(text) => {
+                  onChangeText={(text: string) => {
                     setIdentifier(text);
                     if (errorMessage) setErrorMessage(null);
                   }}
@@ -174,7 +175,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                   placeholder="Enter your security password"
                   placeholderTextColor="#94A3B8"
                   value={password}
-                  onChangeText={(text) => {
+                  onChangeText={(text: string) => {
                     setPassword(text);
                     if (errorMessage) setErrorMessage(null);
                   }}

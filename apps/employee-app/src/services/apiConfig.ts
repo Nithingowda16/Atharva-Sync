@@ -30,6 +30,8 @@ export const API_ENDPOINTS = {
   LOGIN: '/auth/login',
   LOGOUT: '/auth/logout',
   EMPLOYEE_COMMUTE: '/mobile/employee/commute',
+  ADDRESS: '/mobile/employee/address',
+  STATUS_MESSAGE: '/mobile/employee/status-message',
   TRIPS: '/trips',
   TELEMETRY: '/telemetry',
   SOS: '/sos',

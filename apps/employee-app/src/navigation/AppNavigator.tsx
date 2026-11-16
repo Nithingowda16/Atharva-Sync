@@ -37,7 +37,7 @@ import { EmergencySosScreen } from '../screens/emergency/EmergencySosScreen';
 import { BottomNavigation } from '../components/navigation/BottomNavigation';
 import { QuickActionBottomSheet } from '../components/navigation/QuickActionBottomSheet';
 import { colors } from '../theme';
-import { bookingService, authService } from '../services';
+import { bookingService, authService, addressService } from '../services';
 import {
   ScreenName,
   MainTab,
@@ -145,6 +145,24 @@ export const AppNavigator: React.FC = () => {
 
   useEffect(() => {
     refreshLiveCommute();
+    // Auto-populate pickup location from employee's primary saved address
+    const empId = user?.employeeId || '111';
+    addressService.getPrimaryAddress(empId).then((primary) => {
+      if (primary) {
+        setBookingDraft((prev) => ({
+          ...prev,
+          pickupPoint: prev.pickupPoint || {
+            id: primary.id,
+            name: `${primary.label}: ${primary.addressLine}`,
+            landmark: primary.landmark || 'Residential Landmark',
+            address: `${primary.addressLine}, ${primary.city} ${primary.pincode || ''}`,
+            latitude: primary.latitude || 12.9719,
+            longitude: primary.longitude || 77.6412,
+            isPrimary: true,
+          },
+        }));
+      }
+    });
   }, [user]);
 
   // Booking Draft State
@@ -175,9 +193,16 @@ export const AppNavigator: React.FC = () => {
     }
   };
 
-  // Confirm Booking Handler (completes frontend state transition)
-  const handleBookingConfirmed = () => {
+  // Confirm Booking Handler (sends to central backend & updates local state)
+  const handleBookingConfirmed = async () => {
     if (bookingDraft.shift && bookingDraft.pickupPoint) {
+      // 1. Submit to backend API / database
+      bookingService.createSchedule(bookingDraft).then((res) => {
+        if (res.success) {
+          refreshLiveCommute();
+        }
+      });
+
       const newRide: RideRecord = {
         id: `ride-${Date.now()}`,
         tripCode: `ATH-${Date.now().toString().slice(-4)}`,
@@ -303,6 +328,15 @@ export const AppNavigator: React.FC = () => {
           <QrBoardingScreen
             ride={selectedRide}
             onBack={() => setCurrentScreen('Home')}
+            onBoarded={() => {
+              if (selectedRide) {
+                const updated: RideRecord = { ...selectedRide, boardingStatus: 'BOARDED' };
+                setSelectedRide(updated);
+                setBookingsList((prev) =>
+                  prev.map((r) => (r.id === updated.id ? updated : r))
+                );
+              }
+            }}
           />
         );
 
@@ -323,24 +357,24 @@ export const AppNavigator: React.FC = () => {
         return (
           <ShiftSelectionScreen
             date={bookingDraft.date || new Date().toISOString().split('T')[0]}
+            direction={bookingDraft.direction || 'LOGIN'}
             onBack={() => setCurrentScreen('CreateSchedule')}
             onApplyShift={(shift) => {
               setBookingDraft((prev) => ({ ...prev, shift }));
               setCurrentScreen('CreateSchedule');
             }}
-            availableShifts={[]} // Strict No-Mock-Data: empty by default
           />
         );
 
       case 'PickupLocation':
         return (
           <PickupLocationScreen
+            employeeId={user?.employeeId || '111'}
             onBack={() => setCurrentScreen('CreateSchedule')}
             onSelectPickup={(pickup) => {
               setBookingDraft((prev) => ({ ...prev, pickupPoint: pickup }));
               setCurrentScreen('CreateSchedule');
             }}
-            availablePickups={[]} // Strict No-Mock-Data: empty by default
             currentSelectedId={bookingDraft.pickupPoint?.id}
           />
         );
@@ -353,7 +387,6 @@ export const AppNavigator: React.FC = () => {
               setBookingDraft((prev) => ({ ...prev, route }));
               setCurrentScreen('CreateSchedule');
             }}
-            availableRoutes={[]} // Strict No-Mock-Data: empty by default
             currentSelectedId={bookingDraft.route?.id}
           />
         );
@@ -388,7 +421,26 @@ export const AppNavigator: React.FC = () => {
         return <HistoryScreen onBack={() => setCurrentScreen('Profile')} />;
 
       case 'MyAddress':
-        return <MyAddressScreen onBack={() => setCurrentScreen('Profile')} />;
+        return (
+          <MyAddressScreen
+            employeeId={user?.employeeId || '111'}
+            onBack={() => setCurrentScreen('Profile')}
+            onAddAddress={(newAddr) => {
+              setBookingDraft((prev) => ({
+                ...prev,
+                pickupPoint: {
+                  id: newAddr.id,
+                  name: `${newAddr.label}: ${newAddr.addressLine}`,
+                  landmark: newAddr.landmark || 'Residential Landmark',
+                  address: `${newAddr.addressLine}, ${newAddr.city} ${newAddr.pincode || ''}`,
+                  latitude: newAddr.latitude || 12.9719,
+                  longitude: newAddr.longitude || 77.6412,
+                  isPrimary: true,
+                },
+              }));
+            }}
+          />
+        );
 
       case 'Notifications':
         return <NotificationsScreen onBack={() => setCurrentScreen('Home')} />;

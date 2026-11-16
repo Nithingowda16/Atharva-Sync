@@ -18,12 +18,13 @@ import {
   StyleSheet,
   TouchableOpacity,
   Dimensions,
-  FlatList,
-  NativeSyntheticEvent,
-  NativeScrollEvent,
   BackHandler,
-  Image,
 } from 'react-native';
+import * as RN from 'react-native';
+const FlatList = (RN as any).FlatList;
+const Image = (RN as any).Image;
+type NativeSyntheticEvent<T> = any;
+type NativeScrollEvent = any;
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -63,7 +64,7 @@ const SLIDES: SlideItem[] = [
 
 export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onFinish }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const flatListRef = useRef<FlatList<SlideItem>>(null);
+  const flatListRef = useRef<any>(null);
 
   // Android Hardware Back Button & Back Gestures
   useEffect(() => {
@@ -304,7 +305,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onFinish }) 
         ref={flatListRef}
         data={SLIDES}
         renderItem={renderSlideItem}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item: any) => item.id}
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}

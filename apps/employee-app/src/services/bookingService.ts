@@ -162,34 +162,35 @@ export const bookingService = {
 
     try {
       const session = await authService.getSession();
-      const res = await fetch(`${getApiBaseUrl()}${API_ENDPOINTS.TRIPS}`, {
+      const res = await fetch(`${getApiBaseUrl()}${API_ENDPOINTS.EMPLOYEE_COMMUTE}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          employeeId: session?.employeeId || 'EMP-9042',
+          employeeName: session?.fullName || 'Amrutha Rao',
           shiftDate: draft.date,
           shiftTime: draft.shift.shiftTime,
           type: draft.direction,
-          corporateClient: 'Walmart Global Tech',
-          routeName: `${draft.pickupPoint.name} → Tech Park Campus`,
-          passengers: [
-            {
-              employeeId: session?.employeeId || 'emp-amrutha',
-              fullName: session?.fullName || 'Amrutha Rao',
-              phone: session?.phone || '+91 98450 11223',
-              pickupAddress: draft.pickupPoint.name,
-              pickupCoords: { latitude: draft.pickupPoint.latitude, longitude: draft.pickupPoint.longitude },
-              dropAddress: 'Enterprise Tech Park, Tower B',
-              dropCoords: { latitude: 12.9352, longitude: 77.6946 },
-            },
-          ],
+          pickupAddress: draft.pickupPoint.name,
+          pickupCoords: {
+            latitude: draft.pickupPoint.latitude || 12.9719,
+            longitude: draft.pickupPoint.longitude || 77.6412,
+          },
+          dropAddress: draft.destination?.name || 'Enterprise Tech Park, Tower B',
+          dropCoords: { latitude: 12.9352, longitude: 77.6946 },
         }),
       });
 
       if (res.ok) {
         const data = await res.json();
-        return { success: true, bookingId: data.trip?.tripCode || `TRIP-${Date.now()}` };
+        return {
+          success: true,
+          bookingId: data.tripCode || `ATH-${Date.now().toString().slice(-4)}`,
+        };
       }
-    } catch (e) {}
+    } catch (e) {
+      console.warn('Backend booking sync warning, using local state:', e);
+    }
 
     return {
       success: true,

@@ -43,6 +43,21 @@ export const typography = {
 
   // Pre-configured text styles
   presets: {
+    h1: {
+      fontSize: 26,
+      lineHeight: 34,
+      fontWeight: '800',
+    } as TextStyle,
+    h2: {
+      fontSize: 20,
+      lineHeight: 26,
+      fontWeight: '700',
+    } as TextStyle,
+    h3: {
+      fontSize: 17,
+      lineHeight: 22,
+      fontWeight: '700',
+    } as TextStyle,
     pageTitle: {
       fontSize: 24,
       lineHeight: 32,
@@ -70,15 +85,31 @@ export const typography = {
       lineHeight: 20,
       fontWeight: '500',
     } as TextStyle,
+    bodyBold: {
+      fontSize: 14,
+      lineHeight: 20,
+      fontWeight: '700',
+    } as TextStyle,
     caption: {
       fontSize: 12,
       lineHeight: 16,
       fontWeight: '500',
     } as TextStyle,
+    captionBold: {
+      fontSize: 12,
+      lineHeight: 16,
+      fontWeight: '700',
+    } as TextStyle,
     captionSmall: {
       fontSize: 11,
       lineHeight: 14,
       fontWeight: '400',
+    } as TextStyle,
+    badge: {
+      fontSize: 10,
+      lineHeight: 14,
+      fontWeight: '700',
+      letterSpacing: 0.5,
     } as TextStyle,
     button: {
       fontSize: 15,

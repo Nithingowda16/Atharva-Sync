@@ -34,11 +34,12 @@ export type JourneyDirection = 'LOGIN' | 'LOGOUT'; // LOGIN = Go to work, LOGOUT
 export interface ShiftRecord {
   id: string;
   shiftTime: string;
-  travelDurationMinutes: number;
+  travelDurationMinutes?: number;
   direction: JourneyDirection;
   shiftWindow?: string;
   cutoffTime?: string;
   isAvailable?: boolean;
+  badgeLabel?: string;
 }
 
 export interface PickupPoint {
@@ -49,6 +50,7 @@ export interface PickupPoint {
   latitude?: number;
   longitude?: number;
   isPrimary?: boolean;
+  pickupTime?: string;
 }
 
 export interface DestinationOffice {
@@ -61,12 +63,16 @@ export interface DestinationOffice {
 
 export interface RouteRecord {
   id: string;
-  routeCode: string;
+  routeCode?: string;
+  code?: string;
   name: string;
   direction: JourneyDirection;
   estimatedDurationMinutes: number;
   totalDistanceKm?: number;
   stopsCount?: number;
+  totalStops?: number;
+  firstPickupTime?: string;
+  stops?: (PickupPoint | string)[];
 }
 
 export interface BookingDraft {
@@ -90,6 +96,8 @@ export type TripStatus =
   | 'BOARDING'
   | 'DEPARTED'
   | 'IN_TRANSIT'
+  | 'EN_ROUTE'
+  | 'BOARDED'
   | 'ARRIVED'
   | 'COMPLETED'
   | 'CANCELLED';
@@ -144,6 +152,8 @@ export interface UserAddress {
   landmark?: string;
   city: string;
   pincode?: string;
+  latitude?: number;
+  longitude?: number;
   isPrimary: boolean;
 }
 

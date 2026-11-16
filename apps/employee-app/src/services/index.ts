@@ -9,3 +9,4 @@ export * from './bookingService';
 export * from './shiftService';
 export * from './tripService';
 export * from './notificationService';
+export * from './addressService';
