@@ -28,9 +28,7 @@ import { RideRecord } from '../../types';
 interface HomeScreenProps {
   user?: any;
   activeRide?: RideRecord | null;
-  onNavigateFlexiSchedule: () => void;
-  onNavigateRentalz: () => void;
-  onNavigateSchedule?: () => void;
+  onNavigateSchedule: () => void;
   onNavigateMyBookings: () => void;
   onNavigateRideDetails: (ride: RideRecord) => void;
   onNavigateLiveTracking: (ride: RideRecord) => void;
@@ -42,8 +40,6 @@ interface HomeScreenProps {
 export const HomeScreen: React.FC<HomeScreenProps> = ({
   user,
   activeRide = null,
-  onNavigateFlexiSchedule,
-  onNavigateRentalz,
   onNavigateSchedule,
   onNavigateMyBookings,
   onNavigateRideDetails,
@@ -178,58 +174,69 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           <RoundedCard style={styles.emptyCard}>
             <EmptyState
               iconName="calendar-outline"
-              title="No active trips yet"
-              description="You have no active rides scheduled for today. Book your commute with Flexi Schedule or request a corporate Rental."
-              actionTitle="Flexi Schedule"
-              onAction={onNavigateFlexiSchedule}
+              title="No bookings yet"
+              description="You have no active rides scheduled for today. Book your upcoming shift to secure cab allocation."
+              actionTitle="Schedule Ride"
+              onAction={onNavigateSchedule}
             />
           </RoundedCard>
         )}
 
-        {/* Corporate Mobility Services */}
+        {/* Commute Operations (Schedule & Manage) */}
         <SectionHeader
-          title="Mobility Services"
-          subtitle="Enterprise corporate car rentals & flexible shift scheduling"
+          title="Commute Operations"
+          subtitle="Quick access to employee transport controls"
           style={{ marginTop: spacing.lg }}
         />
 
         <View style={styles.quickTilesGrid}>
-          {/* Tile 1: Rentalz */}
+          {/* Tile 1: Schedule Ride */}
           <TouchableOpacity
             activeOpacity={0.75}
-            onPress={onNavigateRentalz}
-            style={styles.tile}
-          >
-            <View style={styles.tileIconContainer}>
-              <Ionicons name="car-sport-outline" size={24} color="#000000" />
-            </View>
-            <Text style={styles.tileTitle}>Rentalz</Text>
-            <Text style={styles.tileSubtitle}>Executive hourly car rentals</Text>
-          </TouchableOpacity>
-
-          {/* Tile 2: Flexi Schedule */}
-          <TouchableOpacity
-            activeOpacity={0.75}
-            onPress={onNavigateFlexiSchedule}
+            onPress={onNavigateSchedule}
             style={styles.tile}
           >
             <View style={styles.tileIconContainer}>
               <Ionicons name="calendar-outline" size={24} color="#000000" />
             </View>
-            <Text style={styles.tileTitle}>Flexi Schedule</Text>
-            <Text style={styles.tileSubtitle}>Multi-day & flexible shift commute</Text>
+            <Text style={styles.tileTitle}>Schedule Ride</Text>
+            <Text style={styles.tileSubtitle}>Book login/logout commute</Text>
+          </TouchableOpacity>
+
+          {/* Tile 2: Manage Rides */}
+          <TouchableOpacity
+            activeOpacity={0.75}
+            onPress={onNavigateMyBookings}
+            style={styles.tile}
+          >
+            <View style={styles.tileIconContainer}>
+              <Ionicons name="time-outline" size={24} color="#000000" />
+            </View>
+            <Text style={styles.tileTitle}>Manage Rides</Text>
+            <Text style={styles.tileSubtitle}>View upcoming & past trips</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Transport Advisory Card */}
+        {/* Women Passenger Statutory Safety & SOS Card */}
         <RoundedCard style={styles.advisoryCard}>
           <View style={styles.advisoryHeader}>
-            <Ionicons name="information-circle-outline" size={20} color={colors.info} />
-            <Text style={styles.advisoryTitle}>Statutory Safety Standards</Text>
+            <View style={styles.sosIconContainer}>
+              <Ionicons name="shield-checkmark" size={16} color="#DC2626" />
+            </View>
+            <Text style={styles.advisoryTitle}>WOMEN PASSENGER SAFETY & ESCORT</Text>
           </View>
           <Text style={styles.advisoryBody}>
-            Female employees on shifts between 20:00 and 06:00 are accompanied by trained, verified security escorts in compliance with Karnataka Transport Guidelines.
+            Female employees on shifts between 20:00 and 06:00 are accompanied by trained, verified security escorts with continuous GPS tracking & 24/7 Central Safety Desk surveillance in strict statutory compliance.
           </Text>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={onNavigateSos}
+            style={styles.sosActionRow}
+          >
+            <View style={styles.flashingDot} />
+            <Text style={styles.sosActionText}>24/7 Safety Command Active • Tap for Emergency SOS</Text>
+            <Ionicons name="chevron-forward" size={14} color="#DC2626" />
+          </TouchableOpacity>
         </RoundedCard>
       </ScrollView>
     </SafeAreaView>
@@ -458,23 +465,62 @@ const styles = StyleSheet.create({
   },
   advisoryCard: {
     marginTop: spacing.xl,
-    backgroundColor: colors.surface,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1.5,
+    borderColor: '#FCA5A5',
+    borderRadius: 16,
+    padding: 16,
   },
   advisoryHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    marginBottom: 6,
+    marginBottom: 8,
+  },
+  sosIconContainer: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#FEE2E2',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   advisoryTitle: {
-    ...typography.presets.cardTitle,
-    fontSize: 13,
-    color: colors.textPrimary,
+    fontSize: 12,
+    fontWeight: '900',
+    color: '#DC2626',
+    letterSpacing: 0.5,
+    flex: 1,
   },
   advisoryBody: {
-    ...typography.presets.caption,
-    color: colors.textSecondary,
+    fontSize: 12,
+    color: '#991B1B',
     lineHeight: 18,
+    fontWeight: '500',
+  },
+  sosActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEE2E2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    marginTop: 12,
+  },
+  flashingDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#DC2626',
+    marginRight: 8,
+  },
+  sosActionText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#B91C1C',
+    flex: 1,
   },
 });
 

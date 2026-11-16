@@ -34,6 +34,7 @@ import { FeedbackScreen } from '../screens/profile/FeedbackScreen';
 import { SettingsScreen } from '../screens/profile/SettingsScreen';
 import { EmergencySosScreen } from '../screens/emergency/EmergencySosScreen';
 import { RentalzScreen } from '../screens/rentalz/RentalzScreen';
+import { FlexiScheduleScreen } from '../screens/schedule/FlexiScheduleScreen';
 
 import { BottomNavigation } from '../components/navigation/BottomNavigation';
 import { QuickActionBottomSheet, QuickActionType } from '../components/navigation/QuickActionBottomSheet';
@@ -92,6 +93,7 @@ export const AppNavigator: React.FC = () => {
 
         case 'MyBookings':
         case 'Rentalz':
+        case 'FlexiSchedule':
         case 'RideDetails':
         case 'LiveTracking':
         case 'QrBoarding':
@@ -188,20 +190,29 @@ export const AppNavigator: React.FC = () => {
   // Quick Action Sheet Handlers
   const handleSelectQuickAction = (action: QuickActionType) => {
     setIsBottomSheetOpen(false);
-    if (action === 'flexi' || action === 'schedule') {
+    if (action === 'flexi') {
+      setCurrentScreen('FlexiSchedule');
+    } else if (action === 'rentalz') {
+      setCurrentScreen('Rentalz');
+    } else if (action === 'schedule') {
       setBookingDraft({
         date: new Date().toISOString().split('T')[0],
         selectedDates: [new Date().toISOString().split('T')[0]],
         direction: 'BOTH',
       });
       setCurrentScreen('CreateSchedule');
-    } else if (action === 'rentalz') {
-      setCurrentScreen('Rentalz');
     } else if (action === 'manage') {
       setCurrentScreen('MyBookings');
     } else if (action === 'routes') {
       setCurrentScreen('Home');
     }
+  };
+
+  const handleFlexiRequest = (ride: RideRecord) => {
+    bookingService.addConfirmedRides([ride]);
+    setBookingsList((prev) => [ride, ...prev]);
+    setSelectedRide(ride);
+    setCurrentScreen('LiveTracking');
   };
 
   const handleRentalConfirmed = (ride: RideRecord) => {
@@ -365,15 +376,6 @@ export const AppNavigator: React.FC = () => {
           <HomeScreen
             user={user}
             activeRide={selectedRide || (bookingsList.length > 0 ? bookingsList[0] : null)}
-            onNavigateFlexiSchedule={() => {
-              setBookingDraft({
-                date: new Date().toISOString().split('T')[0],
-                selectedDates: [new Date().toISOString().split('T')[0]],
-                direction: 'BOTH',
-              });
-              setCurrentScreen('CreateSchedule');
-            }}
-            onNavigateRentalz={() => setCurrentScreen('Rentalz')}
             onNavigateSchedule={() => {
               setBookingDraft({
                 date: new Date().toISOString().split('T')[0],
@@ -406,6 +408,15 @@ export const AppNavigator: React.FC = () => {
             user={user}
             onBack={() => setCurrentScreen('Home')}
             onConfirmRental={handleRentalConfirmed}
+          />
+        );
+
+      case 'FlexiSchedule':
+        return (
+          <FlexiScheduleScreen
+            user={user}
+            onBack={() => setCurrentScreen('Home')}
+            onRequestCab={handleFlexiRequest}
           />
         );
 
@@ -597,7 +608,7 @@ export const AppNavigator: React.FC = () => {
         return (
           <HomeScreen
             user={user}
-            onNavigateFlexiSchedule={() => {
+            onNavigateSchedule={() => {
               setBookingDraft({
                 date: new Date().toISOString().split('T')[0],
                 selectedDates: [new Date().toISOString().split('T')[0]],
@@ -605,8 +616,6 @@ export const AppNavigator: React.FC = () => {
               });
               setCurrentScreen('CreateSchedule');
             }}
-            onNavigateRentalz={() => setCurrentScreen('Rentalz')}
-            onNavigateSchedule={() => setCurrentScreen('CreateSchedule')}
             onNavigateMyBookings={() => setCurrentScreen('MyBookings')}
             onNavigateRideDetails={() => {}}
             onNavigateLiveTracking={() => {}}

@@ -19,6 +19,7 @@ export type ScreenName =
   | 'RouteSelection'
   | 'BookingReview'
   | 'Rentalz'
+  | 'FlexiSchedule'
   | 'Profile'
   | 'History'
   | 'MyAddress'

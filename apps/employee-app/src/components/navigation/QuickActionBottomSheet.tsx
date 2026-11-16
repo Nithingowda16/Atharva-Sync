@@ -104,37 +104,37 @@ export const QuickActionBottomSheet: React.FC<QuickActionBottomSheetProps> = ({
         </Text>
 
         <View style={styles.actionsList}>
-          {/* Action 1: Rentalz */}
-          <TouchableOpacity
-            activeOpacity={0.75}
-            onPress={() => onSelectAction('rentalz')}
-            style={styles.actionCard}
-          >
-            <IconContainer size={44} shape="rounded" backgroundColor="#F3F4F6">
-              <Ionicons name="car-sport-outline" size={24} color="#000000" />
-            </IconContainer>
-            <View style={styles.actionTextCol}>
-              <Text style={styles.actionCardTitle}>Rentalz</Text>
-              <Text style={styles.actionCardSubtitle}>
-                Executive hourly, full-day & airport corporate car rentals
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-          </TouchableOpacity>
-
-          {/* Action 2: Flexi Schedule */}
+          {/* Action 1: Flexi Schedule (Missed Cab Catch-Up) */}
           <TouchableOpacity
             activeOpacity={0.75}
             onPress={() => onSelectAction('flexi')}
             style={styles.actionCard}
           >
             <IconContainer size={44} shape="rounded" backgroundColor="#F3F4F6">
-              <Ionicons name="calendar-outline" size={24} color="#000000" />
+              <Ionicons name="flash-outline" size={24} color="#000000" />
             </IconContainer>
             <View style={styles.actionTextCol}>
               <Text style={styles.actionCardTitle}>Flexi Schedule</Text>
               <Text style={styles.actionCardSubtitle}>
-                Schedule multiple dates, round trips & flexible shifts
+                Missed your cab? Find active cabs travelling towards your location
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+          </TouchableOpacity>
+
+          {/* Action 2: Rentalz (Company Purpose) */}
+          <TouchableOpacity
+            activeOpacity={0.75}
+            onPress={() => onSelectAction('rentalz')}
+            style={styles.actionCard}
+          >
+            <IconContainer size={44} shape="rounded" backgroundColor="#F3F4F6">
+              <Ionicons name="briefcase-outline" size={24} color="#000000" />
+            </IconContainer>
+            <View style={styles.actionTextCol}>
+              <Text style={styles.actionCardTitle}>Rentalz</Text>
+              <Text style={styles.actionCardSubtitle}>
+                Official corporate car rental for company business & client visits
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />

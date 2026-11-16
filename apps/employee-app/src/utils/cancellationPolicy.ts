@@ -58,3 +58,4 @@ export function checkCancellationEligibility(dateStr: string, shiftTime: string)
     };
   }
 }
+

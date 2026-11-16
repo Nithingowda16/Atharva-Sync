@@ -146,7 +146,7 @@ export const CreateScheduleScreen: React.FC<CreateScheduleScreenProps> = ({
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <AppHeader title="Flexi Schedule" onBack={onBack} />
+      <AppHeader title="Schedule Commute" onBack={onBack} />
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Section 1: Travel Dates Selection (Multi-Date / Week Booking) */}

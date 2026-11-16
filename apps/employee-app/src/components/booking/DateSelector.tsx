@@ -16,6 +16,7 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography, borderRadius, spacing } from '../../theme';
@@ -52,14 +53,14 @@ export const DateSelector: React.FC<DateSelectorProps> = ({
     ? [selectedDate]
     : [new Date().toISOString().split('T')[0]];
 
-  // Generate upcoming 14 days (2 full work weeks)
+  // Generate strictly upcoming 7 days (1 week limit enforced by company policy)
   const generateUpcomingDays = (): DateItem[] => {
     const list: DateItem[] = [];
     const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const today = new Date();
 
-    for (let i = 0; i < 14; i++) {
+    for (let i = 0; i < 7; i++) {
       const d = new Date(today);
       d.setDate(today.getDate() + i);
       const iso = d.toISOString().split('T')[0];
@@ -77,7 +78,7 @@ export const DateSelector: React.FC<DateSelectorProps> = ({
 
   const daysList = dates && dates.length > 0 ? dates : generateUpcomingDays();
 
-  // Handle single card click (Toggle in / out of multi-selection)
+  // Handle single card click (Toggle in / out of multi-selection, strictly capped at 7 days)
   const handleCardPress = (dateStr: string) => {
     if (onToggleDate) {
       onToggleDate(dateStr);
@@ -87,6 +88,13 @@ export const DateSelector: React.FC<DateSelectorProps> = ({
           onSelectMultipleDates(activeSelectedList.filter((d) => d !== dateStr));
         }
       } else {
+        if (activeSelectedList.length >= 7) {
+          Alert.alert(
+            '1 Week Maximum Limit',
+            'Company transport policy permits booking for a maximum of 1 week (7 days) at a time.'
+          );
+          return;
+        }
         onSelectMultipleDates([...activeSelectedList, dateStr].sort());
       }
     } else if (onSelectDate) {
@@ -128,6 +136,12 @@ export const DateSelector: React.FC<DateSelectorProps> = ({
 
   return (
     <View style={styles.wrapper}>
+      {/* 1 Week Policy Notice */}
+      <View style={styles.policyRow}>
+        <Ionicons name="information-circle-outline" size={13} color="#475569" style={{ marginRight: 5 }} />
+        <Text style={styles.policyText}>Policy limit: 1 week (max 7 days) advance booking</Text>
+      </View>
+
       {/* Quick Preset Filter Chips */}
       <View style={styles.presetsRow}>
         <TouchableOpacity
@@ -226,6 +240,17 @@ export const DateSelector: React.FC<DateSelectorProps> = ({
 const styles = StyleSheet.create({
   wrapper: {
     marginVertical: spacing.xs,
+  },
+  policyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    paddingHorizontal: 2,
+  },
+  policyText: {
+    fontSize: 11,
+    color: '#64748B',
+    fontWeight: '600',
   },
   presetsRow: {
     flexDirection: 'row',
