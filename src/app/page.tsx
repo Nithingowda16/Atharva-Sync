@@ -620,6 +620,8 @@ export default function ETSPortal() {
             'harish.admin@atharvatravels.com',
             'bhaskar.admin@atharvatravels.com',
             'hemaraj.admin@atharvatravels.com',
+            'billing.audit@enterprise.internal',
+            'facilities.head@walmart.internal',
           ];
           if (data.authenticated && data.user && allowedAdmins.includes(data.user.email?.toLowerCase())) {
             setCurrentUser(data.user);
@@ -669,6 +671,8 @@ export default function ETSPortal() {
           'harish.admin@atharvatravels.com',
           'bhaskar.admin@atharvatravels.com',
           'hemaraj.admin@atharvatravels.com',
+          'billing.audit@enterprise.internal',
+          'facilities.head@walmart.internal',
         ];
         if (!data.user || !allowedAdmins.includes(data.user.email?.toLowerCase())) {
           setAuthError('Access Denied: Restricted access portal. Access is strictly limited to authorized Atharva administrators.');

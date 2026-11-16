@@ -96,6 +96,29 @@ export const BASE_PROVISIONED_ACCOUNTS: ProvisionedAccount[] = [
       canManageRoster: true,
     },
   },
+
+  // 4. Rohan Mehra - Vendor Billing Auditor
+  {
+    id: 'usr-vnd-billing-audit',
+    email: 'billing.audit@enterprise.internal',
+    aliasCode: 'VND-TEAM-04',
+    fullName: 'Rohan Mehra',
+    role: 'CORPORATE_CLIENT',
+    accountType: 'VENDOR_TEAM_MEMBER',
+    companyName: 'Nexus Global Enterprise Tech',
+    clientCode: 'VND-CORP-01',
+    staffCode: 'VND-TEAM-04',
+    deskRole: 'Commute Billing & Kilometric Auditor (Vendor Team)',
+    assignedByAdmin: 'ATH-ADMIN-01 (Atharva Super Admin)',
+    isAccessGranted: true,
+    permissions: {
+      canAllocateCabs: false,
+      canViewTelemetry: false,
+      canRequestAdhoc: false,
+      canViewBilling: true,
+      canManageRoster: false,
+    },
+  },
 ];
 
 // Initialize global storage with the 3 authorized accounts
