@@ -189,11 +189,6 @@ export function findAccount(identifier: string): ProvisionedAccount | undefined 
       (u.staffCode && u.staffCode.toLowerCase() === trimmed)
   );
 }
-      u.email.toLowerCase() === trimmed ||
-      u.aliasCode.toLowerCase() === trimmed ||
-      (u.staffCode && u.staffCode.toLowerCase() === trimmed)
-  );
-}
 
 export function registerAccount(account: ProvisionedAccount): void {
   const accounts: ProvisionedAccount[] = getAllAccounts();
