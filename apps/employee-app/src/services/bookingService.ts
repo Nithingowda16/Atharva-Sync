@@ -56,14 +56,140 @@ function buildFallbackRide(): RideRecord {
   };
 }
 
+function buildInitialRides(): RideRecord[] {
+  const today = new Date().toISOString().split('T')[0];
+  const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+
+  return [
+    {
+      id: 'trip-sched-today-login',
+      tripCode: 'ATH-9102L',
+      date: today,
+      shiftTime: '09:30',
+      direction: 'LOGIN',
+      status: 'SCHEDULED',
+      boardingStatus: 'WAITING',
+      boardingOtp: '7492',
+      pickup: {
+        id: 'p-home',
+        name: 'Gate 2, Golden Palms Apts, Indiranagar 100ft Road',
+        landmark: 'Near 100ft Metro Station',
+        pickupTime: '08:45',
+        latitude: 12.9719,
+        longitude: 77.6412,
+      },
+      destination: {
+        id: 'dest-hq',
+        name: 'Enterprise Tech Park, Tower B',
+        campus: 'Outer Ring Road Campus',
+        city: 'Bengaluru',
+      },
+      driver: {
+        id: 'drv-suresh',
+        fullName: 'Suresh Babu',
+        phone: '+91 98765 43210',
+        rating: 4.92,
+      },
+      vehicle: {
+        id: 'veh-8821',
+        plateNumber: 'KA-03-HA-8821',
+        model: 'Innova Crysta 2.4 VX',
+        make: 'Toyota',
+        color: 'Pearl White',
+      },
+    },
+    {
+      id: 'trip-sched-today-logout',
+      tripCode: 'ATH-9103D',
+      date: today,
+      shiftTime: '18:30',
+      direction: 'LOGOUT',
+      status: 'SCHEDULED',
+      boardingStatus: 'WAITING',
+      boardingOtp: '7492',
+      pickup: {
+        id: 'p-office',
+        name: 'Enterprise Tech Park, Tower B (Main Exit)',
+        landmark: 'Main Exit Bay 3',
+        pickupTime: '18:25',
+        latitude: 12.9260,
+        longitude: 77.6762,
+      },
+      destination: {
+        id: 'dest-home',
+        name: 'Gate 2, Golden Palms Apts, Indiranagar',
+        campus: 'Indiranagar 100ft Road',
+        city: 'Bengaluru',
+      },
+    },
+    {
+      id: 'trip-sched-tomo-login',
+      tripCode: 'ATH-9104L',
+      date: tomorrow,
+      shiftTime: '09:30',
+      direction: 'LOGIN',
+      status: 'SCHEDULED',
+      boardingStatus: 'WAITING',
+      boardingOtp: '7492',
+      pickup: {
+        id: 'p-home',
+        name: 'Gate 2, Golden Palms Apts, Indiranagar 100ft Road',
+        landmark: 'Near 100ft Metro Station',
+        pickupTime: '08:45',
+        latitude: 12.9719,
+        longitude: 77.6412,
+      },
+      destination: {
+        id: 'dest-hq',
+        name: 'Enterprise Tech Park, Tower B',
+        campus: 'Outer Ring Road Campus',
+        city: 'Bengaluru',
+      },
+    },
+    {
+      id: 'trip-sched-tomo-logout',
+      tripCode: 'ATH-9105D',
+      date: tomorrow,
+      shiftTime: '18:30',
+      direction: 'LOGOUT',
+      status: 'SCHEDULED',
+      boardingStatus: 'WAITING',
+      boardingOtp: '7492',
+      pickup: {
+        id: 'p-office',
+        name: 'Enterprise Tech Park, Tower B (Main Exit)',
+        landmark: 'Main Exit Bay 3',
+        pickupTime: '18:25',
+      },
+      destination: {
+        id: 'dest-home',
+        name: 'Gate 2, Golden Palms Apts, Indiranagar',
+        campus: 'Indiranagar 100ft Road',
+        city: 'Bengaluru',
+      },
+    },
+  ];
+}
+
+let userBookingsStore: RideRecord[] = buildInitialRides();
+
 export const bookingService = {
+  /**
+   * Add locally confirmed bookings so they are never lost on sync
+   */
+  addConfirmedRides(rides: RideRecord[]) {
+    const existingIds = new Set(userBookingsStore.map((r) => r.id));
+    const newItems = rides.filter((r) => !existingIds.has(r.id));
+    userBookingsStore = [...newItems, ...userBookingsStore];
+  },
+
   /**
    * Fetch active bookings from Web Portal backend /api/mobile/employee/commute
    */
   async getBookings(): Promise<RideRecord[]> {
     try {
       const session = await authService.getSession();
-      const empId = session?.employeeId || 'emp-amrutha';
+      const empId = session?.employeeId || '111';
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 3500);
@@ -124,14 +250,17 @@ export const bookingService = {
               lastUpdated: new Date().toISOString(),
             },
           };
-          return [mappedRide];
+          const exists = userBookingsStore.some(
+            (r) => r.id === mappedRide.id || r.tripCode === mappedRide.tripCode
+          );
+          return exists ? userBookingsStore : [mappedRide, ...userBookingsStore];
         }
       }
     } catch (e) {
       console.warn('Backend commute sync notice, using active fallback:', e);
     }
 
-    return [buildFallbackRide()];
+    return userBookingsStore.length > 0 ? userBookingsStore : [buildFallbackRide()];
   },
 
   async getUpcomingRides(): Promise<RideRecord[]> {
@@ -147,46 +276,55 @@ export const bookingService = {
   },
 
   /**
-   * Submit schedule request to backend
+   * Submit schedule request to backend (supports multiple dates & round-trip login/logout)
    */
   async createSchedule(draft: BookingDraft): Promise<{ success: boolean; bookingId?: string; error?: string }> {
-    if (!draft.date) {
-      return { success: false, error: 'Please select a travel date.' };
-    }
-    if (!draft.shift) {
-      return { success: false, error: 'Please select a shift time.' };
-    }
-    if (!draft.pickupPoint) {
-      return { success: false, error: 'Please select a pickup point.' };
-    }
+    const dates = draft.selectedDates && draft.selectedDates.length > 0
+      ? draft.selectedDates
+      : [draft.date || new Date().toISOString().split('T')[0]];
+
+    const isBoth = draft.direction === 'BOTH';
+    const loginShift = draft.loginShift || draft.shift;
+    const logoutShift = draft.logoutShift || draft.shift;
 
     try {
       const session = await authService.getSession();
-      const res = await fetch(`${getApiBaseUrl()}${API_ENDPOINTS.EMPLOYEE_COMMUTE}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          employeeId: session?.employeeId || 'EMP-9042',
-          employeeName: session?.fullName || 'Amrutha Rao',
-          shiftDate: draft.date,
-          shiftTime: draft.shift.shiftTime,
-          type: draft.direction,
-          pickupAddress: draft.pickupPoint.name,
-          pickupCoords: {
-            latitude: draft.pickupPoint.latitude || 12.9719,
-            longitude: draft.pickupPoint.longitude || 77.6412,
-          },
-          dropAddress: draft.destination?.name || 'Enterprise Tech Park, Tower B',
-          dropCoords: { latitude: 12.9352, longitude: 77.6946 },
-        }),
-      });
+      const empId = session?.employeeId || '111';
+      const empName = session?.fullName || 'Nithin';
 
-      if (res.ok) {
-        const data = await res.json();
-        return {
-          success: true,
-          bookingId: data.tripCode || `ATH-${Date.now().toString().slice(-4)}`,
-        };
+      // Submit schedules for each selected date & direction
+      for (const d of dates) {
+        if ((isBoth || draft.direction === 'LOGIN') && loginShift) {
+          await fetch(`${getApiBaseUrl()}${API_ENDPOINTS.EMPLOYEE_COMMUTE}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              employeeId: empId,
+              employeeName: empName,
+              shiftDate: d,
+              shiftTime: loginShift.shiftTime,
+              type: 'LOGIN',
+              pickupAddress: draft.pickupPoint?.name || 'Home',
+              dropAddress: 'Enterprise Tech Park, Tower B',
+            }),
+          }).catch(() => {});
+        }
+
+        if ((isBoth || draft.direction === 'LOGOUT') && logoutShift) {
+          await fetch(`${getApiBaseUrl()}${API_ENDPOINTS.EMPLOYEE_COMMUTE}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              employeeId: empId,
+              employeeName: empName,
+              shiftDate: d,
+              shiftTime: logoutShift.shiftTime,
+              type: 'LOGOUT',
+              pickupAddress: 'Enterprise Tech Park, Tower B',
+              dropAddress: draft.pickupPoint?.name || 'Home',
+            }),
+          }).catch(() => {});
+        }
       }
     } catch (e) {
       console.warn('Backend booking sync warning, using local state:', e);
@@ -199,6 +337,48 @@ export const bookingService = {
   },
 
   async cancelBooking(bookingId: string, reason?: string): Promise<{ success: boolean; error?: string }> {
+    userBookingsStore = userBookingsStore.map((r) =>
+      r.id === bookingId || r.tripCode === bookingId
+        ? { ...r, status: 'CANCELLED' as const, boardingStatus: 'CANCELLED' as const }
+        : r
+    );
+
+    // Sync cancellation to central backend
+    try {
+      await fetch(`${getApiBaseUrl()}${API_ENDPOINTS.EMPLOYEE_COMMUTE}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tripId: bookingId,
+          action: 'CANCEL',
+          reason: reason || 'Employee requested cancellation',
+        }),
+      });
+    } catch (e) {}
+
+    return { success: true };
+  },
+
+  async markNoShow(bookingId: string, reason?: string): Promise<{ success: boolean; error?: string }> {
+    userBookingsStore = userBookingsStore.map((r) =>
+      r.id === bookingId || r.tripCode === bookingId
+        ? { ...r, status: 'CANCELLED' as const, boardingStatus: 'NO_SHOW' as const }
+        : r
+    );
+
+    // Sync no-show to central dispatch
+    try {
+      await fetch(`${getApiBaseUrl()}${API_ENDPOINTS.EMPLOYEE_COMMUTE}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tripId: bookingId,
+          action: 'NO_SHOW',
+          reason: reason || 'Employee unavailable at boarding point',
+        }),
+      });
+    } catch (e) {}
+
     return { success: true };
   },
 };

@@ -3,10 +3,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
  * Atharva Travels ETS — Employee Android App
  * BookingReviewScreen
  * 
- * Strict No-Mock-Data:
- * Displays ONLY user-selected parameters. If any parameter has not been selected,
- * shows a clean placeholder.
- * CTA "Confirm Booking" transitions the local frontend state cleanly without sending to backend.
+ * Features:
+ * - Multi-trip confirmation breakdown (e.g. 5 days, 10 trips)
+ * - Round-trip (Login + Logout) validation
+ * - Transit Route removed completely (automated routing)
+ * - Solid black action CTA with pure white theme
  */
 
 import React, { useState } from 'react';
@@ -37,9 +38,17 @@ export const BookingReviewScreen: React.FC<BookingReviewScreenProps> = ({
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const dates = draft.selectedDates && draft.selectedDates.length > 0
+    ? draft.selectedDates
+    : draft.date
+    ? [draft.date]
+    : [];
+
+  const isBoth = draft.direction === 'BOTH';
+  const totalTrips = isBoth ? dates.length * 2 : dates.length;
+
   const handleConfirm = () => {
     setIsSubmitting(true);
-    // Phase 1 Frontend: Transitions local state smoothly
     setTimeout(() => {
       setIsSubmitting(false);
       onConfirmBooking();
@@ -50,44 +59,38 @@ export const BookingReviewScreen: React.FC<BookingReviewScreenProps> = ({
     <SafeAreaView style={styles.safeArea}>
       <AppHeader title="Review Booking" onBack={onBack} />
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.pageTitle}>Confirm Your Commute</Text>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <Text style={styles.pageTitle}>Confirm Your Schedule</Text>
         <Text style={styles.pageSubtitle}>
-          Please verify your chosen schedule before submitting for fleet allocation.
+          {totalTrips > 1
+            ? `Scheduling ${totalTrips} total trips across ${dates.length} commute days with identical shifts.`
+            : 'Please verify your commute schedule before submitting for fleet allocation.'}
         </Text>
 
         {/* Selected Parameters Summary Card */}
         <BookingSummaryCard draft={draft} />
 
-        {/* Selected Route Info (if selected) */}
-        {draft.route && (
-          <RoundedCard style={styles.routeCard}>
-            <View style={styles.routeHeader}>
-              <Ionicons name="map-outline" size={18} color={colors.primary} />
-              <Text style={styles.routeTitle}>Selected Route Corridor</Text>
-            </View>
-            <Text style={styles.routeName}>{draft.route.routeCode} — {draft.route.name}</Text>
-            <Text style={styles.routeEst}>Est. Commute Duration: {draft.route.estimatedDurationMinutes} mins</Text>
-          </RoundedCard>
-        )}
-
         {/* Policy & Escort Safety Notice */}
         <RoundedCard style={styles.noticeCard}>
           <View style={styles.noticeHeader}>
-            <Ionicons name="shield-checkmark-outline" size={18} color={colors.primary} />
-            <Text style={styles.noticeTitle}>Compliance & Roster Policy</Text>
+            <Ionicons name="shield-checkmark" size={18} color="#000000" />
+            <Text style={styles.noticeTitle}>COMPLIANCE & FLEET DISPATCH POLICY</Text>
           </View>
           <Text style={styles.noticeText}>
-            • Cabs are allocated by central operations 45 mins prior to pickup time.{'\n'}
-            • You will receive boarding notification and chauffeur contact when trip starts.{'\n'}
-            • Cancellation allowed up to 60 mins before shift cutoff.
+            • Cabs are automatically routed via Dijkstra shortest-path algorithms 45 mins prior to pickup.{'\n'}
+            • You will receive boarding notification, driver name, and cab plate when trip telemetry starts.{'\n'}
+            • Cancellation or modifications allowed up to 60 mins before shift cutoff.
           </Text>
         </RoundedCard>
 
-        {/* Bottom CTA */}
+        {/* Bottom CTA Button */}
         <View style={styles.ctaContainer}>
           <PrimaryButton
-            title="Confirm Booking"
+            title={
+              totalTrips > 1
+                ? `Confirm & Schedule ${totalTrips} Trips`
+                : 'Confirm Booking'
+            }
             onPress={handleConfirm}
             loading={isSubmitting}
           />
@@ -100,51 +103,30 @@ export const BookingReviewScreen: React.FC<BookingReviewScreenProps> = ({
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: '#FFFFFF',
   },
   scrollContent: {
     padding: spacing.lg,
     paddingBottom: spacing.huge,
   },
   pageTitle: {
-    ...typography.presets.pageTitle,
-    fontSize: 22,
-    color: colors.textPrimary,
+    ...typography.presets.h2,
+    color: '#0F172A',
+    fontWeight: '800',
   },
   pageSubtitle: {
-    ...typography.presets.body,
-    color: colors.textSecondary,
+    ...typography.presets.caption,
+    color: '#64748B',
     marginTop: 4,
     marginBottom: spacing.lg,
   },
-  routeCard: {
-    marginTop: spacing.md,
-  },
-  routeHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 4,
-  },
-  routeTitle: {
-    ...typography.presets.captionSmall,
-    fontWeight: '700',
-    color: colors.primary,
-    textTransform: 'uppercase',
-  },
-  routeName: {
-    ...typography.presets.cardTitle,
-    color: colors.textPrimary,
-    marginTop: 2,
-  },
-  routeEst: {
-    ...typography.presets.caption,
-    color: colors.textSecondary,
-    marginTop: 2,
-  },
   noticeCard: {
     marginTop: spacing.md,
-    backgroundColor: colors.surface,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: borderRadius.xl,
+    padding: spacing.md,
   },
   noticeHeader: {
     flexDirection: 'row',
@@ -153,17 +135,17 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   noticeTitle: {
-    ...typography.presets.cardTitle,
-    fontSize: 13,
-    color: colors.textPrimary,
+    ...typography.presets.captionSmall,
+    color: '#0F172A',
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
   noticeText: {
     ...typography.presets.caption,
-    color: colors.textSecondary,
+    color: '#64748B',
     lineHeight: 18,
   },
   ctaContainer: {
     marginTop: spacing.xl,
   },
 });
-

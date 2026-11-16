@@ -18,6 +18,7 @@ export type ScreenName =
   | 'PickupLocation'
   | 'RouteSelection'
   | 'BookingReview'
+  | 'Rentalz'
   | 'Profile'
   | 'History'
   | 'MyAddress'
@@ -29,13 +30,13 @@ export type ScreenName =
 
 export type MainTab = 'Bookings' | 'Profile';
 
-export type JourneyDirection = 'LOGIN' | 'LOGOUT'; // LOGIN = Go to work, LOGOUT = Return home
+export type JourneyDirection = 'LOGIN' | 'LOGOUT' | 'BOTH'; // LOGIN = Go to work, LOGOUT = Return home, BOTH = Round trip
 
 export interface ShiftRecord {
   id: string;
   shiftTime: string;
   travelDurationMinutes?: number;
-  direction: JourneyDirection;
+  direction: 'LOGIN' | 'LOGOUT';
   shiftWindow?: string;
   cutoffTime?: string;
   isAvailable?: boolean;
@@ -77,10 +78,13 @@ export interface RouteRecord {
 
 export interface BookingDraft {
   date?: string;
+  selectedDates?: string[]; // Multiple dates for week-long / multi-day booking
   direction: JourneyDirection;
   pickupPoint?: PickupPoint;
   destination?: DestinationOffice;
-  shift?: ShiftRecord;
+  shift?: ShiftRecord; // Primary shift (if single direction)
+  loginShift?: ShiftRecord; // Inward morning shift when booking BOTH
+  logoutShift?: ShiftRecord; // Outward evening shift when booking BOTH
   route?: RouteRecord;
   specialNeeds?: boolean;
   notes?: string;

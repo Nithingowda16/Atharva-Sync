@@ -33,9 +33,10 @@ import { HelpSupportScreen } from '../screens/profile/HelpSupportScreen';
 import { FeedbackScreen } from '../screens/profile/FeedbackScreen';
 import { SettingsScreen } from '../screens/profile/SettingsScreen';
 import { EmergencySosScreen } from '../screens/emergency/EmergencySosScreen';
+import { RentalzScreen } from '../screens/rentalz/RentalzScreen';
 
 import { BottomNavigation } from '../components/navigation/BottomNavigation';
-import { QuickActionBottomSheet } from '../components/navigation/QuickActionBottomSheet';
+import { QuickActionBottomSheet, QuickActionType } from '../components/navigation/QuickActionBottomSheet';
 import { colors } from '../theme';
 import { bookingService, authService, addressService } from '../services';
 import {
@@ -90,6 +91,7 @@ export const AppNavigator: React.FC = () => {
           return true;
 
         case 'MyBookings':
+        case 'Rentalz':
         case 'RideDetails':
         case 'LiveTracking':
         case 'QrBoarding':
@@ -168,8 +170,10 @@ export const AppNavigator: React.FC = () => {
   // Booking Draft State
   const [bookingDraft, setBookingDraft] = useState<BookingDraft>({
     date: new Date().toISOString().split('T')[0],
-    direction: 'LOGIN',
+    selectedDates: [new Date().toISOString().split('T')[0]],
+    direction: 'BOTH',
   });
+  const [shiftTargetDirection, setShiftTargetDirection] = useState<'LOGIN' | 'LOGOUT'>('LOGIN');
 
   // Handle Tab Switch
   const handleTabChange = (tab: MainTab) => {
@@ -182,50 +186,138 @@ export const AppNavigator: React.FC = () => {
   };
 
   // Quick Action Sheet Handlers
-  const handleSelectQuickAction = (action: 'schedule' | 'manage' | 'routes') => {
+  const handleSelectQuickAction = (action: QuickActionType) => {
     setIsBottomSheetOpen(false);
-    if (action === 'schedule') {
+    if (action === 'flexi' || action === 'schedule') {
+      setBookingDraft({
+        date: new Date().toISOString().split('T')[0],
+        selectedDates: [new Date().toISOString().split('T')[0]],
+        direction: 'BOTH',
+      });
       setCurrentScreen('CreateSchedule');
+    } else if (action === 'rentalz') {
+      setCurrentScreen('Rentalz');
     } else if (action === 'manage') {
       setCurrentScreen('MyBookings');
     } else if (action === 'routes') {
-      setCurrentScreen('RouteSelection');
+      setCurrentScreen('Home');
     }
   };
 
-  // Confirm Booking Handler (sends to central backend & updates local state)
+  const handleRentalConfirmed = (ride: RideRecord) => {
+    bookingService.addConfirmedRides([ride]);
+    setBookingsList((prev) => [ride, ...prev]);
+    setSelectedRide(ride);
+    setCurrentScreen('MyBookings');
+  };
+
+  const handleCancelBooking = async (bookingId: string) => {
+    await bookingService.cancelBooking(bookingId);
+    setBookingsList((prev) =>
+      prev.map((r) =>
+        r.id === bookingId || r.tripCode === bookingId
+          ? { ...r, status: 'CANCELLED', boardingStatus: 'CANCELLED' }
+          : r
+      )
+    );
+  };
+
+  const handleReportNoShow = async (bookingId: string) => {
+    await bookingService.markNoShow(bookingId);
+    setBookingsList((prev) =>
+      prev.map((r) =>
+        r.id === bookingId || r.tripCode === bookingId
+          ? { ...r, status: 'CANCELLED', boardingStatus: 'NO_SHOW' }
+          : r
+      )
+    );
+  };
+
+  // Confirm Booking Handler (Supports Multi-Date and Round-Trip Login/Logout)
   const handleBookingConfirmed = async () => {
-    if (bookingDraft.shift && bookingDraft.pickupPoint) {
-      // 1. Submit to backend API / database
+    if (bookingDraft.pickupPoint) {
+      const datesToSchedule: string[] =
+        bookingDraft.selectedDates && bookingDraft.selectedDates.length > 0
+          ? bookingDraft.selectedDates
+          : [bookingDraft.date || new Date().toISOString().split('T')[0]];
+
+      const isBoth = bookingDraft.direction === 'BOTH';
+      const loginShift = bookingDraft.loginShift || bookingDraft.shift;
+      const logoutShift = bookingDraft.logoutShift || bookingDraft.shift;
+
+      const createdRides: RideRecord[] = [];
+
+      datesToSchedule.forEach((dateStr, idx) => {
+        // 1. Morning Login Trip
+        if ((isBoth || bookingDraft.direction === 'LOGIN') && loginShift) {
+          createdRides.push({
+            id: `ride-${Date.now()}-login-${idx}`,
+            tripCode: `ATH-${(Date.now() + idx).toString().slice(-4)}L`,
+            date: dateStr,
+            shiftTime: loginShift.shiftTime,
+            direction: 'LOGIN',
+            status: 'SCHEDULED',
+            boardingStatus: 'WAITING',
+            boardingOtp: '7492',
+            pickup: bookingDraft.pickupPoint!,
+            destination: bookingDraft.destination || {
+              id: 'dest-hq',
+              name: 'Enterprise Tech Park, Tower B',
+              campus: 'Campus Hub',
+              city: 'Bengaluru',
+            },
+          });
+        }
+
+        // 2. Evening Logout Trip
+        if ((isBoth || bookingDraft.direction === 'LOGOUT') && logoutShift) {
+          createdRides.push({
+            id: `ride-${Date.now()}-logout-${idx}`,
+            tripCode: `ATH-${(Date.now() + idx).toString().slice(-4)}D`,
+            date: dateStr,
+            shiftTime: logoutShift.shiftTime,
+            direction: 'LOGOUT',
+            status: 'SCHEDULED',
+            boardingStatus: 'WAITING',
+            boardingOtp: '7492',
+            pickup: {
+              id: 'pickup-office-hub',
+              name: 'Enterprise Tech Park, Tower B',
+              landmark: 'Main Exit Bay 3',
+              address: 'Outer Ring Rd, Bellandur, Bengaluru',
+            },
+            destination: {
+              id: bookingDraft.pickupPoint!.id,
+              name: bookingDraft.pickupPoint!.name,
+              campus: bookingDraft.pickupPoint!.landmark || 'Home Residence',
+              city: 'Bengaluru',
+            },
+          });
+        }
+      });
+
+      // Persist in local store so they are retained across backend syncs
+      bookingService.addConfirmedRides(createdRides);
+
+      // Submit to backend API / database
       bookingService.createSchedule(bookingDraft).then((res) => {
         if (res.success) {
           refreshLiveCommute();
         }
       });
 
-      const newRide: RideRecord = {
-        id: `ride-${Date.now()}`,
-        tripCode: `ATH-${Date.now().toString().slice(-4)}`,
-        date: bookingDraft.date || new Date().toISOString().split('T')[0],
-        shiftTime: bookingDraft.shift.shiftTime,
-        direction: bookingDraft.direction,
-        status: 'SCHEDULED',
-        boardingStatus: 'WAITING',
-        boardingOtp: '7492',
-        pickup: bookingDraft.pickupPoint,
-        destination: bookingDraft.destination || {
-          id: 'dest-hq',
-          name: 'Atharva Corporate Campus',
-          campus: 'Tower B, Domlur Tech Park',
-          city: 'Bengaluru',
-        },
-        route: bookingDraft.route,
-      };
-
-      setBookingsList([newRide, ...bookingsList]);
-      setSelectedRide(newRide);
-      setCurrentScreen('Home');
+      setBookingsList([...createdRides, ...bookingsList]);
+      if (createdRides.length > 0) {
+        setSelectedRide(createdRides[0]);
+      }
+      // Navigate directly to My Bookings so user immediately sees their confirmed rides
+      setCurrentScreen('MyBookings');
     }
+  };
+
+  const handleUpdateProfile = async (updated: Partial<UserProfile>) => {
+    const nextUser = await authService.updateProfile(updated);
+    setUser(nextUser);
   };
 
   // Is Main Tab View
@@ -271,8 +363,25 @@ export const AppNavigator: React.FC = () => {
       case 'Home':
         return (
           <HomeScreen
+            user={user}
             activeRide={selectedRide || (bookingsList.length > 0 ? bookingsList[0] : null)}
-            onNavigateSchedule={() => setCurrentScreen('CreateSchedule')}
+            onNavigateFlexiSchedule={() => {
+              setBookingDraft({
+                date: new Date().toISOString().split('T')[0],
+                selectedDates: [new Date().toISOString().split('T')[0]],
+                direction: 'BOTH',
+              });
+              setCurrentScreen('CreateSchedule');
+            }}
+            onNavigateRentalz={() => setCurrentScreen('Rentalz')}
+            onNavigateSchedule={() => {
+              setBookingDraft({
+                date: new Date().toISOString().split('T')[0],
+                selectedDates: [new Date().toISOString().split('T')[0]],
+                direction: 'BOTH',
+              });
+              setCurrentScreen('CreateSchedule');
+            }}
             onNavigateMyBookings={() => setCurrentScreen('MyBookings')}
             onNavigateRideDetails={(ride) => {
               setSelectedRide(ride);
@@ -291,6 +400,15 @@ export const AppNavigator: React.FC = () => {
           />
         );
 
+      case 'Rentalz':
+        return (
+          <RentalzScreen
+            user={user}
+            onBack={() => setCurrentScreen('Home')}
+            onConfirmRental={handleRentalConfirmed}
+          />
+        );
+
       case 'MyBookings':
         return (
           <MyBookingsScreen
@@ -300,6 +418,8 @@ export const AppNavigator: React.FC = () => {
               setSelectedRide(ride);
               setCurrentScreen('RideDetails');
             }}
+            onCancelBooking={handleCancelBooking}
+            onReportNoShow={handleReportNoShow}
             bookings={bookingsList}
           />
         );
@@ -346,9 +466,11 @@ export const AppNavigator: React.FC = () => {
             draft={bookingDraft}
             onUpdateDraft={(updated) => setBookingDraft((prev) => ({ ...prev, ...updated }))}
             onBack={() => setCurrentScreen('Home')}
-            onOpenShiftSelection={() => setCurrentScreen('ShiftSelection')}
+            onOpenShiftSelection={(targetDir) => {
+              setShiftTargetDirection(targetDir || (bookingDraft.direction === 'LOGOUT' ? 'LOGOUT' : 'LOGIN'));
+              setCurrentScreen('ShiftSelection');
+            }}
             onOpenPickupSelection={() => setCurrentScreen('PickupLocation')}
-            onOpenRouteSelection={() => setCurrentScreen('RouteSelection')}
             onContinueReview={() => setCurrentScreen('BookingReview')}
           />
         );
@@ -357,10 +479,22 @@ export const AppNavigator: React.FC = () => {
         return (
           <ShiftSelectionScreen
             date={bookingDraft.date || new Date().toISOString().split('T')[0]}
-            direction={bookingDraft.direction || 'LOGIN'}
+            direction={shiftTargetDirection}
             onBack={() => setCurrentScreen('CreateSchedule')}
             onApplyShift={(shift) => {
-              setBookingDraft((prev) => ({ ...prev, shift }));
+              if (shiftTargetDirection === 'LOGOUT') {
+                setBookingDraft((prev) => ({
+                  ...prev,
+                  logoutShift: shift,
+                  shift: prev.direction === 'LOGOUT' ? shift : prev.shift,
+                }));
+              } else {
+                setBookingDraft((prev) => ({
+                  ...prev,
+                  loginShift: shift,
+                  shift: prev.direction === 'LOGIN' ? shift : prev.shift,
+                }));
+              }
               setCurrentScreen('CreateSchedule');
             }}
           />
@@ -379,18 +513,6 @@ export const AppNavigator: React.FC = () => {
           />
         );
 
-      case 'RouteSelection':
-        return (
-          <RouteSelectionScreen
-            onBack={() => setCurrentScreen('CreateSchedule')}
-            onSelectRoute={(route) => {
-              setBookingDraft((prev) => ({ ...prev, route }));
-              setCurrentScreen('CreateSchedule');
-            }}
-            currentSelectedId={bookingDraft.route?.id}
-          />
-        );
-
       case 'BookingReview':
         return (
           <BookingReviewScreen
@@ -404,6 +526,7 @@ export const AppNavigator: React.FC = () => {
         return (
           <ProfileScreen
             user={user}
+            onUpdateProfile={handleUpdateProfile}
             onNavigateHistory={() => setCurrentScreen('History')}
             onNavigateHelp={() => setCurrentScreen('HelpSupport')}
             onNavigateAddress={() => setCurrentScreen('MyAddress')}
@@ -471,7 +594,27 @@ export const AppNavigator: React.FC = () => {
         );
 
       default:
-        return <HomeScreen onNavigateSchedule={() => setCurrentScreen('CreateSchedule')} onNavigateMyBookings={() => setCurrentScreen('MyBookings')} onNavigateRideDetails={() => {}} onNavigateLiveTracking={() => {}} onNavigateQrBoarding={() => {}} onNavigateSos={() => setCurrentScreen('EmergencySos')} onNavigateNotifications={() => setCurrentScreen('Notifications')} />;
+        return (
+          <HomeScreen
+            user={user}
+            onNavigateFlexiSchedule={() => {
+              setBookingDraft({
+                date: new Date().toISOString().split('T')[0],
+                selectedDates: [new Date().toISOString().split('T')[0]],
+                direction: 'BOTH',
+              });
+              setCurrentScreen('CreateSchedule');
+            }}
+            onNavigateRentalz={() => setCurrentScreen('Rentalz')}
+            onNavigateSchedule={() => setCurrentScreen('CreateSchedule')}
+            onNavigateMyBookings={() => setCurrentScreen('MyBookings')}
+            onNavigateRideDetails={() => {}}
+            onNavigateLiveTracking={() => {}}
+            onNavigateQrBoarding={() => {}}
+            onNavigateSos={() => setCurrentScreen('EmergencySos')}
+            onNavigateNotifications={() => setCurrentScreen('Notifications')}
+          />
+        );
     }
   };
 

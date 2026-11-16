@@ -24,10 +24,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { IconContainer } from '../common/IconContainer';
 import { colors, typography, spacing, borderRadius, shadows } from '../../theme';
 
+export type QuickActionType = 'flexi' | 'rentalz' | 'routes' | 'schedule' | 'manage';
+
 interface QuickActionBottomSheetProps {
   visible: boolean;
   onClose: () => void;
-  onSelectAction: (action: 'schedule' | 'manage' | 'routes') => void;
+  onSelectAction: (action: QuickActionType) => void;
 }
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -102,37 +104,37 @@ export const QuickActionBottomSheet: React.FC<QuickActionBottomSheetProps> = ({
         </Text>
 
         <View style={styles.actionsList}>
-          {/* Action 1: Schedule Ride */}
+          {/* Action 1: Rentalz */}
           <TouchableOpacity
             activeOpacity={0.75}
-            onPress={() => onSelectAction('schedule')}
+            onPress={() => onSelectAction('rentalz')}
             style={styles.actionCard}
           >
-            <IconContainer size={44} shape="rounded" backgroundColor={colors.primarySurface}>
-              <Ionicons name="calendar-outline" size={24} color={colors.primary} />
+            <IconContainer size={44} shape="rounded" backgroundColor="#F3F4F6">
+              <Ionicons name="car-sport-outline" size={24} color="#000000" />
             </IconContainer>
             <View style={styles.actionTextCol}>
-              <Text style={styles.actionCardTitle}>Schedule Ride</Text>
+              <Text style={styles.actionCardTitle}>Rentalz</Text>
               <Text style={styles.actionCardSubtitle}>
-                Book your upcoming shift commute to office or home
+                Executive hourly, full-day & airport corporate car rentals
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
           </TouchableOpacity>
 
-          {/* Action 2: Manage Ride */}
+          {/* Action 2: Flexi Schedule */}
           <TouchableOpacity
             activeOpacity={0.75}
-            onPress={() => onSelectAction('manage')}
+            onPress={() => onSelectAction('flexi')}
             style={styles.actionCard}
           >
-            <IconContainer size={44} shape="rounded" backgroundColor={colors.primarySurface}>
-              <Ionicons name="list-outline" size={24} color={colors.primary} />
+            <IconContainer size={44} shape="rounded" backgroundColor="#F3F4F6">
+              <Ionicons name="calendar-outline" size={24} color="#000000" />
             </IconContainer>
             <View style={styles.actionTextCol}>
-              <Text style={styles.actionCardTitle}>Manage Rides</Text>
+              <Text style={styles.actionCardTitle}>Flexi Schedule</Text>
               <Text style={styles.actionCardSubtitle}>
-                View, modify or cancel scheduled and active commute
+                Schedule multiple dates, round trips & flexible shifts
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
@@ -144,8 +146,8 @@ export const QuickActionBottomSheet: React.FC<QuickActionBottomSheetProps> = ({
             onPress={() => onSelectAction('routes')}
             style={styles.actionCard}
           >
-            <IconContainer size={44} shape="rounded" backgroundColor={colors.primarySurface}>
-              <Ionicons name="map-outline" size={24} color={colors.primary} />
+            <IconContainer size={44} shape="rounded" backgroundColor="#F3F4F6">
+              <Ionicons name="map-outline" size={24} color="#000000" />
             </IconContainer>
             <View style={styles.actionTextCol}>
               <Text style={styles.actionCardTitle}>View Routes</Text>

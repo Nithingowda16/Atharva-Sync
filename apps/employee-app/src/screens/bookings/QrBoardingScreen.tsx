@@ -4,10 +4,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
  * QrBoardingScreen
  * 
  * Features:
- * - Active Employee Camera Scanner (employee scans vehicle/cab QR sticker to board)
- * - Viewfinder with laser scanner animation, corner reticles, and torch toggle
- * - Mandatory Boarding OTP (4-digit security PIN: 7 4 9 2)
- * - Instant boarding confirmation syncing to Central Web Portal
+ * - Real CameraView hardware integration from expo-camera
+ * - Flashlight / Torch toggle (hardware flash)
+ * - Corner reticles with laser scan line animation overlay
+ * - Mandatory Boarding Security PIN (4-digit OTP: 7 4 9 2) to quote to chauffeur
+ * - Chauffeur vehicle verification card
  * - Pure white theme with solid black buttons
  */
 
@@ -22,10 +23,10 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import { AppHeader } from '../../components/common/AppHeader';
 import { RoundedCard } from '../../components/common/RoundedCard';
-import { PrimaryButton } from '../../components/common/PrimaryButton';
-import { colors, typography, borderRadius, spacing, shadows } from '../../theme';
+import { colors, typography, borderRadius, spacing } from '../../theme';
 import { RideRecord } from '../../types';
 import { getApiBaseUrl, API_ENDPOINTS } from '../../services/apiConfig';
 
@@ -40,8 +41,9 @@ export const QrBoardingScreen: React.FC<QrBoardingScreenProps> = ({
   onBack,
   onBoarded,
 }) => {
-  const [isScanning, setIsScanning] = useState(false);
+  const [permission, requestPermission] = useCameraPermissions();
   const [torchOn, setTorchOn] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
   const [isBoarded, setIsBoarded] = useState(ride?.boardingStatus === 'BOARDED');
   const [boardedTimestamp, setBoardedTimestamp] = useState<string | null>(null);
 
@@ -52,7 +54,7 @@ export const QrBoardingScreen: React.FC<QrBoardingScreenProps> = ({
     Animated.loop(
       Animated.sequence([
         Animated.timing(scanAnim, {
-          toValue: 180,
+          toValue: 200,
           duration: 1800,
           useNativeDriver: true,
         }),
@@ -68,20 +70,6 @@ export const QrBoardingScreen: React.FC<QrBoardingScreenProps> = ({
   const otpCode = ride?.boardingOtp || '7492';
   const driverName = ride?.driver?.fullName || 'Suresh Babu';
   const vehiclePlate = ride?.vehicle?.plateNumber || 'KA-03-HA-8821';
-
-  // Perform Employee Cab QR Scan
-  const handleScanCabQr = () => {
-    setIsScanning(true);
-    setTimeout(() => {
-      setIsScanning(false);
-      completeBoarding('QR_SCAN');
-    }, 1200);
-  };
-
-  // Perform OTP Verification
-  const handleVerifyOtp = () => {
-    completeBoarding('OTP_VERIFIED');
-  };
 
   const completeBoarding = (method: 'QR_SCAN' | 'OTP_VERIFIED') => {
     const timeNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -106,8 +94,23 @@ export const QrBoardingScreen: React.FC<QrBoardingScreenProps> = ({
 
     Alert.alert(
       'Boarding Verified! 🎉',
-      `Welcome aboard vehicle ${vehiclePlate}.\nDriver ${driverName} notified. Your safe transit is logged with Atharva Central Operations.`
+      `Welcome aboard vehicle ${vehiclePlate}.\nChauffeur ${driverName} notified. Your safe transit is logged with Atharva Central Operations.`
     );
+  };
+
+  const handleBarcodeScanned = (data: string) => {
+    if (isScanning || isBoarded) return;
+    setIsScanning(true);
+    completeBoarding('QR_SCAN');
+    setTimeout(() => setIsScanning(false), 2000);
+  };
+
+  const handleSimulateScan = () => {
+    setIsScanning(true);
+    setTimeout(() => {
+      setIsScanning(false);
+      completeBoarding('QR_SCAN');
+    }, 800);
   };
 
   return (
@@ -166,32 +169,56 @@ export const QrBoardingScreen: React.FC<QrBoardingScreenProps> = ({
                   <Ionicons
                     name={torchOn ? 'flash' : 'flash-outline'}
                     size={16}
-                    color={torchOn ? '#000000' : '#64748B'}
+                    color={torchOn ? '#FFFFFF' : '#000000'}
                   />
                   <Text style={[styles.torchText, torchOn && styles.torchTextActive]}>
-                    {torchOn ? 'Flash On' : 'Torch'}
+                    {torchOn ? 'Flashlight On' : 'Torch'}
                   </Text>
                 </TouchableOpacity>
               </View>
 
               {/* Viewfinder Target Frame */}
               <View style={styles.viewfinderFrame}>
+                {permission?.granted ? (
+                  <CameraView
+                    style={StyleSheet.absoluteFillObject}
+                    facing="back"
+                    enableTorch={torchOn}
+                    onBarcodeScanned={(result: any) => handleBarcodeScanned(result?.data || '')}
+                    barcodeScannerSettings={{
+                      barcodeTypes: ['qr'],
+                    }}
+                  />
+                ) : (
+                  <View style={styles.permissionBox}>
+                    <Ionicons name="camera-outline" size={44} color="#FFFFFF" />
+                    <Text style={styles.permissionText}>Camera access required to scan</Text>
+                    <TouchableOpacity
+                      onPress={requestPermission}
+                      style={styles.permissionBtn}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={styles.permissionBtnText}>Enable Camera</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
                 {/* 4 Corner Reticles */}
-                <View style={[styles.corner, styles.cornerTL]} />
-                <View style={[styles.corner, styles.cornerTR]} />
-                <View style={[styles.corner, styles.cornerBL]} />
-                <View style={[styles.corner, styles.cornerBR]} />
+                <View style={[styles.corner, styles.cornerTL]} pointerEvents="none" />
+                <View style={[styles.corner, styles.cornerTR]} pointerEvents="none" />
+                <View style={[styles.corner, styles.cornerBL]} pointerEvents="none" />
+                <View style={[styles.corner, styles.cornerBR]} pointerEvents="none" />
 
                 {/* Animated Laser Scanning Line */}
                 <Animated.View
+                  pointerEvents="none"
                   style={[
                     styles.laserScanLine,
                     { transform: [{ translateY: scanAnim }] },
                   ]}
                 />
 
-                <View style={styles.viewfinderCenter}>
-                  <Ionicons name="qr-code-outline" size={54} color="rgba(255,255,255,0.4)" />
+                <View style={styles.viewfinderCenter} pointerEvents="none">
                   <Text style={styles.viewfinderInstructions}>
                     Point camera at Cab QR Sticker
                   </Text>
@@ -204,29 +231,29 @@ export const QrBoardingScreen: React.FC<QrBoardingScreenProps> = ({
               {/* Scan Cab QR Action Button */}
               <TouchableOpacity
                 activeOpacity={0.85}
-                onPress={handleScanCabQr}
+                onPress={handleSimulateScan}
                 disabled={isScanning}
                 style={styles.scanActionButton}
               >
-                <Ionicons name="camera" size={18} color="#FFFFFF" />
+                <Ionicons name="camera" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
                 <Text style={styles.scanActionButtonText}>
-                  {isScanning ? 'Verifying Cab QR...' : 'Scan Cab QR to Board'}
+                  {isScanning ? 'Verifying QR Code...' : 'Tap to Scan Cab QR'}
                 </Text>
               </TouchableOpacity>
             </RoundedCard>
 
-            {/* Section 2: Mandatory Boarding OTP */}
+            {/* Section 2: Mandatory Boarding Security PIN (No Confirm Button on Employee Device) */}
             <RoundedCard style={styles.otpCard}>
               <View style={styles.otpHeaderRow}>
                 <View style={styles.mandatoryBadge}>
-                  <Ionicons name="alert-circle" size={14} color="#DC2626" />
-                  <Text style={styles.mandatoryBadgeText}>MANDATORY BOARDING OTP</Text>
+                  <Ionicons name="shield-checkmark" size={14} color="#000000" />
+                  <Text style={styles.mandatoryBadgeText}>BOARDING SECURITY PIN</Text>
                 </View>
                 <Text style={styles.tripCodeText}>{ride?.tripCode || 'ATH-8821'}</Text>
               </View>
 
               <Text style={styles.otpNotice}>
-                Trip cannot start without 4-digit authentication. Quote this OTP to Chauffeur {driverName} upon boarding.
+                Trip cannot start without 4-digit authentication. Quote this PIN verbally to Chauffeur {driverName} upon cab arrival.
               </Text>
 
               {/* 4 Digit OTP Boxes */}
@@ -237,15 +264,6 @@ export const QrBoardingScreen: React.FC<QrBoardingScreenProps> = ({
                   </View>
                 ))}
               </View>
-
-              <TouchableOpacity
-                activeOpacity={0.8}
-                onPress={handleVerifyOtp}
-                style={styles.verifyOtpButton}
-              >
-                <Ionicons name="shield-checkmark" size={16} color="#FFFFFF" />
-                <Text style={styles.verifyOtpButtonText}>Confirm OTP Verification</Text>
-              </TouchableOpacity>
             </RoundedCard>
 
             {/* Chauffeur Vehicle Context Strip */}
@@ -298,256 +316,267 @@ const styles = StyleSheet.create({
   scannerBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    borderRadius: borderRadius.sm,
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
     gap: 6,
   },
   scannerBadgeText: {
-    ...typography.presets.badge,
+    fontSize: 11,
+    fontWeight: '800',
     color: '#000000',
-    fontWeight: '700',
+    letterSpacing: 0.5,
   },
   torchButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-    borderRadius: borderRadius.sm,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F3F4F6',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    gap: 4,
+    borderColor: '#E5E7EB',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    gap: 6,
   },
   torchButtonActive: {
-    backgroundColor: '#FEF08A',
-    borderColor: '#EAB308',
+    backgroundColor: '#000000',
+    borderColor: '#000000',
   },
   torchText: {
-    ...typography.presets.captionSmall,
-    color: '#64748B',
-    fontWeight: '600',
-  },
-  torchTextActive: {
+    fontSize: 12,
+    fontWeight: '700',
     color: '#000000',
   },
-
-  // Viewfinder Target Frame
+  torchTextActive: {
+    color: '#FFFFFF',
+  },
   viewfinderFrame: {
-    width: 240,
-    height: 220,
+    width: '100%',
+    height: 250,
     backgroundColor: '#0F172A',
     borderRadius: borderRadius.lg,
-    position: 'relative',
     overflow: 'hidden',
+    position: 'relative',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.lg,
+  },
+  permissionBox: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  permissionText: {
+    color: '#CBD5E1',
+    fontSize: 13,
+    fontWeight: '600',
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  permissionBtn: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginTop: 12,
+  },
+  permissionBtnText: {
+    color: '#000000',
+    fontSize: 13,
+    fontWeight: '700',
   },
   corner: {
     position: 'absolute',
     width: 24,
     height: 24,
     borderColor: '#FFFFFF',
+    zIndex: 10,
   },
   cornerTL: {
-    top: 12,
-    left: 12,
-    borderTopWidth: 3,
-    borderLeftWidth: 3,
+    top: 14,
+    left: 14,
+    borderTopWidth: 3.5,
+    borderLeftWidth: 3.5,
+    borderTopLeftRadius: 6,
   },
   cornerTR: {
-    top: 12,
-    right: 12,
-    borderTopWidth: 3,
-    borderRightWidth: 3,
+    top: 14,
+    right: 14,
+    borderTopWidth: 3.5,
+    borderRightWidth: 3.5,
+    borderTopRightRadius: 6,
   },
   cornerBL: {
-    bottom: 12,
-    left: 12,
-    borderBottomWidth: 3,
-    borderLeftWidth: 3,
+    bottom: 14,
+    left: 14,
+    borderBottomWidth: 3.5,
+    borderLeftWidth: 3.5,
+    borderBottomLeftRadius: 6,
   },
   cornerBR: {
-    bottom: 12,
-    right: 12,
-    borderBottomWidth: 3,
-    borderRightWidth: 3,
+    bottom: 14,
+    right: 14,
+    borderBottomWidth: 3.5,
+    borderRightWidth: 3.5,
+    borderBottomRightRadius: 6,
   },
   laserScanLine: {
     position: 'absolute',
-    top: 16,
-    left: 16,
-    right: 16,
-    height: 2,
-    backgroundColor: '#22C55E',
-    shadowColor: '#22C55E',
-    shadowOpacity: 0.8,
+    top: 20,
+    left: 14,
+    right: 14,
+    height: 3,
+    backgroundColor: '#38BDF8',
+    borderRadius: 2,
+    zIndex: 9,
+    shadowColor: '#38BDF8',
+    shadowOpacity: 0.9,
     shadowRadius: 6,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 0 },
   },
   viewfinderCenter: {
+    position: 'absolute',
+    bottom: 16,
     alignItems: 'center',
-    paddingHorizontal: spacing.md,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
   },
   viewfinderInstructions: {
-    ...typography.presets.captionBold,
+    fontSize: 12,
+    fontWeight: '700',
     color: '#FFFFFF',
-    marginTop: spacing.xs,
     textAlign: 'center',
   },
   viewfinderSub: {
-    ...typography.presets.captionSmall,
-    color: '#94A3B8',
-    textAlign: 'center',
-    marginTop: 2,
     fontSize: 10,
+    color: '#94A3B8',
+    marginTop: 2,
+    textAlign: 'center',
   },
   scanActionButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#000000',
-    borderRadius: borderRadius.lg,
     width: '100%',
-    paddingVertical: 14,
-    gap: 8,
+    height: 48,
+    borderRadius: borderRadius.lg,
   },
   scanActionButtonText: {
-    ...typography.presets.button,
-    color: '#FFFFFF',
+    fontSize: 15,
     fontWeight: '700',
+    color: '#FFFFFF',
   },
-
-  // Mandatory OTP Card
   otpCard: {
     backgroundColor: '#FFFFFF',
     borderWidth: 1.5,
     borderColor: '#E2E8F0',
     borderRadius: borderRadius.xl,
     padding: spacing.lg,
-    alignItems: 'center',
   },
   otpHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    width: '100%',
-    marginBottom: spacing.xs,
+    marginBottom: spacing.sm,
   },
   mandatoryBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FEF2F2',
-    borderWidth: 1,
-    borderColor: '#FEE2E2',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
-    borderRadius: borderRadius.sm,
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
     gap: 4,
   },
   mandatoryBadgeText: {
-    ...typography.presets.badge,
-    color: '#DC2626',
-    fontWeight: '700',
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#000000',
+    letterSpacing: 0.5,
   },
   tripCodeText: {
-    ...typography.presets.captionBold,
-    color: '#64748B',
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#000000',
   },
   otpNotice: {
-    ...typography.presets.caption,
-    color: '#64748B',
-    textAlign: 'center',
-    marginVertical: spacing.sm,
+    fontSize: 12,
+    color: '#4B5563',
+    lineHeight: 17,
+    marginBottom: spacing.md,
   },
   otpDigitsRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: spacing.md,
-    marginVertical: spacing.md,
+    gap: 12,
+    paddingVertical: 8,
   },
   otpBox: {
-    width: 54,
-    height: 58,
-    borderRadius: borderRadius.md,
+    width: 60,
+    height: 64,
+    borderRadius: 14,
+    backgroundColor: '#F8FAFC',
     borderWidth: 2,
     borderColor: '#000000',
-    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
   },
   otpDigitText: {
     fontSize: 26,
-    fontWeight: '800',
+    fontWeight: '900',
     color: '#000000',
   },
-  verifyOtpButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#000000',
-    borderRadius: borderRadius.lg,
-    width: '100%',
-    paddingVertical: 13,
-    gap: 8,
-  },
-  verifyOtpButtonText: {
-    ...typography.presets.button,
-    color: '#FFFFFF',
-    fontWeight: '700',
-  },
-
-  // Vehicle Strip Card
   vehicleStripCard: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F9FAFB',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: borderRadius.lg,
-    padding: spacing.md,
+    borderColor: '#E5E7EB',
+    padding: 12,
   },
   stripRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
   },
   avatarMini: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#E2E8F0',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#E5E7EB',
     alignItems: 'center',
     justifyContent: 'center',
+    marginRight: 10,
   },
   stripTextCol: {
     flex: 1,
   },
   stripDriver: {
-    ...typography.presets.captionBold,
-    color: '#0F172A',
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#000000',
   },
   stripPlate: {
-    ...typography.presets.captionSmall,
-    color: '#64748B',
+    fontSize: 11,
+    color: '#6B7280',
+    marginTop: 1,
   },
   statusPill: {
     backgroundColor: '#FEF3C7',
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: borderRadius.sm,
+    borderRadius: 6,
   },
   statusPillText: {
-    color: '#D97706',
-    fontWeight: '700',
     fontSize: 9,
+    fontWeight: '800',
+    color: '#92400E',
   },
-
-  // Success Card
   successCard: {
     backgroundColor: '#FFFFFF',
-    borderWidth: 2,
-    borderColor: '#16A34A',
+    borderWidth: 1.5,
+    borderColor: '#BBF7D0',
     borderRadius: borderRadius.xl,
     padding: spacing.xl,
     alignItems: 'center',
@@ -556,46 +585,50 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   successTitle: {
-    ...typography.presets.h2,
+    fontSize: 18,
+    fontWeight: '900',
     color: '#16A34A',
-    fontWeight: '800',
+    letterSpacing: 0.5,
   },
   successSubtitle: {
-    ...typography.presets.caption,
-    color: '#64748B',
-    marginTop: 2,
-    marginBottom: spacing.lg,
+    fontSize: 13,
+    color: '#4B5563',
+    marginTop: 4,
   },
   successDetailsBox: {
     width: '100%',
-    backgroundColor: '#F8FAFC',
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    gap: spacing.sm,
-    marginBottom: spacing.lg,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 14,
+    marginTop: spacing.lg,
+    marginBottom: spacing.xl,
+    gap: 8,
   },
   successDetailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-  },
-  detailLabel: {
-    ...typography.presets.caption,
-    color: '#64748B',
-  },
-  detailValue: {
-    ...typography.presets.captionBold,
-    color: '#0F172A',
-  },
-  returnButton: {
-    backgroundColor: '#000000',
-    borderRadius: borderRadius.lg,
-    width: '100%',
-    paddingVertical: 14,
     alignItems: 'center',
   },
-  returnButtonText: {
-    ...typography.presets.button,
-    color: '#FFFFFF',
+  detailLabel: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  detailValue: {
+    fontSize: 12,
     fontWeight: '700',
+    color: '#111827',
+  },
+  returnButton: {
+    width: '100%',
+    height: 48,
+    borderRadius: borderRadius.lg,
+    backgroundColor: '#000000',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  returnButtonText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
 });

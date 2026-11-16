@@ -111,6 +111,28 @@ export const authService = {
     activeUserSession = null;
   },
 
+  async updateProfile(updated: Partial<UserProfile>): Promise<UserProfile> {
+    if (activeUserSession) {
+      activeUserSession = {
+        ...activeUserSession,
+        ...updated,
+        // Corporate ID is strictly immutable for HR compliance
+        employeeId: activeUserSession.employeeId,
+      };
+    } else {
+      activeUserSession = {
+        employeeId: 'EMP-9042',
+        fullName: updated.fullName || 'Amrutha Rao',
+        email: updated.email || 'amrutha.rao@walmart.internal',
+        department: updated.department || 'Core Supply Chain Engineering',
+        phone: updated.phone || '+91 98450 11223',
+        primaryOffice: 'Enterprise Tech Park, Tower B',
+        ...updated,
+      };
+    }
+    return activeUserSession;
+  },
+
   async getSession(): Promise<UserProfile | null> {
     return activeUserSession;
   },

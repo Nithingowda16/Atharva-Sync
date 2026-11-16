@@ -26,8 +26,11 @@ import { colors, typography, borderRadius, spacing } from '../../theme';
 import { RideRecord } from '../../types';
 
 interface HomeScreenProps {
+  user?: any;
   activeRide?: RideRecord | null;
-  onNavigateSchedule: () => void;
+  onNavigateFlexiSchedule: () => void;
+  onNavigateRentalz: () => void;
+  onNavigateSchedule?: () => void;
   onNavigateMyBookings: () => void;
   onNavigateRideDetails: (ride: RideRecord) => void;
   onNavigateLiveTracking: (ride: RideRecord) => void;
@@ -37,7 +40,10 @@ interface HomeScreenProps {
 }
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({
+  user,
   activeRide = null,
+  onNavigateFlexiSchedule,
+  onNavigateRentalz,
   onNavigateSchedule,
   onNavigateMyBookings,
   onNavigateRideDetails,
@@ -172,44 +178,46 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
           <RoundedCard style={styles.emptyCard}>
             <EmptyState
               iconName="calendar-outline"
-              title="No bookings yet"
-              description="You have no active rides scheduled for today. Book your upcoming shift to secure cab allocation."
-              actionTitle="Schedule Ride"
-              onAction={onNavigateSchedule}
+              title="No active trips yet"
+              description="You have no active rides scheduled for today. Book your commute with Flexi Schedule or request a corporate Rental."
+              actionTitle="Flexi Schedule"
+              onAction={onNavigateFlexiSchedule}
             />
           </RoundedCard>
         )}
 
-        {/* Quick Shift Management Actions */}
+        {/* Corporate Mobility Services */}
         <SectionHeader
-          title="Commute Operations"
-          subtitle="Quick access to employee transport controls"
+          title="Mobility Services"
+          subtitle="Enterprise corporate car rentals & flexible shift scheduling"
           style={{ marginTop: spacing.lg }}
         />
 
         <View style={styles.quickTilesGrid}>
+          {/* Tile 1: Rentalz */}
           <TouchableOpacity
             activeOpacity={0.75}
-            onPress={onNavigateSchedule}
+            onPress={onNavigateRentalz}
             style={styles.tile}
           >
             <View style={styles.tileIconContainer}>
-              <Ionicons name="add-circle-outline" size={24} color={colors.primary} />
+              <Ionicons name="car-sport-outline" size={24} color="#000000" />
             </View>
-            <Text style={styles.tileTitle}>Schedule Ride</Text>
-            <Text style={styles.tileSubtitle}>Book login/logout commute</Text>
+            <Text style={styles.tileTitle}>Rentalz</Text>
+            <Text style={styles.tileSubtitle}>Executive hourly car rentals</Text>
           </TouchableOpacity>
 
+          {/* Tile 2: Flexi Schedule */}
           <TouchableOpacity
             activeOpacity={0.75}
-            onPress={onNavigateMyBookings}
+            onPress={onNavigateFlexiSchedule}
             style={styles.tile}
           >
             <View style={styles.tileIconContainer}>
-              <Ionicons name="time-outline" size={24} color={colors.primary} />
+              <Ionicons name="calendar-outline" size={24} color="#000000" />
             </View>
-            <Text style={styles.tileTitle}>My Bookings</Text>
-            <Text style={styles.tileSubtitle}>View upcoming & past trips</Text>
+            <Text style={styles.tileTitle}>Flexi Schedule</Text>
+            <Text style={styles.tileSubtitle}>Multi-day & flexible shift commute</Text>
           </TouchableOpacity>
         </View>
 

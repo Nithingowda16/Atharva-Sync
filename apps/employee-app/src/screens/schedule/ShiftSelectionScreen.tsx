@@ -31,7 +31,7 @@ import { ShiftRecord, JourneyDirection } from '../../types';
 
 interface ShiftSelectionScreenProps {
   date: string;
-  direction?: JourneyDirection;
+  direction?: 'LOGIN' | 'LOGOUT';
   onBack: () => void;
   onApplyShift: (shift: ShiftRecord) => void;
   availableShifts?: ShiftRecord[];
@@ -151,7 +151,7 @@ export const ShiftSelectionScreen: React.FC<ShiftSelectionScreenProps> = ({
         id: `custom-shift-${Date.now()}`,
         shiftTime: timeStr,
         travelDurationMinutes: 30,
-        direction,
+        direction: direction === 'LOGOUT' ? 'LOGOUT' : 'LOGIN',
         shiftWindow: `Custom timing allocated: ${timeStr}`,
         cutoffTime: '45m prior',
         isAvailable: true,
@@ -169,7 +169,7 @@ export const ShiftSelectionScreen: React.FC<ShiftSelectionScreenProps> = ({
       id: `custom-shift-${Date.now()}`,
       shiftTime: trimmed,
       travelDurationMinutes: 35,
-      direction,
+      direction: direction === 'LOGOUT' ? 'LOGOUT' : 'LOGIN',
       shiftWindow: `Custom employee schedule: ${trimmed}`,
       cutoffTime: '60m prior',
       isAvailable: true,
