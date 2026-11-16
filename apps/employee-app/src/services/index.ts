@@ -3,9 +3,9 @@
  * Unified Services Export
  */
 
+export * from './apiConfig';
 export * from './authService';
 export * from './bookingService';
 export * from './shiftService';
 export * from './tripService';
 export * from './notificationService';
-

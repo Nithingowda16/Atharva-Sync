@@ -6,32 +6,37 @@
  */
 
 export const colors = {
-  // Primary Corporate Blue Palette
-  primary: '#0B4EA2',          // Deep corporate blue (main CTA buttons, selected borders, active icons)
-  primaryDark: '#073874',      // Pressed state / dark headers
-  primaryLight: '#2563EB',     // Bright blue accent
-  primarySurface: '#EBF3FC',   // Light ice-blue surface for icon containers & active tags
-  primarySubtle: '#F0F6FD',    // Subtle blue background for selected cards
+  // Primary Luxury Black Palette for Main Buttons
+  primary: '#000000',          // Solid black (main CTA buttons, primary actions, floating FAB)
+  primaryDark: '#18181B',      // Pressed state / dark headers
+  primaryLight: '#27272A',     // Dark slate accent
+  primarySurface: '#F1F5F9',   // Light subtle surface for icon containers & badges
+  primarySubtle: '#F8FAFC',    // Subtle surface for selected cards
 
-  // Neutral Backgrounds
+  // Hi Riders Vibrant Orange Accent
+  accent: '#FF7900',           // Vibrant orange accent (pins, status tags, brand highlights)
+  accentDark: '#F4510B',       // Deep orange
+  accentSurface: '#FFF7ED',    // Very light orange tint for active badges
+
+  // Neutral Backgrounds (Pure White Application Theme)
   background: '#FFFFFF',       // Pure white main application background
   surface: '#F8FAFC',          // Light off-white for secondary screen areas
-  card: '#FFFFFF',             // White card background
+  card: '#FFFFFF',             // Clean white card background
   cardMuted: '#F1F5F9',        // Muted container background
   cardSelected: '#FFFFFF',     // Selected card surface
 
   // Borders & Dividers
-  border: '#E2E8F0',           // Very subtle unselected card border
-  borderLight: '#EDF2F7',      // Ultra-soft divider
-  borderSelected: '#0B4EA2',   // Deep blue selected border
-  borderFocus: '#2563EB',      // Form input focus border
+  border: '#E2E8F0',           // Very subtle card & input border
+  borderLight: '#F1F5F9',      // Ultra-soft divider
+  borderSelected: '#000000',   // Black selected border
+  borderFocus: '#000000',      // Form input focus border
 
   // Typography Colors
-  textPrimary: '#0F172A',      // Dark navy / charcoal for main titles and body
+  textPrimary: '#0F172A',      // Dark slate / black for main titles and body
   textSecondary: '#64748B',    // Muted grey for subheaders, labels, secondary info
   textMuted: '#94A3B8',        // Placeholder text and hints
-  textWhite: '#FFFFFF',        // White text on primary CTA buttons
-  textPrimaryBlue: '#0B4EA2',  // Accent blue text
+  textWhite: '#FFFFFF',        // White text on black CTA buttons
+  textPrimaryBlue: '#000000',  // Primary text
 
   // Operational Status Colors
   success: '#059669',          // Green for active, on-time, boarded
@@ -52,7 +57,7 @@ export const colors = {
 
   // Interactive Overlays
   overlay: 'rgba(15, 23, 42, 0.45)', // Backdrop dimming for Bottom Sheet & Dialogs
-  ripple: 'rgba(11, 78, 162, 0.08)',  // Android touch ripple
+  ripple: 'rgba(0, 0, 0, 0.08)',      // Android touch ripple
 } as const;
 
 export type Colors = typeof colors;

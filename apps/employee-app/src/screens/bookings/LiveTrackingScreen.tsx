@@ -1,3 +1,4 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 /**
  * Atharva Travels ETS — Employee Android App
  * LiveTrackingScreen
@@ -12,7 +13,6 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   TouchableOpacity,
 } from 'react-native';
@@ -121,7 +121,7 @@ export const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({
           <View style={styles.emergencyTextCol}>
             <Text style={styles.emergencyTitle}>Emergency Transport Desk</Text>
             <Text style={styles.emergencySubtitle}>
-              Tap to broadcast instant SOS alert to Atharva 24x7 Control Room
+              Tap to broadcast instant SOS alert to HI RIDERS 24x7 Control Room
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={16} color={colors.error} />

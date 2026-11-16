@@ -1,3 +1,4 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 /**
  * Atharva Travels ETS — Employee Android App
  * RouteSelectionScreen
@@ -12,7 +13,6 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
 } from 'react-native';
 import { AppHeader } from '../../components/common/AppHeader';

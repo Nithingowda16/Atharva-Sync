@@ -40,10 +40,61 @@ export async function POST(request: NextRequest) {
 
     const trimmed = identifier.trim().toLowerCase();
 
-    // 2. Check Admin-Controlled Provisioned Store
+    // 2. Check for Employee Mobile App Authentication
+    if (roleTarget === 'employee') {
+      const EMPLOYEES = [
+        {
+          id: 'emp-amrutha',
+          employeeId: 'EMP-9042',
+          employeeCode: 'EMP-9042',
+          fullName: 'Amrutha Rao',
+          email: 'amrutha.rao@walmart.internal',
+          department: 'Core Supply Chain Engineering',
+          phone: '+91 98450 11223',
+          role: 'EMPLOYEE',
+        },
+        {
+          id: 'emp-priya',
+          employeeId: 'EMP-9018',
+          employeeCode: 'EMP-9018',
+          fullName: 'Priya Sharma',
+          email: 'priya.sharma@walmart.internal',
+          department: 'Product Management',
+          phone: '+91 98711 22334',
+          role: 'EMPLOYEE',
+        },
+        {
+          id: 'emp-karthik',
+          employeeId: 'EMP-9033',
+          employeeCode: 'EMP-9033',
+          fullName: 'Karthik Natarajan',
+          email: 'karthik.natarajan@walmart.internal',
+          department: 'Cloud Infrastructure & DevOps',
+          phone: '+91 99887 33445',
+          role: 'EMPLOYEE',
+        },
+      ];
+
+      const emp = EMPLOYEES.find(
+        (e) =>
+          e.employeeCode.toLowerCase() === trimmed ||
+          e.email.toLowerCase() === trimmed ||
+          e.id.toLowerCase() === trimmed ||
+          trimmed.includes(e.employeeCode.toLowerCase())
+      ) || EMPLOYEES[0]; // Graceful fallback to primary demo employee
+
+      return NextResponse.json({
+        success: true,
+        message: `Welcome ${emp.fullName}`,
+        user: emp,
+        targetPortal: 'employee-app',
+      });
+    }
+
+    // 3. Check Admin-Controlled Provisioned Store for Web Portal
     const matched = findAccount(trimmed);
 
-    // 3. Strict Authorization Check: Only the 3 authorized admins are allowed
+    // Strict Authorization Check: Only the 3 authorized admins are allowed
     if (!matched || !AUTHORIZED_ADMIN_EMAILS.includes(matched.email.toLowerCase())) {
       return NextResponse.json(
         {

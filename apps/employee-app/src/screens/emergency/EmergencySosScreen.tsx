@@ -1,3 +1,4 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 /**
  * Atharva Travels ETS — Employee Android App
  * EmergencySosScreen
@@ -12,7 +13,6 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   TouchableOpacity,
 } from 'react-native';
@@ -62,7 +62,7 @@ export const EmergencySosScreen: React.FC<EmergencySosScreenProps> = ({
             </View>
             <Text style={styles.dispatchedTitle}>SOS Alert Transmitted</Text>
             <Text style={styles.dispatchedDesc}>
-              Atharva 24x7 Central Operations Command, Quick Response Team (QRT), and corporate safety supervisors have been notified.
+              HI RIDERS 24x7 Central Operations Command, Quick Response Team (QRT), and corporate safety supervisors have been notified.
             </Text>
 
             <View style={styles.hotlineBox}>
@@ -146,7 +146,7 @@ export const EmergencySosScreen: React.FC<EmergencySosScreenProps> = ({
       <ConfirmationDialog
         visible={confirmDialogVisible}
         title="Confirm Emergency SOS"
-        message="Are you sure you want to broadcast an emergency alert to the Atharva Central Operations Control Room?"
+        message="Are you sure you want to broadcast an emergency alert to the HI RIDERS Central Operations Control Room?"
         confirmLabel="Broadcast SOS"
         isDestructive
         onConfirm={handleConfirmTrigger}

@@ -1,3 +1,4 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 /**
  * Atharva Travels ETS — Employee Android App
  * MyBookingsScreen
@@ -11,7 +12,6 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   TouchableOpacity,
   ScrollView,
 } from 'react-native';

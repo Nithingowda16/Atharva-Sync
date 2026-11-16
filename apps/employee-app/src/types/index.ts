@@ -5,6 +5,7 @@
 
 export type ScreenName =
   | 'Splash'
+  | 'Onboarding'
   | 'Login'
   | 'ForgotPassword'
   | 'Home'

@@ -1,10 +1,14 @@
 /**
- * Atharva Travels ETS — Employee Android App
- * LoginScreen
+ * HI RIDERS — Enterprise Transport Mobility
+ * Employee Login Screen (Pure White Aesthetic)
  * 
- * Clean corporate login interface.
- * Shows validation errors, loading state, show/hide password toggle,
- * and forgot password navigation.
+ * Features:
+ * - Pure white background (#FFFFFF)
+ * - Seamlessly blended branding header & mobility overview
+ * - Crisp input fields with dark text and subtle borders
+ * - Full-width solid black "Sign In →" CTA button (#000000)
+ * - Back button to return to Onboarding walkthrough
+ * - Loading and error states
  */
 
 import React, { useState } from 'react';
@@ -14,26 +18,26 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Image,
+  ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { PrimaryButton } from '../../components/common/PrimaryButton';
-import { colors, typography, borderRadius, spacing } from '../../theme';
 import { authService } from '../../services';
 
 interface LoginScreenProps {
   onLoginSuccess: () => void;
   onNavigateForgotPassword: () => void;
-  onBypassForDemo?: () => void; // Clean demo switch for previewing screens
+  onBackToOnboarding?: () => void;
 }
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({
   onLoginSuccess,
   onNavigateForgotPassword,
-  onBypassForDemo,
+  onBackToOnboarding,
 }) => {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
@@ -44,27 +48,29 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   const handleLogin = async () => {
     setErrorMessage(null);
 
-    if (!identifier.trim()) {
+    const trimmedId = identifier.trim();
+    const trimmedPass = password.trim();
+
+    if (!trimmedId) {
       setErrorMessage('Please enter your Employee ID or corporate email.');
       return;
     }
-    if (!password.trim()) {
+    if (!trimmedPass) {
       setErrorMessage('Please enter your password or PIN.');
       return;
     }
 
     setIsLoading(true);
     const result = await authService.login({
-      identifier,
-      secret: password,
+      identifier: trimmedId,
+      secret: trimmedPass,
     });
     setIsLoading(false);
 
     if (result.success) {
       onLoginSuccess();
     } else {
-      // In Phase 1 Frontend: State that backend authentication will be enabled in Phase 2
-      setErrorMessage(result.error || 'Authentication service will connect in Phase 2.');
+      setErrorMessage(result.error || 'Authentication rejected. Please check credentials.');
     }
   };
 
@@ -77,46 +83,74 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          {/* Header Brand Badge */}
-          <View style={styles.brandHeader}>
-            <View style={styles.logoBadge}>
-              <Ionicons name="bus" size={32} color={colors.primary} />
+          {/* Top Bar with Back Button */}
+          <View style={styles.topBar}>
+            {onBackToOnboarding ? (
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={onBackToOnboarding}
+                style={styles.backButton}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              >
+                <Ionicons name="chevron-back" size={24} color="#0F172A" />
+              </TouchableOpacity>
+            ) : (
+              <View style={{ width: 40 }} />
+            )}
+            <View style={styles.topBadge}>
+              <Text style={styles.topBadgeText}>Corporate Mobility</Text>
             </View>
-            <Text style={styles.appTitle}>Atharva Travels</Text>
-            <Text style={styles.appSubtitle}>Enterprise Transport System</Text>
+            <View style={{ width: 40 }} />
           </View>
 
-          {/* Form Card */}
-          <View style={styles.formCard}>
-            <Text style={styles.formTitle}>Employee Login</Text>
-            <Text style={styles.formSubtitle}>
-              Sign in with your corporate employee credentials to view assigned shifts and commute routes.
-            </Text>
+          {/* Centered Brand Header */}
+          <View style={styles.brandContainer}>
+            <View style={styles.logoSquare}>
+              <Image
+                source={require('../../../assets/logo.png')}
+                style={styles.logoImage}
+                resizeMode="contain"
+              />
+            </View>
+            <Text style={styles.brandTitle}>HI RIDERS</Text>
+            <Text style={styles.brandSubtitle}>ENTERPRISE TRANSPORT MOBILITY</Text>
+          </View>
 
-            {/* Validation Error Banner */}
+          {/* Form Container */}
+          <View style={styles.formContainer}>
+            {/* Card Heading */}
+            <View style={styles.headingSection}>
+              <Text style={styles.cardTitle}>Employee Login</Text>
+              <Text style={styles.cardSubtitle}>
+                Sign in with your corporate employee credentials to view assigned shifts and commute routes.
+              </Text>
+            </View>
+
+            {/* Error Banner */}
             {errorMessage && (
               <View style={styles.errorBanner}>
-                <Ionicons name="alert-circle" size={18} color={colors.error} />
+                <Ionicons name="alert-circle" size={18} color="#DC2626" />
                 <Text style={styles.errorText}>{errorMessage}</Text>
               </View>
             )}
 
-            {/* Field 1: Employee ID */}
+            {/* Input 1: Employee ID / Email */}
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Employee ID / Email</Text>
               <View style={styles.inputContainer}>
                 <Ionicons
                   name="person-outline"
-                  size={18}
-                  color={colors.textSecondary}
+                  size={20}
+                  color="#64748B"
                   style={styles.inputIcon}
                 />
                 <TextInput
-                  placeholder="e.g. EMP-1048 or corporate email"
-                  placeholderTextColor={colors.textMuted}
+                  placeholder="e.g. EMP-9042 or corporate email"
+                  placeholderTextColor="#94A3B8"
                   value={identifier}
-                  onChangeText={(text: string) => {
+                  onChangeText={(text) => {
                     setIdentifier(text);
                     if (errorMessage) setErrorMessage(null);
                   }}
@@ -126,21 +160,21 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               </View>
             </View>
 
-            {/* Field 2: Password / PIN */}
+            {/* Input 2: Password / PIN */}
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Password / PIN</Text>
               <View style={styles.inputContainer}>
                 <Ionicons
                   name="lock-closed-outline"
-                  size={18}
-                  color={colors.textSecondary}
+                  size={20}
+                  color="#64748B"
                   style={styles.inputIcon}
                 />
                 <TextInput
                   placeholder="Enter your security password"
-                  placeholderTextColor={colors.textMuted}
+                  placeholderTextColor="#94A3B8"
                   value={password}
-                  onChangeText={(text: string) => {
+                  onChangeText={(text) => {
                     setPassword(text);
                     if (errorMessage) setErrorMessage(null);
                   }}
@@ -150,12 +184,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                 <TouchableOpacity
                   activeOpacity={0.7}
                   onPress={() => setShowPassword(!showPassword)}
-                  style={styles.eyeIcon}
+                  style={styles.eyeButton}
+                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                 >
                   <Ionicons
                     name={showPassword ? 'eye-off-outline' : 'eye-outline'}
                     size={20}
-                    color={colors.textSecondary}
+                    color="#64748B"
                   />
                 </TouchableOpacity>
               </View>
@@ -170,26 +205,25 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
             </TouchableOpacity>
 
-            {/* Sign In CTA */}
-            <PrimaryButton
-              title="Sign In"
+            {/* Solid Black Sign In Button */}
+            <TouchableOpacity
+              activeOpacity={0.85}
               onPress={handleLogin}
-              loading={isLoading}
-              style={styles.signInButton}
-            />
-
-            {/* Demo Screen Preview Switch (Allows exploring the frontend screens) */}
-            {onBypassForDemo && (
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={onBypassForDemo}
-                style={styles.previewModeButton}
-              >
-                <Text style={styles.previewModeText}>
-                  Explore Frontend App Interface (Phase 1 Preview)
-                </Text>
-              </TouchableOpacity>
-            )}
+              disabled={isLoading}
+              style={[styles.signInButton, isLoading && styles.signInButtonDisabled]}
+            >
+              {isLoading ? (
+                <View style={styles.loadingRow}>
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                  <Text style={styles.signInButtonText}>Signing In...</Text>
+                </View>
+              ) : (
+                <View style={styles.buttonContentRow}>
+                  <Text style={styles.signInButtonText}>Sign In</Text>
+                  <Ionicons name="arrow-forward" size={18} color="#FFFFFF" style={{ marginLeft: 8 }} />
+                </View>
+              )}
+            </TouchableOpacity>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -200,131 +234,202 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: '#FFFFFF',
   },
   keyboardView: {
     flex: 1,
   },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.xxl,
-    paddingBottom: spacing.xxxl,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 24,
+    paddingBottom: 36,
+  },
+  topBar: {
+    height: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 4,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
     justifyContent: 'center',
   },
-  brandHeader: {
-    alignItems: 'center',
-    marginBottom: spacing.xxl,
+  topBadge: {
+    backgroundColor: '#FFF7ED',
+    borderWidth: 1,
+    borderColor: '#FFEDD5',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
-  logoBadge: {
-    width: 68,
-    height: 68,
-    borderRadius: borderRadius.xxl,
-    backgroundColor: colors.primarySurface,
+  topBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#FF7900',
+  },
+  brandContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.md,
+    marginTop: 16,
+    marginBottom: 24,
   },
-  appTitle: {
+  logoSquare: {
+    width: 72,
+    height: 72,
+    borderRadius: 20,
+    backgroundColor: '#0F172A',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 4,
+    marginBottom: 12,
+  },
+  logoImage: {
+    width: 52,
+    height: 52,
+    borderRadius: 12,
+  },
+  brandTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#0F172A',
+    letterSpacing: 1,
+  },
+  brandSubtitle: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#FF7900',
+    letterSpacing: 1.5,
+    marginTop: 4,
+  },
+  formContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 22,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 16,
+    elevation: 2,
+  },
+  headingSection: {
+    marginBottom: 20,
+  },
+  cardTitle: {
     fontSize: 22,
     fontWeight: '800',
-    color: colors.textPrimary,
-    letterSpacing: 0.5,
+    color: '#0F172A',
+    letterSpacing: -0.3,
   },
-  appSubtitle: {
-    ...typography.presets.caption,
-    color: colors.primary,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-    marginTop: 2,
-  },
-  formCard: {
-    backgroundColor: colors.card,
-    borderRadius: borderRadius.xxl,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.xl,
-  },
-  formTitle: {
-    ...typography.presets.sectionTitle,
-    fontSize: 18,
-    color: colors.textPrimary,
-    marginBottom: 4,
-  },
-  formSubtitle: {
-    ...typography.presets.caption,
-    color: colors.textSecondary,
-    marginBottom: spacing.lg,
+  cardSubtitle: {
+    fontSize: 13,
+    color: '#64748B',
     lineHeight: 18,
+    marginTop: 6,
   },
   errorBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.errorSurface,
-    padding: spacing.md,
-    borderRadius: borderRadius.md,
-    marginBottom: spacing.md,
+    gap: 8,
+    backgroundColor: '#FEF2F2',
     borderWidth: 1,
-    borderColor: colors.errorBorder,
-    gap: spacing.sm,
+    borderColor: '#FECACA',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
   },
   errorText: {
-    ...typography.presets.captionSmall,
-    color: colors.error,
     flex: 1,
+    fontSize: 12,
+    color: '#DC2626',
+    fontWeight: '500',
+    lineHeight: 16,
   },
   inputGroup: {
-    marginBottom: spacing.md,
+    marginBottom: 16,
   },
   inputLabel: {
-    ...typography.presets.caption,
-    fontWeight: '600',
-    color: colors.textPrimary,
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#0F172A',
     marginBottom: 6,
+    marginLeft: 2,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 50,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: borderRadius.lg,
-    paddingHorizontal: spacing.md,
-    backgroundColor: colors.surface,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    borderRadius: 14,
+    height: 52,
+    paddingHorizontal: 14,
   },
   inputIcon: {
-    marginRight: spacing.sm,
+    marginRight: 10,
   },
   input: {
     flex: 1,
-    ...typography.presets.body,
-    color: colors.textPrimary,
+    fontSize: 14,
+    color: '#0F172A',
     height: '100%',
   },
-  eyeIcon: {
-    padding: spacing.xs,
+  eyeButton: {
+    padding: 6,
   },
   forgotPasswordContainer: {
     alignSelf: 'flex-end',
-    marginBottom: spacing.lg,
+    marginTop: 2,
+    marginBottom: 20,
+    paddingVertical: 4,
   },
   forgotPasswordText: {
-    ...typography.presets.caption,
-    color: colors.primary,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FF7900',
   },
   signInButton: {
-    marginBottom: spacing.md,
-  },
-  previewModeButton: {
-    paddingVertical: spacing.sm,
+    height: 54,
+    backgroundColor: '#000000',
+    borderRadius: 16,
     alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 4,
   },
-  previewModeText: {
-    ...typography.presets.captionSmall,
-    color: colors.primary,
-    fontWeight: '600',
-    textDecorationLine: 'underline',
+  signInButtonDisabled: {
+    opacity: 0.65,
+  },
+  buttonContentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  signInButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
+  },
+  loadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
 });
-

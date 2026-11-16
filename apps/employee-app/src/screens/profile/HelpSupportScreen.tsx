@@ -1,3 +1,4 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 /**
  * Atharva Travels ETS — Employee Android App
  * HelpSupportScreen
@@ -14,7 +15,6 @@ import {
   TextInput,
   Modal,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   TouchableOpacity,
 } from 'react-native';

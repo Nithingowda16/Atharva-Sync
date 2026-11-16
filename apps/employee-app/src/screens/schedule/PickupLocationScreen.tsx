@@ -1,3 +1,4 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 /**
  * Atharva Travels ETS — Employee Android App
  * PickupLocationScreen
@@ -13,7 +14,6 @@ import {
   Text,
   TextInput,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';

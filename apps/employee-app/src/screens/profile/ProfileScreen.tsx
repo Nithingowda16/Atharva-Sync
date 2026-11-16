@@ -1,3 +1,4 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 /**
  * Atharva Travels ETS — Employee Android App
  * ProfileScreen
@@ -14,7 +15,6 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -66,7 +66,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               {user?.fullName || 'Corporate Employee'}
             </Text>
             <Text style={styles.userEmpId}>
-              {user?.employeeId ? `ID: ${user.employeeId}` : 'Atharva ETS Commuter'}
+              {user?.employeeId ? `ID: ${user.employeeId}` : 'HI RIDERS Commuter'}
             </Text>
             {user?.department && (
               <Text style={styles.userDept}>{user.department}</Text>
@@ -144,7 +144,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         </View>
 
         <Text style={styles.versionFooter}>
-          Atharva Travels ETS • Version 1.0.0 (Phase 1 Frontend)
+          HI RIDERS Enterprise Mobility • Version 1.0.0
         </Text>
       </ScrollView>
 

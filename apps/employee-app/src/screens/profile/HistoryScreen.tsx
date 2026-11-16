@@ -1,3 +1,4 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 /**
  * Atharva Travels ETS — Employee Android App
  * HistoryScreen
@@ -10,7 +11,6 @@ import React from 'react';
 import {
   View,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
 } from 'react-native';
 import { AppHeader } from '../../components/common/AppHeader';
@@ -36,7 +36,7 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({
           <EmptyState
             iconName="time-outline"
             title="No trip history"
-            description="Your completed commute trips and timestamps will be logged here once you begin traveling with Atharva ETS."
+            description="Your completed commute trips and timestamps will be logged here once you begin traveling with HI RIDERS."
           />
         ) : (
           <View>

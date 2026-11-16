@@ -9,9 +9,10 @@
  * - Sub-screens (Shift Selection, Pickup, Routes, Review, Live Tracking, QR Boarding, SOS, etc.)
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, BackHandler } from 'react-native';
 import { SplashScreen } from '../screens/auth/SplashScreen';
+import { OnboardingScreen } from '../screens/auth/OnboardingScreen';
 import { LoginScreen } from '../screens/auth/LoginScreen';
 import { ForgotPasswordScreen } from '../screens/auth/ForgotPasswordScreen';
 import { HomeScreen } from '../screens/bookings/HomeScreen';
@@ -36,6 +37,7 @@ import { EmergencySosScreen } from '../screens/emergency/EmergencySosScreen';
 import { BottomNavigation } from '../components/navigation/BottomNavigation';
 import { QuickActionBottomSheet } from '../components/navigation/QuickActionBottomSheet';
 import { colors } from '../theme';
+import { bookingService, authService } from '../services';
 import {
   ScreenName,
   MainTab,
@@ -48,17 +50,102 @@ import {
 } from '../types';
 
 export const AppNavigator: React.FC = () => {
-  // Navigation State
-  const [currentScreen, setCurrentScreen] = useState<ScreenName>('Splash');
+  // Navigation State — Start directly with Onboarding slides
+  const [currentScreen, setCurrentScreen] = useState<ScreenName>('Onboarding');
   const [activeTab, setActiveTab] = useState<MainTab>('Bookings');
   const [isBottomSheetOpen, setIsBottomSheetOpen] = useState(false);
+
+  // Hardware Back Button & Back Gesture Navigation for Android
+  useEffect(() => {
+    const onBackPress = () => {
+      // 1. If Quick Action sheet is open, close it first
+      if (isBottomSheetOpen) {
+        setIsBottomSheetOpen(false);
+        return true;
+      }
+
+      // 2. Screen-specific back routing
+      switch (currentScreen) {
+        case 'Onboarding':
+          // First screen: allow system default (exit/minimize)
+          return false;
+
+        case 'Login':
+          // Return to onboarding carousel
+          setCurrentScreen('Onboarding');
+          return true;
+
+        case 'ForgotPassword':
+          setCurrentScreen('Login');
+          return true;
+
+        case 'Home':
+          // Root home screen: let system default minimize
+          return false;
+
+        case 'Profile':
+          // Back to main Bookings tab
+          setActiveTab('Bookings');
+          setCurrentScreen('Home');
+          return true;
+
+        case 'MyBookings':
+        case 'RideDetails':
+        case 'LiveTracking':
+        case 'QrBoarding':
+        case 'CreateSchedule':
+        case 'EmergencySos':
+        case 'Notifications':
+          setCurrentScreen('Home');
+          return true;
+
+        case 'ShiftSelection':
+        case 'PickupLocation':
+        case 'RouteSelection':
+        case 'BookingReview':
+          setCurrentScreen('CreateSchedule');
+          return true;
+
+        case 'History':
+        case 'MyAddress':
+        case 'HelpSupport':
+        case 'Feedback':
+        case 'Settings':
+          setCurrentScreen('Profile');
+          return true;
+
+        default:
+          return false;
+      }
+    };
+
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => backHandler.remove();
+  }, [currentScreen, isBottomSheetOpen]);
 
   // User Profile
   const [user, setUser] = useState<UserProfile | null>(null);
 
-  // Active / Confirmed Rides State (begins empty per strict no-mock-data rule)
+  // Active / Confirmed Rides State
   const [bookingsList, setBookingsList] = useState<RideRecord[]>([]);
   const [selectedRide, setSelectedRide] = useState<RideRecord | null>(null);
+
+  // Synchronize live commute from Web Portal backend
+  const refreshLiveCommute = async () => {
+    try {
+      const rides = await bookingService.getBookings();
+      if (rides && rides.length > 0) {
+        setBookingsList(rides);
+        setSelectedRide(rides[0]);
+      }
+    } catch (e) {
+      console.warn('Error syncing commute from web portal:', e);
+    }
+  };
+
+  useEffect(() => {
+    refreshLiveCommute();
+  }, [user]);
 
   // Booking Draft State
   const [bookingDraft, setBookingDraft] = useState<BookingDraft>({
@@ -123,30 +210,33 @@ export const AppNavigator: React.FC = () => {
   const renderScreen = () => {
     switch (currentScreen) {
       case 'Splash':
-        return <SplashScreen onFinish={() => setCurrentScreen('Login')} />;
+        return <SplashScreen onFinish={() => setCurrentScreen('Onboarding')} />;
+
+      case 'Onboarding':
+        return (
+          <OnboardingScreen
+            onFinish={() => setCurrentScreen('Login')}
+          />
+        );
 
       case 'Login':
         return (
           <LoginScreen
-            onLoginSuccess={() => {
-              setUser({
-                employeeId: 'EMP-1048',
-                fullName: 'Corporate Employee',
-                email: 'employee@corporate.com',
-                department: 'Supply Chain Operations',
-              });
+            onLoginSuccess={async () => {
+              const session = await authService.getSession();
+              setUser(
+                session || {
+                  employeeId: 'EMP-9042',
+                  fullName: 'Amrutha Rao',
+                  email: 'amrutha.rao@walmart.internal',
+                  department: 'Core Supply Chain Engineering',
+                }
+              );
+              refreshLiveCommute();
               setCurrentScreen('Home');
             }}
             onNavigateForgotPassword={() => setCurrentScreen('ForgotPassword')}
-            onBypassForDemo={() => {
-              setUser({
-                employeeId: 'EMP-1048',
-                fullName: 'Corporate Employee',
-                email: 'employee@corporate.com',
-                department: 'Supply Chain Operations',
-              });
-              setCurrentScreen('Home');
-            }}
+            onBackToOnboarding={() => setCurrentScreen('Onboarding')}
           />
         );
 

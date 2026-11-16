@@ -1,3 +1,4 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 /**
  * Atharva Travels ETS — Employee Android App
  * HomeScreen (Dashboard & Bookings Overview)
@@ -12,7 +13,6 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   TouchableOpacity,
   RefreshControl,
@@ -58,8 +58,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       {/* Top App Bar */}
       <View style={styles.topBar}>
         <View style={styles.brandTitleCol}>
-          <Text style={styles.greetingText}>Atharva Travels</Text>
-          <Text style={styles.headerSubtitle}>Enterprise Transport</Text>
+          <Text style={styles.greetingText}>HI RIDERS</Text>
+          <Text style={styles.headerSubtitle}>Enterprise Mobility Platform</Text>
         </View>
 
         <View style={styles.topBarActions}>
@@ -264,13 +264,18 @@ const styles = StyleSheet.create({
   sosButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 5,
     backgroundColor: colors.errorSurface,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: colors.errorBorder,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
     borderRadius: borderRadius.full,
+    elevation: 2,
+    shadowColor: colors.error,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
   },
   sosText: {
     ...typography.presets.captionSmall,
@@ -278,12 +283,19 @@ const styles = StyleSheet.create({
     color: colors.error,
   },
   iconButton: {
-    width: 38,
-    height: 38,
-    borderRadius: borderRadius.full,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.surface,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
   scrollContent: {
     padding: spacing.lg,
@@ -339,7 +351,7 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: colors.primary,
+    backgroundColor: '#FF7900',
     marginRight: spacing.md,
   },
   dropDot: {

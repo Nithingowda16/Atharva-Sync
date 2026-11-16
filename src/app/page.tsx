@@ -1098,19 +1098,19 @@ export default function ETSPortal() {
           <header className="bg-white border-b border-slate-200 sticky top-0 z-30 px-6 py-2 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
             <div className="max-w-full mx-auto flex items-center justify-between">
               
-              {/* Brand + Corporate Hub Name (Faithful to MoveInSync Layout, Zero Walmart) */}
+              {/* Brand: Atharva Travels */}
               <div className="flex items-center space-x-3">
-                <div className="flex items-center space-x-1.5">
-                  <div className="bg-[#107c41] text-white font-extrabold px-1.5 py-0.5 text-xs tracking-tighter flex items-center">
-                    <span className="text-base font-black">M</span>
-                  </div>
-                  <span className="font-extrabold text-[#107c41] text-sm tracking-tight hidden sm:inline">
-                    Move<span className="text-slate-800 font-bold">InSync</span>
-                  </span>
-                </div>
+                <img
+                  src="/logo.png"
+                  alt="Atharva Travels"
+                  className="h-8 w-auto object-contain mix-blend-multiply"
+                />
                 <div className="border-l border-slate-300 pl-3">
-                  <span className="text-slate-800 font-bold text-sm tracking-tight block">
-                    Enterprise Tech Park - Bangalore
+                  <span className="text-slate-900 font-black text-sm tracking-tight block">
+                    Atharva Travels
+                  </span>
+                  <span className="text-slate-500 font-semibold text-[10px] tracking-wide block uppercase">
+                    Enterprise Mobility Platform
                   </span>
                 </div>
               </div>
@@ -1300,32 +1300,7 @@ export default function ETSPortal() {
                 </div>
               </div>
 
-              {/* Web Portal Switcher */}
-              <div className="hidden lg:flex items-center space-x-2 text-xs">
-                <button
-                  onClick={() => {
-                    setViewState('driver-app');
-                    showToast('Switched to Driver Operations Terminal');
-                  }}
-                  className="px-2.5 py-1.5 font-bold text-slate-700 hover:text-emerald-700 bg-slate-100 hover:bg-emerald-50 border border-slate-300 flex items-center space-x-1.5 transition-all shadow-xs"
-                  title="Open Driver Mobile App"
-                >
-                  <Car className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Driver Terminal</span>
-                </button>
 
-                <button
-                  onClick={() => {
-                    setViewState('employee-app');
-                    showToast('Switched to Employee Commuter App');
-                  }}
-                  className="px-2.5 py-1.5 font-bold text-slate-700 hover:text-blue-700 bg-slate-100 hover:bg-blue-50 border border-slate-300 flex items-center space-x-1.5 transition-all shadow-xs"
-                  title="Open Employee Mobile App"
-                >
-                  <Smartphone className="w-3.5 h-3.5 text-blue-600" />
-                  <span>Employee App</span>
-                </button>
-              </div>
 
               {/* Right User & Utility Controls */}
               <div className="flex items-center space-x-3">
@@ -2084,7 +2059,7 @@ export default function ETSPortal() {
                     </div>
                     <button
                       type="button"
-                      onClick={() => showToast('MoveInSync 24/7 Enterprise Control Center active')}
+                      onClick={() => showToast('Atharva Travels 24/7 Enterprise Control Center active')}
                       className="text-[#0f5fc2] font-bold hover:underline text-[11px] shrink-0"
                     >
                       Know More
@@ -2877,27 +2852,7 @@ export default function ETSPortal() {
               </div>
 
               <div className="flex items-center space-x-2 text-xs">
-                <button
-                  onClick={() => {
-                    setViewState('driver-app');
-                    showToast('Switched to Driver Operations Terminal');
-                  }}
-                  className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs px-3 py-2 shadow-sm transition-colors flex items-center space-x-1.5"
-                >
-                  <Car className="w-3.5 h-3.5" />
-                  <span>Driver Terminal</span>
-                </button>
 
-                <button
-                  onClick={() => {
-                    setViewState('employee-app');
-                    showToast('Switched to Employee Commuter App');
-                  }}
-                  className="bg-indigo-700 hover:bg-indigo-800 text-white font-bold text-xs px-3 py-2 shadow-sm transition-colors flex items-center space-x-1.5"
-                >
-                  <Smartphone className="w-3.5 h-3.5" />
-                  <span>Employee App</span>
-                </button>
 
                 <button
                   onClick={() => {

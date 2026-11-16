@@ -1,3 +1,4 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 /**
  * Atharva Travels ETS — Employee Android App
  * SettingsScreen
@@ -13,9 +14,10 @@ import {
   Text,
   Switch,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   TouchableOpacity,
+  TextInput,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppHeader } from '../../components/common/AppHeader';
@@ -23,6 +25,7 @@ import { RoundedCard } from '../../components/common/RoundedCard';
 import { Divider } from '../../components/common/Divider';
 import { ConfirmationDialog } from '../../components/common/ConfirmationDialog';
 import { colors, typography, spacing } from '../../theme';
+import { getApiBaseUrl, setApiBaseUrl, DEFAULT_EMULATOR_URL, DEFAULT_LAN_URL } from '../../services';
 
 interface SettingsScreenProps {
   onBack: () => void;
@@ -38,6 +41,13 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
   const [escortAlerts, setEscortAlerts] = useState(true);
   const [gpsActive, setGpsActive] = useState(true);
   const [logoutDialogVisible, setLogoutDialogVisible] = useState(false);
+  const [portalUrl, setPortalUrlState] = useState(getApiBaseUrl());
+
+  const handleSelectPreset = (url: string) => {
+    setApiBaseUrl(url);
+    setPortalUrlState(url);
+    Alert.alert('Server Connected', `API Base URL updated to:\n${url}`);
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -107,6 +117,64 @@ export const SettingsScreen: React.FC<SettingsScreenProps> = ({
               trackColor={{ false: colors.border, true: colors.primary }}
               thumbColor={colors.card}
             />
+          </View>
+        </RoundedCard>
+
+        {/* Section 3: Web Portal Connection */}
+        <Text style={[styles.sectionHeaderTitle, { marginTop: spacing.xl }]}>
+          Web Portal Server Gateway
+        </Text>
+        <RoundedCard style={styles.card}>
+          <View style={styles.settingRow}>
+            <View style={styles.settingTextCol}>
+              <Text style={styles.settingTitle}>Current Server URL</Text>
+              <Text style={[styles.settingDesc, { color: colors.primary, fontWeight: '600' }]}>
+                {portalUrl}
+              </Text>
+            </View>
+          </View>
+
+          <Divider />
+
+          <Text style={[styles.settingDesc, { marginVertical: spacing.xs }]}>
+            Quick Preset Selection:
+          </Text>
+          <View style={{ flexDirection: 'row', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => handleSelectPreset(DEFAULT_EMULATOR_URL)}
+              style={[
+                styles.presetButton,
+                portalUrl === DEFAULT_EMULATOR_URL && styles.presetButtonActive,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.presetButtonText,
+                  portalUrl === DEFAULT_EMULATOR_URL && styles.presetButtonTextActive,
+                ]}
+              >
+                Emulator (10.0.2.2)
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => handleSelectPreset(DEFAULT_LAN_URL)}
+              style={[
+                styles.presetButton,
+                portalUrl === DEFAULT_LAN_URL && styles.presetButtonActive,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.presetButtonText,
+                  portalUrl === DEFAULT_LAN_URL && styles.presetButtonTextActive,
+                ]}
+              >
+                Wi-Fi LAN (10.182.158.131)
+              </Text>
+            </TouchableOpacity>
           </View>
         </RoundedCard>
 
@@ -216,6 +284,27 @@ const styles = StyleSheet.create({
   logoutText: {
     ...typography.presets.cardTitle,
     color: colors.error,
+  },
+  presetButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  presetButtonActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primarySurface,
+  },
+  presetButtonText: {
+    ...typography.presets.captionSmall,
+    color: colors.textSecondary,
+    fontWeight: '500',
+  },
+  presetButtonTextActive: {
+    color: colors.primary,
+    fontWeight: '700',
   },
 });
 

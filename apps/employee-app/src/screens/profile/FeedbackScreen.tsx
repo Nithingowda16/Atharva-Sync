@@ -1,3 +1,4 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 /**
  * Atharva Travels ETS — Employee Android App
  * FeedbackScreen
@@ -13,7 +14,6 @@ import {
   Text,
   TextInput,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   TouchableOpacity,
 } from 'react-native';
@@ -52,7 +52,7 @@ export const FeedbackScreen: React.FC<FeedbackScreenProps> = ({ onBack }) => {
             </View>
             <Text style={styles.successTitle}>Thank You!</Text>
             <Text style={styles.successDescription}>
-              Your feedback helps Atharva Travels maintain SLA benchmarks and continuous employee commute safety.
+              Your feedback helps HI RIDERS maintain SLA benchmarks and continuous employee commute safety.
             </Text>
             <PrimaryButton
               title="Return to Profile"
