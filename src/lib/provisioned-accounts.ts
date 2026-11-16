@@ -119,18 +119,64 @@ export const BASE_PROVISIONED_ACCOUNTS: ProvisionedAccount[] = [
       canManageRoster: false,
     },
   },
+
+  // 5. Vikramaditya Hegde - Corporate Facilities Head
+  {
+    id: 'usr-corp-facilities-head',
+    email: 'facilities.head@walmart.internal',
+    aliasCode: 'WALMART-CORP-01',
+    fullName: 'Vikramaditya Hegde',
+    role: 'CORPORATE_CLIENT',
+    accountType: 'PRIMARY_VENDOR',
+    companyName: 'Walmart Global Tech',
+    clientCode: 'VND-WALMART-01',
+    staffCode: 'WMT-FAC-01',
+    deskRole: 'Head of Workplace Mobility & Corporate Vendor Admin',
+    assignedByAdmin: 'ATH-ADMIN-01 (Atharva Super Admin)',
+    isAccessGranted: true,
+    permissions: {
+      canAllocateCabs: true,
+      canViewTelemetry: true,
+      canRequestAdhoc: true,
+      canViewBilling: true,
+      canManageRoster: true,
+    },
+  },
+
+  // 6. Atharva Deshmukh - Master Operations Manager
+  {
+    id: 'usr-atharva-ops-manager',
+    email: 'ops.manager@atharvatravels.com',
+    aliasCode: 'ATH-OPS-MANAGER',
+    fullName: 'Atharva Deshmukh',
+    role: 'ATHARVA_ADMIN',
+    accountType: 'SUPER_ADMIN',
+    companyName: 'Atharva Travels Pvt Ltd',
+    staffCode: 'ATH-OPS-01',
+    deskRole: 'Master Operations Manager & Command Dispatcher',
+    assignedByAdmin: 'ROOT_AUTHORITY',
+    isAccessGranted: true,
+    permissions: {
+      canAllocateCabs: true,
+      canViewTelemetry: true,
+      canRequestAdhoc: true,
+      canViewBilling: true,
+      canManageRoster: true,
+    },
+  },
 ];
 
-// Initialize global storage with the 3 authorized accounts
-if (!(global as any).__ATHARVA_PROVISIONED_ACCOUNTS__) {
-  (global as any).__ATHARVA_PROVISIONED_ACCOUNTS__ = [...BASE_PROVISIONED_ACCOUNTS];
-}
-
+// Always sync with latest base accounts
 export function getAllAccounts(): ProvisionedAccount[] {
-  if (!(global as any).__ATHARVA_PROVISIONED_ACCOUNTS__) {
-    (global as any).__ATHARVA_PROVISIONED_ACCOUNTS__ = [...BASE_PROVISIONED_ACCOUNTS];
+  const dynamic = (global as any).__ATHARVA_PROVISIONED_ACCOUNTS__ || [];
+  const combined = [...BASE_PROVISIONED_ACCOUNTS];
+  for (const d of dynamic) {
+    if (!combined.some((c) => c.email.toLowerCase() === d.email.toLowerCase())) {
+      combined.push(d);
+    }
   }
-  return (global as any).__ATHARVA_PROVISIONED_ACCOUNTS__;
+  (global as any).__ATHARVA_PROVISIONED_ACCOUNTS__ = combined;
+  return combined;
 }
 
 export function findAccount(identifier: string): ProvisionedAccount | undefined {
@@ -138,6 +184,11 @@ export function findAccount(identifier: string): ProvisionedAccount | undefined 
   const accounts: ProvisionedAccount[] = getAllAccounts();
   return accounts.find(
     (u) =>
+      u.email.toLowerCase() === trimmed ||
+      u.aliasCode.toLowerCase() === trimmed ||
+      (u.staffCode && u.staffCode.toLowerCase() === trimmed)
+  );
+}
       u.email.toLowerCase() === trimmed ||
       u.aliasCode.toLowerCase() === trimmed ||
       (u.staffCode && u.staffCode.toLowerCase() === trimmed)

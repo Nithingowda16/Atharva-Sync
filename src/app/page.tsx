@@ -683,7 +683,11 @@ export default function ETSPortal() {
 
         setCurrentUser(data.user);
         showToast(`Authentication verified: Welcome ${data.user.fullName}`);
-        setViewState('vendor-portal');
+        const targetView =
+          data.user.role === 'ATHARVA_ADMIN' || loginRole === 'admin'
+            ? 'admin-portal'
+            : 'vendor-portal';
+        setViewState(targetView);
         setActiveHeaderTab('DASHBOARD');
       } else {
         setAuthError(data.error || 'Access Denied: Invalid credentials or unauthorized account.');
