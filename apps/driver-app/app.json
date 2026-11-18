@@ -41,7 +41,8 @@
         {
           "cameraPermission": "Allow Atharva Pilot to access the camera to scan passenger QR boarding passes."
         }
-      ]
+      ],
+      "./plugins/withOptimizedBuild"
     ],
     "extra": {
       "eas": {
