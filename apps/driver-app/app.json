@@ -1,0 +1,53 @@
+{
+  "expo": {
+    "name": "HR Pilot",
+    "slug": "atharva-driver-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1565C0"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1565C0"
+      },
+      "package": "com.atharvatravels.ets.driver",
+      "permissions": [
+        "CAMERA",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-font",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Atharva Pilot to access the camera to scan passenger QR boarding passes."
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "99fb8084-d50d-4b19-8257-8fd64e1260e1"
+      }
+    },
+    "owner": "bhargavram16"
+  }
+}
