@@ -465,6 +465,10 @@ export default function ETSPortal() {
   // 1-Year Historical & Future Schedule Horizon
   const [selectedDate, setSelectedDate] = useState<string>('2026-11-11');
   
+  // User Profile Dropdown & Sign Out Confirmation State
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState<boolean>(false);
+  const [isSignOutConfirmOpen, setIsSignOutConfirmOpen] = useState<boolean>(false);
+  
   // Real-Time Draggable Operational Dual Time Slider
   const [sliderStartMins, setSliderStartMins] = useState<number>(720); // 12:00
   const [sliderEndMins, setSliderEndMins] = useState<number>(1200); // 20:00
@@ -1692,22 +1696,90 @@ export default function ETSPortal() {
 
                 <div className="h-4 w-px bg-slate-200" />
 
-                {/* Operator Identity Badge (As shown in screenshot) */}
-                <div className="flex items-center space-x-1.5 text-xs text-slate-700 font-medium">
-                  <User className="w-3.5 h-3.5 text-[#0f5fc2]" />
-                  <span className="font-bold text-slate-900">{currentUser?.fullName || 'Harish R.'}</span>
-                  <span className="text-slate-300">•</span>
-                  <span className="text-slate-500 hidden sm:inline">Atharva Travels Pvt Ltd</span>
-                </div>
+                {/* Interactive Operator Profile Dropdown (Settings & Sign Out) */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+                    className="flex items-center space-x-2 text-xs text-slate-700 font-medium px-2 py-1 rounded hover:bg-slate-100 border border-transparent hover:border-slate-200 transition-all cursor-pointer select-none group"
+                    title="Click for Profile, Settings & Sign Out"
+                  >
+                    <div className="w-6 h-6 rounded-full bg-[#0f5fc2] text-white flex items-center justify-center font-bold text-[11px] shadow-xs">
+                      {(currentUser?.fullName || 'Harish R.').charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex items-center space-x-1.5 text-left">
+                      <span className="font-bold text-slate-900 group-hover:text-[#0f5fc2] transition-colors">
+                        {currentUser?.fullName || 'Harish R.'}
+                      </span>
+                      <span className="text-slate-300">•</span>
+                      <span className="text-slate-500 hidden sm:inline">Atharva Travels Pvt Ltd</span>
+                    </div>
+                    <ChevronDown className={`w-3.5 h-3.5 text-slate-400 group-hover:text-[#0f5fc2] transition-transform duration-200 ${isProfileMenuOpen ? 'rotate-180 text-[#0f5fc2]' : ''}`} />
+                  </button>
 
-                <button
-                  onClick={handleLogout}
-                  className="border border-slate-300 hover:border-red-400 hover:text-red-700 px-2.5 py-1 text-slate-700 font-semibold text-xs flex items-center space-x-1.5 transition-colors bg-white shadow-xs ml-1"
-                  title="Sign Out"
-                >
-                  <LogOut className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Sign Out</span>
-                </button>
+                  {/* Backdrop dismiss */}
+                  {isProfileMenuOpen && (
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setIsProfileMenuOpen(false)}
+                    />
+                  )}
+
+                  {/* Profile Dropdown Menu */}
+                  {isProfileMenuOpen && (
+                    <div className="absolute right-0 top-full mt-2 w-64 bg-white border border-slate-200 shadow-2xl rounded-sm py-1.5 z-50 animate-in fade-in slide-in-from-top-1">
+                      {/* Identity Card */}
+                      <div className="px-3.5 py-3 border-b border-slate-100 bg-slate-50/70">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-9 h-9 rounded-full bg-[#0f5fc2] text-white flex items-center justify-center font-black text-sm shadow-sm">
+                            {(currentUser?.fullName || 'Harish R.').charAt(0).toUpperCase()}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-bold text-slate-900 truncate">
+                              {currentUser?.fullName || 'Harish R.'}
+                            </p>
+                            <p className="text-[11px] text-slate-500 truncate">
+                              {currentUser?.email || 'harish.admin@atharvatravels.com'}
+                            </p>
+                            <span className="inline-block mt-1 text-[10px] font-bold text-[#0f5fc2] bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
+                              Operations Admin
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Menu Options: Settings & Sign Out */}
+                      <div className="py-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsProfileMenuOpen(false);
+                            setActiveHeaderTab('SETTINGS');
+                            showToast('Opening Corporate Settings & Fleet Configuration');
+                          }}
+                          className="w-full px-3.5 py-2.5 text-left text-xs font-semibold text-slate-700 hover:bg-blue-50 hover:text-[#0f5fc2] flex items-center space-x-2.5 transition-colors cursor-pointer"
+                        >
+                          <Settings className="w-4 h-4 text-slate-500" />
+                          <span>Settings</span>
+                        </button>
+
+                        <div className="h-px bg-slate-100 my-1" />
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsProfileMenuOpen(false);
+                            setIsSignOutConfirmOpen(true);
+                          }}
+                          className="w-full px-3.5 py-2.5 text-left text-xs font-semibold text-red-600 hover:bg-red-50 flex items-center space-x-2.5 transition-colors cursor-pointer"
+                        >
+                          <LogOut className="w-4 h-4 text-red-500" />
+                          <span>Sign Out</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
             </div>
@@ -3389,7 +3461,7 @@ export default function ETSPortal() {
                 <div className="h-6 w-px bg-slate-200" />
 
                 <button
-                  onClick={handleLogout}
+                  onClick={() => setIsSignOutConfirmOpen(true)}
                   className="p-2 text-slate-500 hover:text-red-600 hover:bg-slate-100 transition-colors"
                   title="Logout"
                 >
@@ -4238,6 +4310,53 @@ export default function ETSPortal() {
                 </div>
               </form>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* SIGN OUT CONFIRMATION MODAL */}
+      {isSignOutConfirmOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white border border-slate-300 shadow-2xl max-w-md w-full p-6 space-y-4 rounded-none">
+            <div className="flex items-start space-x-3.5">
+              <div className="w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center flex-shrink-0">
+                <LogOut className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-slate-900">
+                  Confirm Sign Out
+                </h3>
+                <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                  Are you sure you want to sign out of <strong>Atharva Travels Enterprise Transport Portal</strong>? Your active operational session will be ended.
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-amber-50 border border-amber-200 px-3 py-2 text-[11px] text-amber-800 flex items-center space-x-2">
+              <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+              <span>All active vehicle telemetry and dispatch data are synchronized with the server.</span>
+            </div>
+
+            <div className="flex items-center justify-end space-x-2.5 pt-2 border-t border-slate-200">
+              <button
+                type="button"
+                onClick={() => setIsSignOutConfirmOpen(false)}
+                className="px-4 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsSignOutConfirmOpen(false);
+                  handleLogout();
+                }}
+                className="px-4 py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-700 shadow-sm transition-colors flex items-center space-x-1.5 cursor-pointer"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Yes, Sign Out</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
