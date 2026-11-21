@@ -49,6 +49,10 @@ import {
   Info,
   AlertCircle,
   Wrench,
+  Trash2,
+  UserPlus,
+  UserCheck,
+  UserX,
 } from 'lucide-react';
 import { LocationIssueModal } from '@/components/LocationIssueModal';
 import { GoogleMapsTracker } from '@/components/GoogleMapsTracker';
@@ -458,8 +462,207 @@ export default function ETSPortal() {
     }
   };
   const [selectedBusinessUnit, setSelectedBusinessUnit] = useState<string>('WalmartLabs');
-  const [sliderStart, setSliderStart] = useState<string>('12:00');
-  const [sliderEnd, setSliderEnd] = useState<string>('20:00');
+  // 1-Year Historical & Future Schedule Horizon
+  const [selectedDate, setSelectedDate] = useState<string>('2026-11-11');
+  
+  // Real-Time Draggable Operational Dual Time Slider
+  const [sliderStartMins, setSliderStartMins] = useState<number>(720); // 12:00
+  const [sliderEndMins, setSliderEndMins] = useState<number>(1200); // 20:00
+  const [isDraggingSlider, setIsDraggingSlider] = useState<'start' | 'end' | null>(null);
+  const sliderTrackRef = useRef<HTMLDivElement>(null);
+
+  // Helper: Format YYYY-MM-DD into "11 Nov 2026"
+  const formatDisplayDate = (dStr: string): string => {
+    try {
+      if (!dStr) return '';
+      const parts = dStr.split('-');
+      if (parts.length !== 3) return dStr;
+      const [y, m, d] = parts.map(Number);
+      const dt = new Date(y, m - 1, d);
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return `${d} ${months[dt.getMonth()]} ${y}`;
+    } catch {
+      return dStr;
+    }
+  };
+
+  // Helper: Minutes to HH:MM format
+  const minsToTimeString = (m: number): string => {
+    const clamped = Math.max(0, Math.min(1439, m));
+    const hours = Math.floor(clamped / 60);
+    const mins = Math.floor((clamped % 60) / 15) * 15;
+    return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+  };
+
+  // Quick Date Navigation Helpers across 1-year dataset
+  const handlePrevDay = () => {
+    try {
+      const [y, m, d] = selectedDate.split('-').map(Number);
+      const dt = new Date(y, m - 1, d - 1);
+      const yyyy = dt.getFullYear();
+      const mm = String(dt.getMonth() + 1).padStart(2, '0');
+      const dd = String(dt.getDate()).padStart(2, '0');
+      setSelectedDate(`${yyyy}-${mm}-${dd}`);
+      showToast(`Selected date: ${formatDisplayDate(`${yyyy}-${mm}-${dd}`)}`);
+    } catch {}
+  };
+
+  const handleNextDay = () => {
+    try {
+      const [y, m, d] = selectedDate.split('-').map(Number);
+      const dt = new Date(y, m - 1, d + 1);
+      const yyyy = dt.getFullYear();
+      const mm = String(dt.getMonth() + 1).padStart(2, '0');
+      const dd = String(dt.getDate()).padStart(2, '0');
+      setSelectedDate(`${yyyy}-${mm}-${dd}`);
+      showToast(`Selected date: ${formatDisplayDate(`${yyyy}-${mm}-${dd}`)}`);
+    } catch {}
+  };
+
+  // Draggable slider pointer handlers
+  const handleSliderPointerDown = (which: 'start' | 'end', e: React.PointerEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingSlider(which);
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  };
+
+  const handleSliderPointerMove = (e: React.PointerEvent) => {
+    if (!isDraggingSlider || !sliderTrackRef.current) return;
+    const rect = sliderTrackRef.current.getBoundingClientRect();
+    const fraction = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    const rawMins = Math.round((fraction * 1440) / 15) * 15;
+    if (isDraggingSlider === 'start') {
+      const nextStart = Math.min(rawMins, sliderEndMins - 30);
+      setSliderStartMins(Math.max(0, nextStart));
+    } else if (isDraggingSlider === 'end') {
+      const nextEnd = Math.max(rawMins, sliderStartMins + 30);
+      setSliderEndMins(Math.min(1439, nextEnd));
+    }
+  };
+
+  const handleSliderPointerUp = (e: React.PointerEvent) => {
+    if (isDraggingSlider) {
+      setIsDraggingSlider(null);
+      try {
+        (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+      } catch {}
+    }
+  };
+
+  const handleTrackClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!sliderTrackRef.current) return;
+    const rect = sliderTrackRef.current.getBoundingClientRect();
+    const fraction = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    const clickedMins = Math.round((fraction * 1440) / 15) * 15;
+    const distToStart = Math.abs(clickedMins - sliderStartMins);
+    const distToEnd = Math.abs(clickedMins - sliderEndMins);
+    if (distToStart < distToEnd) {
+      setSliderStartMins(Math.min(clickedMins, sliderEndMins - 30));
+    } else {
+      setSliderEndMins(Math.max(clickedMins, sliderStartMins + 30));
+    }
+  };
+
+  // Admin Employee Master State
+  const [employeesList, setEmployeesList] = useState<any[]>([]);
+  const [isAddEmployeeModalOpen, setIsAddEmployeeModalOpen] = useState<boolean>(false);
+  const [adminEmployeeSearch, setAdminEmployeeSearch] = useState<string>('');
+  const [isSubmittingEmployee, setIsSubmittingEmployee] = useState<boolean>(false);
+  const [newEmployeeForm, setNewEmployeeForm] = useState({
+    fullName: '',
+    employeeCode: '',
+    email: '',
+    phone: '',
+    department: 'Core Supply Chain & Logistics Engineering',
+    homeAddress: '',
+    officeCampus: 'Enterprise Tech Park, Tower B',
+    gender: 'FEMALE' as 'MALE' | 'FEMALE' | 'OTHER',
+    femaleSafeguard: true,
+    defaultShiftTime: '09:00',
+  });
+
+  const fetchEmployees = async () => {
+    try {
+      const res = await fetch('/api/portal/employees');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.employees) setEmployeesList(data.employees);
+      }
+    } catch (e) {}
+  };
+
+  const handleCreateEmployee = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newEmployeeForm.fullName || !newEmployeeForm.employeeCode) {
+      showToast('Please enter both Full Name and Employee Code.');
+      return;
+    }
+    setIsSubmittingEmployee(true);
+    try {
+      const res = await fetch('/api/portal/employees', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'create_employee',
+          ...newEmployeeForm,
+          actor: currentUser ? `${currentUser.fullName} (${currentUser.staffCode || currentUser.email})` : 'Atharva Super Admin',
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        showToast(`✅ Added employee ${data.employee?.fullName} (${data.employee?.employeeCode})!`);
+        setIsAddEmployeeModalOpen(false);
+        setNewEmployeeForm({
+          fullName: '',
+          employeeCode: '',
+          email: '',
+          phone: '',
+          department: 'Core Supply Chain & Logistics Engineering',
+          homeAddress: '',
+          officeCampus: 'Enterprise Tech Park, Tower B',
+          gender: 'FEMALE',
+          femaleSafeguard: true,
+          defaultShiftTime: '09:00',
+        });
+        await fetchEmployees();
+      } else {
+        const err = await res.json();
+        showToast(err.error || 'Failed to add employee');
+      }
+    } catch (e) {
+      showToast('Error adding employee');
+    } finally {
+      setIsSubmittingEmployee(false);
+    }
+  };
+
+  const handleRemoveEmployee = async (emp: any) => {
+    if (!window.confirm(`Are you sure you want to remove employee ${emp.fullName} (${emp.employeeCode}) from Atharva Travels Master Roster?`)) {
+      return;
+    }
+    try {
+      const res = await fetch('/api/portal/employees', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'remove_employee',
+          id: emp.id,
+          employeeCode: emp.employeeCode,
+          actor: currentUser ? `${currentUser.fullName} (${currentUser.staffCode || currentUser.email})` : 'Atharva Super Admin',
+        }),
+      });
+      if (res.ok) {
+        showToast(`🗑️ Removed employee ${emp.fullName} (${emp.employeeCode})`);
+        await fetchEmployees();
+      } else {
+        showToast('Error removing employee');
+      }
+    } catch (e) {
+      showToast('Failed to remove employee');
+    }
+  };
+
   const [lastUpdatedSeconds, setLastUpdatedSeconds] = useState<number>(12);
 
   // Operations Map & Telemetry Controls
@@ -642,6 +845,7 @@ export default function ETSPortal() {
 
   useEffect(() => {
     fetchLiveBackendTrips();
+    fetchEmployees();
     const interval = setInterval(fetchLiveBackendTrips, 3000);
     const timer = setInterval(() => {
       setLastUpdatedSeconds((prev) => (prev >= 60 ? 1 : prev + 1));
@@ -1561,34 +1765,111 @@ export default function ETSPortal() {
           {activeHeaderTab === 'DASHBOARD' && (
             <div className="flex-1 flex flex-col">
               
-              {/* Timeline Slider & Shift Direction Switcher */}
+              {/* 1-Year Date Picker + Timeline Range Slider + Direction Switcher */}
               <div className="bg-white border-b border-slate-200 px-6 py-2.5 flex flex-wrap items-center justify-between gap-4 text-xs">
-                <div className="flex items-center space-x-3 flex-1 min-w-[340px] max-w-2xl">
-                  <span className="font-bold text-slate-800 shrink-0 text-xs tracking-tight">
-                    11 Nov 2026 {sliderStart} - 11 Nov 2026 {sliderEnd}
+                
+                {/* 1-Year Date Selector & Quick Horizon Navigation */}
+                <div className="flex items-center space-x-2 shrink-0 bg-slate-50 border border-slate-200 px-2.5 py-1">
+                  <Calendar className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                  <button
+                    type="button"
+                    onClick={handlePrevDay}
+                    className="px-1.5 py-0.5 hover:bg-slate-200 text-slate-700 font-black rounded"
+                    title="Previous Day"
+                  >
+                    ◀
+                  </button>
+                  <input
+                    type="date"
+                    value={selectedDate}
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        setSelectedDate(e.target.value);
+                        showToast(`Filtered schedule for date: ${formatDisplayDate(e.target.value)}`);
+                      }
+                    }}
+                    className="bg-white border border-slate-300 font-bold px-2 py-0.5 text-xs text-slate-800 focus:outline-none"
+                    title="Choose any date in the 1-year historical & schedule horizon"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleNextDay}
+                    className="px-1.5 py-0.5 hover:bg-slate-200 text-slate-700 font-black rounded"
+                    title="Next Day"
+                  >
+                    ▶
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedDate('2026-11-21');
+                      showToast('Jumped to Today: 21 Nov 2026');
+                    }}
+                    className={`px-2 py-0.5 text-[10px] font-bold transition-colors ${
+                      selectedDate === '2026-11-21' ? 'bg-[#0f5fc2] text-white' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+                    }`}
+                  >
+                    Today
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedDate('2026-11-11');
+                      showToast('Jumped to 11 Nov 2026 (Active Commute Roster)');
+                    }}
+                    className={`px-2 py-0.5 text-[10px] font-bold transition-colors ${
+                      selectedDate === '2026-11-11' ? 'bg-[#0f5fc2] text-white' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+                    }`}
+                  >
+                    11 Nov 2026
+                  </button>
+                </div>
+
+                {/* Real-time Draggable Dual-Handle Operational Time Slider */}
+                <div className="flex items-center space-x-3 flex-1 min-w-[340px] max-w-xl">
+                  <span className="font-bold text-slate-800 shrink-0 text-xs tracking-tight whitespace-nowrap">
+                    {formatDisplayDate(selectedDate)} {minsToTimeString(sliderStartMins)} - {formatDisplayDate(selectedDate)} {minsToTimeString(sliderEndMins)}
                   </span>
                   
-                  {/* Interactive Dual-Handle Operational Time Slider */}
-                  <div className="relative flex-1 flex items-center max-w-md mx-2">
+                  <div
+                    ref={sliderTrackRef}
+                    onClick={handleTrackClick}
+                    className="relative flex-1 flex items-center max-w-md mx-2 h-7 cursor-pointer select-none"
+                    title="Drag start or end handle to adjust operational time window"
+                  >
+                    {/* Background Track */}
                     <div className="h-1.5 bg-slate-200 w-full rounded" />
-                    <div className="absolute left-[15%] right-[25%] h-1.5 bg-[#0f5fc2] rounded" />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSliderStart('11:00');
-                        showToast('Window Start adjusted to 11:00');
+                    {/* Active Range Bar */}
+                    <div
+                      className="absolute h-1.5 bg-[#0f5fc2] rounded"
+                      style={{
+                        left: `${(sliderStartMins / 1440) * 100}%`,
+                        width: `${Math.max(1, ((sliderEndMins - sliderStartMins) / 1440) * 100)}%`,
                       }}
-                      className="absolute left-[15%] -translate-x-1/2 w-4 h-4 bg-white border-2 border-[#0f5fc2] rounded-full cursor-pointer shadow hover:scale-125 transition-transform"
-                      title="Adjust Start Time"
                     />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSliderEnd('21:00');
-                        showToast('Window End adjusted to 21:00');
-                      }}
-                      className="absolute right-[25%] translate-x-1/2 w-4 h-4 bg-white border-2 border-[#0f5fc2] rounded-full cursor-pointer shadow hover:scale-125 transition-transform"
-                      title="Adjust End Time"
+                    {/* Start Handle */}
+                    <div
+                      onPointerDown={(e) => handleSliderPointerDown('start', e)}
+                      onPointerMove={handleSliderPointerMove}
+                      onPointerUp={handleSliderPointerUp}
+                      onPointerCancel={handleSliderPointerUp}
+                      style={{ left: `${(sliderStartMins / 1440) * 100}%` }}
+                      className={`absolute -translate-x-1/2 w-4 h-4 bg-white border-2 border-[#0f5fc2] rounded shadow-md cursor-ew-resize hover:scale-125 transition-transform z-10 flex items-center justify-center ${
+                        isDraggingSlider === 'start' ? 'ring-2 ring-blue-400 scale-125' : ''
+                      }`}
+                      title={`Drag Start Time (${minsToTimeString(sliderStartMins)})`}
+                    />
+                    {/* End Handle */}
+                    <div
+                      onPointerDown={(e) => handleSliderPointerDown('end', e)}
+                      onPointerMove={handleSliderPointerMove}
+                      onPointerUp={handleSliderPointerUp}
+                      onPointerCancel={handleSliderPointerUp}
+                      style={{ left: `${(sliderEndMins / 1440) * 100}%` }}
+                      className={`absolute -translate-x-1/2 w-4 h-4 bg-white border-2 border-[#0f5fc2] rounded shadow-md cursor-ew-resize hover:scale-125 transition-transform z-10 flex items-center justify-center ${
+                        isDraggingSlider === 'end' ? 'ring-2 ring-blue-400 scale-125' : ''
+                      }`}
+                      title={`Drag End Time (${minsToTimeString(sliderEndMins)})`}
                     />
                   </div>
                 </div>
@@ -1643,7 +1924,7 @@ export default function ETSPortal() {
                       onClick={() => {
                         fetchLiveBackendTrips();
                         setLastUpdatedSeconds(0);
-                        showToast(`Refreshed ${tripDirection} live operations data.`);
+                        showToast(`Refreshed ${tripDirection} live operations data for ${formatDisplayDate(selectedDate)}.`);
                       }}
                       className="w-7 h-7 bg-[#0fa958] hover:bg-emerald-600 text-white rounded-full flex items-center justify-center shadow-xs transition-all hover:rotate-180"
                       title="Refresh Operational Telemetry"
@@ -1657,71 +1938,113 @@ export default function ETSPortal() {
                 </div>
               </div>
 
-              {/* Time Shift Quick Select Pills (Includes 09:00 AM & Dynamic Shift Badges) */}
-              <div className="bg-white border-b border-slate-200 px-6 py-2 flex items-center space-x-2 overflow-x-auto text-xs">
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mr-1 shrink-0">
-                  {tripDirection} Shifts:
-                </span>
-                {(() => {
-                  const baseShifts = tripDirection === 'LOGIN'
-                    ? ['ALL', '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30']
-                    : ['ALL', '17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00', '22:30', '23:00', '23:30', '00:00', '00:30', '01:00'];
-                  
-                  const customShiftTimes = Array.from(new Set([
-                    ...rideRequests.map((r: any) => r.shiftTime),
-                    ...dbTrips.map((t: any) => t.shift || t.shiftTime)
-                  ])).filter(Boolean);
+              {/* SHIFT TIME DROPDOWN FOR BOTH LOGIN AND LOGOUT */}
+              <div className="bg-white border-b border-slate-200 px-6 py-2.5 flex flex-wrap items-center justify-between gap-4 text-xs">
+                <div className="flex items-center space-x-3 flex-wrap gap-y-2">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-xs font-bold text-slate-700 uppercase tracking-wide flex items-center space-x-1.5">
+                      <Clock className="w-3.5 h-3.5 text-[#0f5fc2]" />
+                      <span>{tripDirection} Shift Time:</span>
+                    </span>
 
-                  const allShifts = Array.from(new Set([...baseShifts, ...customShiftTimes]));
-
-                  return allShifts.map((shiftTime) => {
-                    const count = shiftTime === 'ALL'
-                      ? rideRequests.filter((r: any) => !tripDirection || r.direction === tripDirection).length +
-                        dbTrips.filter((t: any) => !t.direction || t.direction === tripDirection).length
-                      : rideRequests.filter((r: any) => (!tripDirection || r.direction === tripDirection) && isShiftMatch(r.shiftTime, shiftTime)).length +
-                        dbTrips.filter((t: any) => (!t.direction || t.direction === tripDirection) && isShiftMatch(t.shift || t.shiftTime, shiftTime)).length;
-
-                    return (
-                      <button
-                        key={shiftTime}
-                        type="button"
-                        onClick={() => {
-                          setSelectedShift(shiftTime);
-                          showToast(`Filtered operations for ${shiftTime} shift`);
+                    {/* Primary Shift Dropdown requested by user */}
+                    <div className="relative">
+                      <select
+                        value={selectedShift}
+                        onChange={(e) => {
+                          setSelectedShift(e.target.value);
+                          showToast(`Filtered for ${e.target.value === 'ALL' ? 'All Shifts' : `${e.target.value} shift`} on ${formatDisplayDate(selectedDate)}`);
                         }}
-                        className={`px-3 py-1 border text-xs font-semibold rounded-full transition-all shrink-0 flex items-center space-x-1.5 ${
-                          selectedShift === shiftTime
-                            ? 'border-[#0f5fc2] text-[#0f5fc2] bg-blue-50/80 font-black shadow-xs ring-1 ring-[#0f5fc2]'
-                            : 'border-slate-300 text-slate-600 hover:border-slate-400 bg-white'
-                        }`}
+                        className="bg-white border-2 border-[#0f5fc2] text-slate-900 font-black px-3 py-1.5 pr-8 text-xs rounded shadow-xs focus:outline-none focus:ring-2 focus:ring-blue-300 min-w-[210px] cursor-pointer"
                       >
-                        <span>{shiftTime}</span>
-                        {count > 0 && (
-                          <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full ${
-                            selectedShift === shiftTime ? 'bg-[#0f5fc2] text-white' : 'bg-blue-100 text-[#0f5fc2]'
-                          }`}>
-                            {count}
-                          </span>
-                        )}
-                      </button>
-                    );
-                  });
-                })()}
+                        {(() => {
+                          const baseShifts = tripDirection === 'LOGIN'
+                            ? ['ALL', '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30']
+                            : ['ALL', '17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00', '22:30', '23:00', '23:30', '00:00', '00:30', '01:00'];
 
-                <div className="relative pl-1 shrink-0">
-                  <button
-                    onClick={() => {
-                      setSelectedShift('ALL');
-                      showToast('Displaying all shifts consolidated');
-                    }}
-                    className={`px-3 py-1 border text-xs font-medium rounded-full flex items-center space-x-1 ${
-                      selectedShift === 'ALL'
-                        ? 'border-[#0f5fc2] bg-blue-50 text-[#0f5fc2] font-bold'
-                        : 'border-slate-300 bg-white text-slate-600 hover:border-slate-400'
-                    }`}
-                  >
-                    <span>All Shifts</span>
-                  </button>
+                          const customShiftTimes = Array.from(new Set([
+                            ...rideRequests.map((r: any) => r.shiftTime),
+                            ...dbTrips.map((t: any) => t.shift || t.shiftTime)
+                          ])).filter(Boolean);
+
+                          const allShifts = Array.from(new Set([...baseShifts, ...customShiftTimes]));
+
+                          return allShifts.map((sTime) => {
+                            if (sTime === 'ALL') {
+                              const totalOnDate = rideRequests.filter((r: any) => (!r.shiftDate || r.shiftDate === selectedDate) && (!tripDirection || r.direction === tripDirection)).length +
+                                dbTrips.filter((t: any) => (!t.shiftDate || t.shiftDate === selectedDate) && (!t.direction || t.direction === tripDirection)).length;
+                              return (
+                                <option key="ALL" value="ALL">
+                                  All Shifts ({totalOnDate} scheduled on {formatDisplayDate(selectedDate)})
+                                </option>
+                              );
+                            }
+
+                            const count = rideRequests.filter((r: any) => (!r.shiftDate || r.shiftDate === selectedDate) && (!tripDirection || r.direction === tripDirection) && isShiftMatch(r.shiftTime, sTime)).length +
+                              dbTrips.filter((t: any) => (!t.shiftDate || t.shiftDate === selectedDate) && (!t.direction || t.direction === tripDirection) && isShiftMatch(t.shift || t.shiftTime, sTime)).length;
+
+                            return (
+                              <option key={sTime} value={sTime}>
+                                {sTime} {count > 0 ? `(${count} booked)` : ''}
+                              </option>
+                            );
+                          });
+                        })()}
+                      </select>
+                      <ChevronDown className="w-4 h-4 text-[#0f5fc2] absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    </div>
+                  </div>
+
+                  {/* Quick Shift Pills for Instant 1-Click Access */}
+                  <div className="flex items-center space-x-1.5 pl-2 border-l border-slate-200">
+                    {(tripDirection === 'LOGIN' ? ['09:00', '10:30', '13:30'] : ['18:00', '21:30', '22:30']).map((quickShift) => {
+                      const count = rideRequests.filter((r: any) => (!r.shiftDate || r.shiftDate === selectedDate) && (!tripDirection || r.direction === tripDirection) && isShiftMatch(r.shiftTime, quickShift)).length +
+                        dbTrips.filter((t: any) => (!t.shiftDate || t.shiftDate === selectedDate) && (!t.direction || t.direction === tripDirection) && isShiftMatch(t.shift || t.shiftTime, quickShift)).length;
+                      return (
+                        <button
+                          key={quickShift}
+                          type="button"
+                          onClick={() => {
+                            setSelectedShift(quickShift);
+                            showToast(`Shift set to ${quickShift}`);
+                          }}
+                          className={`px-2.5 py-1 text-xs font-bold rounded transition-all flex items-center space-x-1 ${
+                            selectedShift === quickShift
+                              ? 'bg-[#0f5fc2] text-white shadow-xs'
+                              : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                          }`}
+                        >
+                          <span>{quickShift}</span>
+                          {count > 0 && (
+                            <span className={`text-[10px] font-black px-1 rounded-full ${
+                              selectedShift === quickShift ? 'bg-white text-blue-900' : 'bg-blue-100 text-blue-800'
+                            }`}>
+                              {count}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                    <button
+                      type="button"
+                      onClick={() => setSelectedShift('ALL')}
+                      className={`px-2.5 py-1 text-xs font-bold rounded transition-all ${
+                        selectedShift === 'ALL'
+                          ? 'bg-[#0f5fc2] text-white'
+                          : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                      }`}
+                    >
+                      All
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-2 text-[11px] text-slate-500">
+                  <span>Date: <strong className="text-slate-800">{formatDisplayDate(selectedDate)}</strong></span>
+                  <span>•</span>
+                  <span>Shift: <strong className="text-slate-800">{selectedShift}</strong></span>
+                  <span>•</span>
+                  <span className="bg-blue-50 text-[#0f5fc2] px-2 py-0.5 font-bold uppercase">{tripDirection}</span>
                 </div>
               </div>
 
@@ -1736,13 +2059,15 @@ export default function ETSPortal() {
                     <div className="flex-1 flex flex-col p-5 space-y-4">
                       {(() => {
                         const matchingRequests = rideRequests.filter((r) => {
+                          const dateMatch = !r.shiftDate || r.shiftDate === selectedDate;
                           const dirMatch = !tripDirection || r.direction === tripDirection;
-                          return dirMatch && isShiftMatch(r.shiftTime, selectedShift);
+                          return dateMatch && dirMatch && isShiftMatch(r.shiftTime, selectedShift);
                         });
 
                         const matchingTrips = dbTrips.filter((t) => {
+                          const dateMatch = !t.shiftDate || t.shiftDate === selectedDate;
                           const dirMatch = !tripDirection || t.direction === tripDirection;
-                          return dirMatch && isShiftMatch(t.shift || t.shiftTime, selectedShift);
+                          return dateMatch && dirMatch && isShiftMatch(t.shift || t.shiftTime, selectedShift);
                         });
 
                         const totalScheduled = matchingRequests.length + matchingTrips.length;
@@ -1760,21 +2085,33 @@ export default function ETSPortal() {
                               <h3 className="text-lg font-black text-slate-800">No trips</h3>
                               <p className="text-xs text-slate-500 max-w-sm mt-1.5 leading-relaxed">
                                 {selectedShift === 'ALL'
-                                  ? 'No employee ride requests or booked cabs found in the system.'
-                                  : `No employee rides or cabs scheduled for the ${selectedShift} shift.`}
+                                  ? `No employee ride requests or booked cabs scheduled on ${formatDisplayDate(selectedDate)}.`
+                                  : `No employee rides or cabs scheduled for the ${selectedShift} ${tripDirection} shift on ${formatDisplayDate(selectedDate)}.`}
                               </p>
                               <p className="text-[11px] text-slate-400 mt-2">
                                 When an employee books or schedules a ride (e.g. at {selectedShift}), it will appear here immediately in real-time.
                               </p>
-                              {selectedShift !== 'ALL' && (
+                              <div className="flex items-center space-x-2 mt-4">
+                                {selectedShift !== 'ALL' && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setSelectedShift('ALL')}
+                                    className="px-4 py-1.5 bg-[#0f5fc2] hover:bg-blue-700 text-white text-xs font-bold transition-colors shadow-xs"
+                                  >
+                                    View All Shifts on {formatDisplayDate(selectedDate)}
+                                  </button>
+                                )}
                                 <button
                                   type="button"
-                                  onClick={() => setSelectedShift('ALL')}
-                                  className="mt-4 px-4 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold border border-slate-300 transition-colors"
+                                  onClick={() => {
+                                    setSelectedDate('2026-11-11');
+                                    showToast('Switched to 11 Nov 2026 active commute date');
+                                  }}
+                                  className="px-4 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold border border-slate-300 transition-colors"
                                 >
-                                  View All Shifts ({rideRequests.length} Total)
+                                  Jump to 11 Nov 2026
                                 </button>
-                              )}
+                              </div>
                             </div>
                           );
                         }
@@ -1854,7 +2191,7 @@ export default function ETSPortal() {
                                 <div className="flex items-center space-x-2">
                                   <Car className="w-4 h-4 text-[#0f5fc2]" />
                                   <span className="font-bold text-xs text-slate-800">
-                                    Booked Cabs &amp; Schedules ({selectedShift === 'ALL' ? 'All Shifts' : `${selectedShift} Shift`})
+                                    Booked Cabs &amp; Schedules ({selectedShift === 'ALL' ? 'All Shifts' : `${selectedShift} Shift`} • {formatDisplayDate(selectedDate)})
                                   </span>
                                   <span className="bg-blue-100 text-[#0f5fc2] text-[10px] font-bold px-1.5 py-0.5">
                                     {totalScheduled} Commuters
@@ -3358,6 +3695,181 @@ export default function ETSPortal() {
               </div>
             </div>
 
+            {/* CORPORATE EMPLOYEE MASTER & ROSTER MANAGEMENT (ADMIN ONLY - NOT VENDOR) */}
+            <div className="bg-white border border-slate-200 p-5 shadow-sm space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                <div className="flex items-center space-x-2.5">
+                  <div className="w-8 h-8 bg-emerald-100 text-emerald-800 flex items-center justify-center font-black">
+                    <Users className="w-4 h-4 text-emerald-700" />
+                  </div>
+                  <div>
+                    <div className="flex items-center space-x-2">
+                      <h3 className="font-black text-sm text-slate-900 tracking-tight">
+                        Corporate Employee Master &amp; Roster Management
+                      </h3>
+                      <span className="bg-purple-100 text-purple-900 border border-purple-200 text-[10px] font-black uppercase tracking-wider px-2 py-0.5">
+                        Admin Authoritative Only • Isolated from Vendor
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Maintain corporate commuter database: add new employees, configure escort safeguards, and remove or deactivate employees.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-3">
+                  {/* Search Employee Bar */}
+                  <div className="relative">
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      placeholder="Search by name, code, dept..."
+                      value={adminEmployeeSearch}
+                      onChange={(e) => setAdminEmployeeSearch(e.target.value)}
+                      className="border border-slate-300 pl-8 pr-3 py-1.5 text-xs text-slate-800 font-medium focus:outline-none focus:border-blue-600 w-56 bg-slate-50"
+                    />
+                  </div>
+
+                  {/* Add Employee Button */}
+                  <button
+                    type="button"
+                    onClick={() => setIsAddEmployeeModalOpen(true)}
+                    className="bg-[#0f5fc2] hover:bg-blue-700 text-white font-bold text-xs px-3.5 py-1.5 shadow-xs transition-colors flex items-center space-x-1.5"
+                  >
+                    <UserPlus className="w-3.5 h-3.5" />
+                    <span>+ Add Employee</span>
+                  </button>
+
+                  <button
+                    onClick={fetchEmployees}
+                    className="p-1.5 border border-slate-300 hover:bg-slate-100 text-slate-600"
+                    title="Refresh Directory"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Employee Count & Summary Badges */}
+              <div className="flex items-center justify-between text-xs text-slate-500">
+                <div className="flex items-center space-x-4">
+                  <span>Total Employees: <strong className="text-slate-900">{employeesList.length}</strong></span>
+                  <span>•</span>
+                  <span>Safeguard Protected: <strong className="text-emerald-700">{employeesList.filter((e) => e.femaleSafeguard).length}</strong></span>
+                  <span>•</span>
+                  <span>Morning Shift (09:00): <strong className="text-blue-700">{employeesList.filter((e) => e.defaultShiftTime === '09:00').length}</strong></span>
+                </div>
+                <span className="text-[11px] text-slate-400 italic">
+                  Changes sync across all 1-year schedules in database
+                </span>
+              </div>
+
+              {/* Employee Master Table */}
+              <div className="border border-slate-200 overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 text-slate-500 font-semibold uppercase tracking-wider border-b border-slate-200">
+                    <tr>
+                      <th className="py-2.5 px-3">Employee</th>
+                      <th className="py-2.5 px-3">Department &amp; Office</th>
+                      <th className="py-2.5 px-3">Contact</th>
+                      <th className="py-2.5 px-3">Pickup Address</th>
+                      <th className="py-2.5 px-3">Default Shift</th>
+                      <th className="py-2.5 px-3">Safety &amp; Safeguard</th>
+                      <th className="py-2.5 px-3 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 font-medium">
+                    {(() => {
+                      const q = adminEmployeeSearch.toLowerCase().trim();
+                      const filtered = employeesList.filter((e) => {
+                        if (!q) return true;
+                        return (
+                          e.fullName.toLowerCase().includes(q) ||
+                          e.employeeCode.toLowerCase().includes(q) ||
+                          e.department.toLowerCase().includes(q) ||
+                          e.phone.includes(q) ||
+                          e.email.toLowerCase().includes(q)
+                        );
+                      });
+
+                      if (filtered.length === 0) {
+                        return (
+                          <tr>
+                            <td colSpan={7} className="text-center py-8 text-slate-400 text-xs">
+                              {employeesList.length === 0
+                                ? 'No employees registered. Click "+ Add Employee" to create the first record.'
+                                : `No employees matching "${adminEmployeeSearch}".`}
+                            </td>
+                          </tr>
+                        );
+                      }
+
+                      return filtered.map((emp) => (
+                        <tr key={emp.id} className="hover:bg-slate-50 transition-colors">
+                          <td className="py-3 px-3">
+                            <div className="flex items-center space-x-2.5">
+                              <div className="w-7 h-7 rounded-full bg-blue-100 text-[#0f5fc2] font-black text-xs flex items-center justify-center shrink-0">
+                                {emp.fullName.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
+                              </div>
+                              <div>
+                                <span className="font-black text-slate-900 block">{emp.fullName}</span>
+                                <span className="text-[10px] font-mono font-bold text-slate-500 block">
+                                  {emp.employeeCode}
+                                </span>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-3 px-3 text-slate-700">
+                            <span className="font-semibold block">{emp.department}</span>
+                            <span className="text-[10px] text-slate-400 flex items-center space-x-1 mt-0.5">
+                              <Building2 className="w-2.5 h-2.5 text-slate-400" />
+                              <span>{emp.officeCampus}</span>
+                            </span>
+                          </td>
+                          <td className="py-3 px-3">
+                            <span className="font-mono text-slate-700 block">{emp.phone}</span>
+                            <span className="text-[10px] text-slate-400 block">{emp.email}</span>
+                          </td>
+                          <td className="py-3 px-3 text-slate-600 max-w-[200px]">
+                            <div className="flex items-start space-x-1">
+                              <MapPin className="w-3 h-3 text-emerald-600 shrink-0 mt-0.5" />
+                              <span className="truncate">{emp.homeAddress}</span>
+                            </div>
+                          </td>
+                          <td className="py-3 px-3">
+                            <span className="font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded text-[11px]">
+                              {emp.defaultShiftTime}
+                            </span>
+                          </td>
+                          <td className="py-3 px-3">
+                            {emp.femaleSafeguard ? (
+                              <span className="bg-emerald-50 text-emerald-800 border border-emerald-300 px-2 py-0.5 text-[10px] font-bold rounded inline-flex items-center space-x-1">
+                                <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                                <span>Safeguard Active</span>
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-slate-400">Standard</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-3 text-right">
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveEmployee(emp)}
+                              className="text-red-600 hover:text-red-800 hover:bg-red-50 border border-transparent hover:border-red-200 px-2.5 py-1 text-xs font-bold rounded transition-colors inline-flex items-center space-x-1"
+                              title={`Remove ${emp.fullName} from directory`}
+                            >
+                              <Trash2 className="w-3 h-3" />
+                              <span>Remove</span>
+                            </button>
+                          </td>
+                        </tr>
+                      ));
+                    })()}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
             {/* RADAR MAP TRACKER (LIGHT BG CONTAINER) */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -3479,6 +3991,190 @@ export default function ETSPortal() {
           showToast(`Location reassigned to ${newAddress} and pushed to driver!`);
         }}
       />
+
+      {/* MODAL: ADD EMPLOYEE (ADMIN EXCLUSIVE) */}
+      {isAddEmployeeModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-in fade-in">
+          <div className="bg-white border border-slate-300 shadow-2xl max-w-lg w-full p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 bg-blue-100 text-[#0f5fc2] flex items-center justify-center font-black">
+                  <UserPlus className="w-4 h-4 text-[#0f5fc2]" />
+                </div>
+                <div>
+                  <h3 className="font-black text-sm text-slate-900">Add New Employee</h3>
+                  <p className="text-[11px] text-slate-500">Corporate Master Directory Entry (Admin Only)</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAddEmployeeModalOpen(false)}
+                className="text-slate-400 hover:text-slate-700 text-lg font-bold p-1"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateEmployee} className="space-y-3 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Full Name *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Rahul Verma"
+                    value={newEmployeeForm.fullName}
+                    onChange={(e) => setNewEmployeeForm({ ...newEmployeeForm, fullName: e.target.value })}
+                    className="w-full border border-slate-300 p-2 font-medium text-slate-800 focus:outline-none focus:border-blue-600"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Employee Code *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. EMP-9065"
+                    value={newEmployeeForm.employeeCode}
+                    onChange={(e) => setNewEmployeeForm({ ...newEmployeeForm, employeeCode: e.target.value })}
+                    className="w-full border border-slate-300 p-2 font-mono font-bold text-slate-800 focus:outline-none focus:border-blue-600 uppercase"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Corporate Email</label>
+                  <input
+                    type="email"
+                    placeholder="e.g. rahul.v@enterprise.com"
+                    value={newEmployeeForm.email}
+                    onChange={(e) => setNewEmployeeForm({ ...newEmployeeForm, email: e.target.value })}
+                    className="w-full border border-slate-300 p-2 font-medium text-slate-800 focus:outline-none focus:border-blue-600"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Phone Number</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. +91 98450 66778"
+                    value={newEmployeeForm.phone}
+                    onChange={(e) => setNewEmployeeForm({ ...newEmployeeForm, phone: e.target.value })}
+                    className="w-full border border-slate-300 p-2 font-mono font-medium text-slate-800 focus:outline-none focus:border-blue-600"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Department</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Supply Chain Logistics Engineering"
+                  value={newEmployeeForm.department}
+                  onChange={(e) => setNewEmployeeForm({ ...newEmployeeForm, department: e.target.value })}
+                  className="w-full border border-slate-300 p-2 font-medium text-slate-800 focus:outline-none focus:border-blue-600"
+                />
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Home Pickup Address</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. 15th Cross, HSR Layout Sector 1, Bangalore"
+                  value={newEmployeeForm.homeAddress}
+                  onChange={(e) => setNewEmployeeForm({ ...newEmployeeForm, homeAddress: e.target.value })}
+                  className="w-full border border-slate-300 p-2 font-medium text-slate-800 focus:outline-none focus:border-blue-600"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Office Campus Hub</label>
+                  <select
+                    value={newEmployeeForm.officeCampus}
+                    onChange={(e) => setNewEmployeeForm({ ...newEmployeeForm, officeCampus: e.target.value })}
+                    className="w-full border border-slate-300 p-2 font-medium text-slate-800 bg-white focus:outline-none focus:border-blue-600"
+                  >
+                    <option value="Enterprise Tech Park, Tower B">Enterprise Tech Park, Tower B</option>
+                    <option value="WalmartLabs Core Facility">WalmartLabs Core Facility</option>
+                    <option value="Bellandur Tech Corridor">Bellandur Tech Corridor</option>
+                    <option value="Main Campus Terminal">Main Campus Terminal</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Default Shift Time</label>
+                  <select
+                    value={newEmployeeForm.defaultShiftTime}
+                    onChange={(e) => setNewEmployeeForm({ ...newEmployeeForm, defaultShiftTime: e.target.value })}
+                    className="w-full border border-slate-300 p-2 font-medium text-slate-800 bg-white focus:outline-none focus:border-blue-600"
+                  >
+                    <option value="09:00">09:00 AM (Morning Login)</option>
+                    <option value="10:30">10:30 AM (Standard Shift)</option>
+                    <option value="13:30">13:30 PM (Midday Login)</option>
+                    <option value="18:00">18:00 PM (Evening Logout)</option>
+                    <option value="21:30">21:30 PM (Night Logout)</option>
+                    <option value="22:30">22:30 PM (Late Shift)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-6 pt-1">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Gender</label>
+                  <div className="flex items-center space-x-3">
+                    {(['FEMALE', 'MALE', 'OTHER'] as const).map((g) => (
+                      <label key={g} className="flex items-center space-x-1 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="new_emp_gender"
+                          value={g}
+                          checked={newEmployeeForm.gender === g}
+                          onChange={() => setNewEmployeeForm({
+                            ...newEmployeeForm,
+                            gender: g,
+                            femaleSafeguard: g === 'FEMALE',
+                          })}
+                        />
+                        <span className="capitalize">{g.toLowerCase()}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="pt-4">
+                  <label className="flex items-center space-x-2 cursor-pointer font-bold text-slate-800">
+                    <input
+                      type="checkbox"
+                      checked={newEmployeeForm.femaleSafeguard}
+                      onChange={(e) => setNewEmployeeForm({ ...newEmployeeForm, femaleSafeguard: e.target.checked })}
+                      className="rounded"
+                    />
+                    <span>🛡️ Female Safeguard Protected</span>
+                  </label>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end space-x-2 pt-3 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setIsAddEmployeeModalOpen(false)}
+                  className="px-4 py-2 border border-slate-300 text-slate-700 font-bold hover:bg-slate-100 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingEmployee}
+                  className="px-4 py-2 bg-[#0f5fc2] hover:bg-blue-700 text-white font-bold shadow-xs transition-colors"
+                >
+                  {isSubmittingEmployee ? 'Registering...' : '+ Register Employee'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {isResetModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">

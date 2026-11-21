@@ -71,6 +71,23 @@ export interface PassengerRecord {
   };
 }
 
+export interface EmployeeRecord {
+  id: string;
+  employeeCode: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  department: string;
+  homeAddress: string;
+  pickupCoords?: { latitude: number; longitude: number };
+  officeCampus: string;
+  gender: 'MALE' | 'FEMALE' | 'OTHER';
+  femaleSafeguard: boolean;
+  defaultShiftTime: string;
+  status: 'ACTIVE' | 'INACTIVE';
+  createdAt: string;
+}
+
 export interface VehicleRecord {
   id: string;
   plateNumber: string;
@@ -228,6 +245,7 @@ interface DBData {
   trips: TripRecord[];
   vehicles: VehicleRecord[];
   drivers: DriverRecord[];
+  employees: EmployeeRecord[];
   rideRequests: RideRequestRecord[];
   sosAlerts: SOSAlertRecord[];
   notifications: NotificationRecord[];
@@ -459,7 +477,261 @@ const SEED_DATA: DBData = {
       updatedAt: '2026-11-11T12:56:10.000Z',
     },
   ],
-  rideRequests: [],
+  employees: [
+    {
+      id: 'emp-amrutha',
+      employeeCode: 'EMP-9042',
+      fullName: 'Amrutha Rao',
+      email: 'amrutha.rao@enterprise.com',
+      phone: '+91 98450 11223',
+      department: 'Core Supply Chain & Logistics Engineering',
+      homeAddress: 'Gate 2, Golden Palms Apts, Indiranagar 100ft Road, Bangalore',
+      pickupCoords: { latitude: 12.9719, longitude: 77.6412 },
+      officeCampus: 'Enterprise Tech Park, Tower B',
+      gender: 'FEMALE',
+      femaleSafeguard: true,
+      defaultShiftTime: '09:00',
+      status: 'ACTIVE',
+      createdAt: '2026-01-15T09:00:00.000Z',
+    },
+    {
+      id: 'emp-priya',
+      employeeCode: 'EMP-9018',
+      fullName: 'Priya Sharma',
+      email: 'priya.sharma@enterprise.com',
+      phone: '+91 98711 22334',
+      department: 'Product Management',
+      homeAddress: 'HAL 2nd Stage, 80ft Road, Indiranagar, Bangalore',
+      pickupCoords: { latitude: 12.9800, longitude: 77.6250 },
+      officeCampus: 'Enterprise Tech Park, Tower B',
+      gender: 'FEMALE',
+      femaleSafeguard: true,
+      defaultShiftTime: '09:00',
+      status: 'ACTIVE',
+      createdAt: '2026-02-10T10:30:00.000Z',
+    },
+    {
+      id: 'emp-karthik',
+      employeeCode: 'EMP-9033',
+      fullName: 'Karthik Natarajan',
+      email: 'karthik.n@enterprise.com',
+      phone: '+91 99887 33445',
+      department: 'DevOps & Cloud Infrastructure',
+      homeAddress: 'Domlur Layout, Inner Ring Road, Bangalore',
+      pickupCoords: { latitude: 12.9620, longitude: 77.6480 },
+      officeCampus: 'Enterprise Tech Park, Tower B',
+      gender: 'MALE',
+      femaleSafeguard: false,
+      defaultShiftTime: '13:30',
+      status: 'ACTIVE',
+      createdAt: '2026-03-01T08:15:00.000Z',
+    },
+    {
+      id: 'emp-sneha',
+      employeeCode: 'EMP-9055',
+      fullName: 'Sneha Patil',
+      email: 'sneha.patil@enterprise.com',
+      phone: '+91 97411 99001',
+      department: 'Retail Marketplace Platform',
+      homeAddress: 'Koramangala 4th Block, 17th Main Rd, Bangalore',
+      pickupCoords: { latitude: 12.9340, longitude: 77.6220 },
+      officeCampus: 'Enterprise Tech Park, Tower B',
+      gender: 'FEMALE',
+      femaleSafeguard: true,
+      defaultShiftTime: '21:30',
+      status: 'ACTIVE',
+      createdAt: '2026-04-12T11:00:00.000Z',
+    },
+    {
+      id: 'emp-ananya',
+      employeeCode: 'EMP-9012',
+      fullName: 'Ananya Deshmukh',
+      email: 'ananya.d@enterprise.com',
+      phone: '+91 98710 44551',
+      department: 'Data Analytics & AI Systems',
+      homeAddress: '12th Main Indiranagar, Bangalore',
+      pickupCoords: { latitude: 12.9720, longitude: 77.6380 },
+      officeCampus: 'Enterprise Tech Park, Tower B',
+      gender: 'FEMALE',
+      femaleSafeguard: true,
+      defaultShiftTime: '09:00',
+      status: 'ACTIVE',
+      createdAt: '2026-05-18T14:20:00.000Z',
+    },
+    {
+      id: 'emp-vikram',
+      employeeCode: 'EMP-9044',
+      fullName: 'Vikram Seth',
+      email: 'vikram.seth@enterprise.com',
+      phone: '+91 98451 22119',
+      department: 'Corporate Finance & Tax',
+      homeAddress: 'ESI Hospital Junction, Indiranagar, Bangalore',
+      pickupCoords: { latitude: 12.9690, longitude: 77.6400 },
+      officeCampus: 'Enterprise Tech Park, Tower B',
+      gender: 'MALE',
+      femaleSafeguard: false,
+      defaultShiftTime: '10:30',
+      status: 'ACTIVE',
+      createdAt: '2026-06-01T09:45:00.000Z',
+    },
+    {
+      id: 'emp-deepa',
+      employeeCode: 'EMP-9081',
+      fullName: 'Deepa Roy',
+      email: 'deepa.roy@enterprise.com',
+      phone: '+91 99001 77221',
+      department: 'Talent Acquisition & HR',
+      homeAddress: 'Old Airport Road, Kodihalli, Bangalore',
+      pickupCoords: { latitude: 12.9600, longitude: 77.6500 },
+      officeCampus: 'Enterprise Tech Park, Tower B',
+      gender: 'FEMALE',
+      femaleSafeguard: true,
+      defaultShiftTime: '18:00',
+      status: 'ACTIVE',
+      createdAt: '2026-07-20T10:00:00.000Z',
+    },
+  ],
+  rideRequests: [
+    {
+      id: 'req-seed-0900-amrutha-today',
+      bookingCode: 'REQ-2026-9042',
+      employeeId: 'emp-amrutha',
+      employeeCode: 'EMP-9042',
+      employeeName: 'Amrutha Rao',
+      employeePhone: '+91 98450 11223',
+      department: 'Core Supply Chain & Logistics Engineering',
+      direction: 'LOGIN',
+      shiftDate: '2026-11-21',
+      shiftTime: '09:00',
+      officeCampus: 'Enterprise Tech Park, Tower B',
+      pickupAddress: 'Gate 2, Golden Palms Apts, Indiranagar 100ft Road',
+      pickupCoords: { latitude: 12.9719, longitude: 77.6412 },
+      dropAddress: 'Enterprise Tech Park, Tower B, Domlur',
+      dropCoords: { latitude: 12.9352, longitude: 77.6946 },
+      bookingType: 'REGULAR_SHIFT',
+      status: 'PENDING_ADMIN',
+      boardingOtp: '7492',
+      createdAt: '2026-11-21T07:30:00.000Z',
+      updatedAt: '2026-11-21T07:30:00.000Z',
+    },
+    {
+      id: 'req-seed-0900-amrutha-11nov',
+      bookingCode: 'REQ-2026-9041',
+      employeeId: 'emp-amrutha',
+      employeeCode: 'EMP-9042',
+      employeeName: 'Amrutha Rao',
+      employeePhone: '+91 98450 11223',
+      department: 'Core Supply Chain & Logistics Engineering',
+      direction: 'LOGIN',
+      shiftDate: '2026-11-11',
+      shiftTime: '09:00',
+      officeCampus: 'Enterprise Tech Park, Tower B',
+      pickupAddress: 'Gate 2, Golden Palms Apts, Indiranagar 100ft Road',
+      pickupCoords: { latitude: 12.9719, longitude: 77.6412 },
+      dropAddress: 'Enterprise Tech Park, Tower B, Domlur',
+      dropCoords: { latitude: 12.9352, longitude: 77.6946 },
+      bookingType: 'REGULAR_SHIFT',
+      status: 'PENDING_ADMIN',
+      boardingOtp: '7492',
+      createdAt: '2026-11-11T07:00:00.000Z',
+      updatedAt: '2026-11-11T07:00:00.000Z',
+    },
+    {
+      id: 'req-seed-0900-priya-11nov',
+      bookingCode: 'REQ-2026-9018',
+      employeeId: 'emp-priya',
+      employeeCode: 'EMP-9018',
+      employeeName: 'Priya Sharma',
+      employeePhone: '+91 98711 22334',
+      department: 'Product Management',
+      direction: 'LOGIN',
+      shiftDate: '2026-11-11',
+      shiftTime: '09:00',
+      officeCampus: 'Enterprise Tech Park, Tower B',
+      pickupAddress: 'HAL 2nd Stage, 80ft Road, Indiranagar',
+      pickupCoords: { latitude: 12.9800, longitude: 77.6250 },
+      dropAddress: 'Enterprise Tech Park, Tower B, Domlur',
+      dropCoords: { latitude: 12.9352, longitude: 77.6946 },
+      bookingType: 'REGULAR_SHIFT',
+      status: 'PUSHED_TO_VENDOR',
+      targetVendorName: 'Eco Rent a Car',
+      boardingOtp: '3190',
+      createdAt: '2026-11-11T07:15:00.000Z',
+      updatedAt: '2026-11-11T07:45:00.000Z',
+    },
+    {
+      id: 'req-seed-1330-karthik-11nov',
+      bookingCode: 'REQ-2026-9033',
+      employeeId: 'emp-karthik',
+      employeeCode: 'EMP-9033',
+      employeeName: 'Karthik Natarajan',
+      employeePhone: '+91 99887 33445',
+      department: 'DevOps & Cloud Infrastructure',
+      direction: 'LOGIN',
+      shiftDate: '2026-11-11',
+      shiftTime: '13:30',
+      officeCampus: 'Enterprise Tech Park, Tower B',
+      pickupAddress: 'Domlur Layout, Inner Ring Road',
+      pickupCoords: { latitude: 12.9620, longitude: 77.6480 },
+      dropAddress: 'Enterprise Tech Park, Tower B, Domlur',
+      dropCoords: { latitude: 12.9352, longitude: 77.6946 },
+      bookingType: 'REGULAR_SHIFT',
+      status: 'ASSIGNED_BY_VENDOR',
+      assignedCabPlate: 'KA-03-HA-8821',
+      assignedDriverName: 'Suresh Babu',
+      assignedDriverPhone: '+91 98765 43210',
+      boardingOtp: '5821',
+      createdAt: '2026-11-11T10:00:00.000Z',
+      updatedAt: '2026-11-11T10:30:00.000Z',
+    },
+    {
+      id: 'req-seed-1800-deepa-today',
+      bookingCode: 'REQ-2026-9081',
+      employeeId: 'emp-deepa',
+      employeeCode: 'EMP-9081',
+      employeeName: 'Deepa Roy',
+      employeePhone: '+91 99001 77221',
+      department: 'Talent Acquisition & HR',
+      direction: 'LOGOUT',
+      shiftDate: '2026-11-21',
+      shiftTime: '18:00',
+      officeCampus: 'Enterprise Tech Park, Tower B',
+      pickupAddress: 'Enterprise Tech Park, Tower B, Domlur',
+      pickupCoords: { latitude: 12.9352, longitude: 77.6946 },
+      dropAddress: 'Old Airport Road, Kodihalli, Bangalore',
+      dropCoords: { latitude: 12.9600, longitude: 77.6500 },
+      bookingType: 'REGULAR_SHIFT',
+      status: 'PENDING_ADMIN',
+      boardingOtp: '4519',
+      createdAt: '2026-11-21T08:00:00.000Z',
+      updatedAt: '2026-11-21T08:00:00.000Z',
+    },
+    {
+      id: 'req-seed-2130-sneha-11nov',
+      bookingCode: 'REQ-2026-9055',
+      employeeId: 'emp-sneha',
+      employeeCode: 'EMP-9055',
+      employeeName: 'Sneha Patil',
+      employeePhone: '+91 97411 99001',
+      department: 'Retail Marketplace Platform',
+      direction: 'LOGOUT',
+      shiftDate: '2026-11-11',
+      shiftTime: '21:30',
+      officeCampus: 'Enterprise Tech Park, Tower B',
+      pickupAddress: 'Enterprise Tech Park, Tower B, Domlur',
+      pickupCoords: { latitude: 12.9352, longitude: 77.6946 },
+      dropAddress: 'Koramangala 4th Block, 17th Main Rd',
+      dropCoords: { latitude: 12.9340, longitude: 77.6220 },
+      bookingType: 'REGULAR_SHIFT',
+      status: 'ASSIGNED_BY_VENDOR',
+      assignedCabPlate: 'KA-01-EQ-9011',
+      assignedDriverName: 'Venkatesh R.',
+      assignedDriverPhone: '+91 97400 33881',
+      boardingOtp: '4192',
+      createdAt: '2026-11-11T16:00:00.000Z',
+      updatedAt: '2026-11-11T16:45:00.000Z',
+    },
+  ],
   sosAlerts: [],
   notifications: [
     {
@@ -502,8 +774,11 @@ function ensureDataLoaded(): DBData {
     if (fs.existsSync(DATA_FILE)) {
       const raw = fs.readFileSync(DATA_FILE, 'utf-8');
       const parsed = JSON.parse(raw);
-      if (!parsed.rideRequests) {
+      if (!parsed.rideRequests || parsed.rideRequests.length === 0) {
         parsed.rideRequests = JSON.parse(JSON.stringify(SEED_DATA.rideRequests));
+      }
+      if (!parsed.employees || parsed.employees.length === 0) {
+        parsed.employees = JSON.parse(JSON.stringify(SEED_DATA.employees));
       }
       inMemoryData = parsed;
     } else {
@@ -546,6 +821,9 @@ export const db = {
     const data = ensureDataLoaded();
     let result = [...data.trips];
 
+    if (filters?.date) {
+      result = result.filter((t) => t.shiftDate === filters.date);
+    }
     if (filters?.type) {
       result = result.filter((t) => t.type === filters.type);
     }
@@ -1097,12 +1375,15 @@ export const db = {
     status?: 'PENDING_ADMIN' | 'PUSHED_TO_VENDOR' | 'ASSIGNED_BY_VENDOR' | 'CANCELLED';
     employeeId?: string;
     shiftDate?: string;
+    shiftTime?: string;
+    direction?: 'LOGIN' | 'LOGOUT';
   }): Promise<RideRequestRecord[]> {
     const data = ensureDataLoaded();
     let list = [...(data.rideRequests || [])];
     if (filters?.status) list = list.filter((r) => r.status === filters.status);
     if (filters?.employeeId) list = list.filter((r) => r.employeeId === filters.employeeId || r.employeeCode === filters.employeeId);
     if (filters?.shiftDate) list = list.filter((r) => r.shiftDate === filters.shiftDate);
+    if (filters?.direction) list = list.filter((r) => r.direction === filters.direction);
     return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   },
 
@@ -1378,6 +1659,110 @@ export const db = {
       activeVehiclesCount: data.vehicles.filter((v) => v.isActive).length,
       activeDriversCount: data.drivers.filter((d) => d.dutyStatus !== 'OFFLINE').length,
     };
+  },
+
+  // 12. EMPLOYEE MASTER & ROSTER MANAGEMENT (ADMIN AUTHORITATIVE ONLY)
+  async getEmployees(query?: string): Promise<EmployeeRecord[]> {
+    const data = ensureDataLoaded();
+    let list = [...(data.employees || [])];
+    if (query) {
+      const q = query.toLowerCase().trim();
+      list = list.filter(
+        (e) =>
+          e.fullName.toLowerCase().includes(q) ||
+          e.employeeCode.toLowerCase().includes(q) ||
+          e.department.toLowerCase().includes(q) ||
+          e.phone.includes(q) ||
+          e.email.toLowerCase().includes(q)
+      );
+    }
+    return list.sort((a, b) => a.fullName.localeCompare(b.fullName));
+  },
+
+  async createEmployee(payload: {
+    fullName: string;
+    employeeCode: string;
+    email: string;
+    phone: string;
+    department: string;
+    homeAddress: string;
+    officeCampus?: string;
+    gender?: 'MALE' | 'FEMALE' | 'OTHER';
+    femaleSafeguard?: boolean;
+    defaultShiftTime?: string;
+    pickupCoords?: { latitude: number; longitude: number };
+    actor?: string;
+  }): Promise<EmployeeRecord> {
+    const data = ensureDataLoaded();
+    if (!data.employees) data.employees = [];
+
+    const existing = data.employees.find(
+      (e) => e.employeeCode.toLowerCase() === payload.employeeCode.toLowerCase().trim()
+    );
+    if (existing) {
+      throw new Error(`Employee with code ${payload.employeeCode} already exists.`);
+    }
+
+    const newEmp: EmployeeRecord = {
+      id: `emp-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`,
+      employeeCode: payload.employeeCode.toUpperCase().trim(),
+      fullName: payload.fullName.trim(),
+      email: payload.email.trim(),
+      phone: payload.phone.trim(),
+      department: payload.department.trim(),
+      homeAddress: payload.homeAddress.trim(),
+      officeCampus: payload.officeCampus || 'Enterprise Tech Park, Tower B',
+      gender: payload.gender || 'FEMALE',
+      femaleSafeguard: payload.femaleSafeguard ?? (payload.gender === 'FEMALE'),
+      defaultShiftTime: payload.defaultShiftTime || '09:00',
+      pickupCoords: payload.pickupCoords || { latitude: 12.9719, longitude: 77.6412 },
+      status: 'ACTIVE',
+      createdAt: new Date().toISOString(),
+    };
+
+    data.employees.unshift(newEmp);
+
+    data.auditLogs.unshift({
+      id: `audit-${Date.now()}`,
+      actor: payload.actor || 'Atharva Admin',
+      actorRole: 'SUPER_ADMIN',
+      action: 'ADD_EMPLOYEE',
+      resource: 'EMPLOYEE_MASTER',
+      resourceId: newEmp.id,
+      newState: newEmp,
+      timestamp: new Date().toISOString(),
+    });
+
+    persistData();
+    return newEmp;
+  },
+
+  async removeEmployee(idOrCode: string, actor?: string): Promise<boolean> {
+    const data = ensureDataLoaded();
+    if (!data.employees) return false;
+
+    const idx = data.employees.findIndex(
+      (e) => e.id === idOrCode || e.employeeCode.toLowerCase() === idOrCode.toLowerCase().trim()
+    );
+    if (idx === -1) {
+      throw new Error(`Employee ${idOrCode} not found in master records.`);
+    }
+
+    const removed = data.employees.splice(idx, 1)[0];
+
+    data.auditLogs.unshift({
+      id: `audit-${Date.now()}`,
+      actor: actor || 'Atharva Admin',
+      actorRole: 'SUPER_ADMIN',
+      action: 'REMOVE_EMPLOYEE',
+      resource: 'EMPLOYEE_MASTER',
+      resourceId: removed.id,
+      previousState: removed,
+      timestamp: new Date().toISOString(),
+    });
+
+    persistData();
+    return true;
   },
 };
 
