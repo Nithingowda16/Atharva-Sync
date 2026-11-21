@@ -64,6 +64,7 @@ export const EmployeeMobileApp: React.FC<EmployeeMobileAppProps> = ({
   const [locationIssueReason, setLocationIssueReason] = useState('Gate closed / waiting 200m ahead');
   const [isSubmittingLocation, setIsSubmittingLocation] = useState(false);
   const [activeSOSModal, setActiveSOSModal] = useState(false);
+  const [hasActiveCommute, setHasActiveCommute] = useState<boolean>(false);
   const [pendingRequests, setPendingRequests] = useState<any[]>([]);
   const [isBookModalOpen, setIsBookModalOpen] = useState(false);
   const [bookShiftTime, setBookShiftTime] = useState('13:30');
@@ -81,6 +82,7 @@ export const EmployeeMobileApp: React.FC<EmployeeMobileAppProps> = ({
           setPendingRequests(data.pendingRequests);
         }
         if (data.activeCommute) {
+          setHasActiveCommute(true);
           const c = data.activeCommute;
           setTripId(c.tripId);
           setTripCode(c.tripCode);
@@ -102,6 +104,8 @@ export const EmployeeMobileApp: React.FC<EmployeeMobileAppProps> = ({
               longitude: c.driver.currentLocation.longitude,
             });
           }
+        } else {
+          setHasActiveCommute(false);
         }
       }
     } catch (e) {
@@ -356,133 +360,148 @@ export const EmployeeMobileApp: React.FC<EmployeeMobileAppProps> = ({
             <span>Schedule / Book Another Ride</span>
           </button>
 
-          {/* Active Trip Header */}
-          <div className="bg-slate-50 border border-slate-200 p-3 space-y-2">
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-bold text-slate-500 uppercase tracking-wide">
-                Today&apos;s Dispatch • {tripCode}
-              </span>
-              <span className="bg-blue-100 text-blue-800 font-extrabold text-[10px] px-2 py-0.5">
-                13:30 SHIFT • LOGIN
-              </span>
-            </div>
+          {/* Active Trip Header or Empty State */}
+          {hasActiveCommute ? (
+            <>
+              {/* Active Trip Header */}
+              <div className="bg-slate-50 border border-slate-200 p-3 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-slate-500 uppercase tracking-wide">
+                    Today&apos;s Dispatch • {tripCode}
+                  </span>
+                  <span className="bg-blue-100 text-blue-800 font-extrabold text-[10px] px-2 py-0.5">
+                    13:30 SHIFT • LOGIN
+                  </span>
+                </div>
 
-            {/* Pickup & Drop Points */}
-            <div className="space-y-1.5 pt-1 text-xs">
-              <div className="flex items-start space-x-2">
-                <MapPin className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                <div className="flex-1">
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Pickup Node:</span>
-                  <strong className="text-slate-900 block leading-tight">{pickupAddress}</strong>
-                  <button
-                    onClick={() => {
-                      setNewAddressInput(pickupAddress);
-                      setIsLocationModalOpen(true);
-                    }}
-                    className="text-[11px] text-blue-700 hover:underline font-bold mt-1 inline-block"
+                {/* Pickup & Drop Points */}
+                <div className="space-y-1.5 pt-1 text-xs">
+                  <div className="flex items-start space-x-2">
+                    <MapPin className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block">Pickup Node:</span>
+                      <strong className="text-slate-900 block leading-tight">{pickupAddress}</strong>
+                      <button
+                        onClick={() => {
+                          setNewAddressInput(pickupAddress);
+                          setIsLocationModalOpen(true);
+                        }}
+                        className="text-[11px] text-blue-700 hover:underline font-bold mt-1 inline-block"
+                      >
+                        Change Pickup Location ➔
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex items-start space-x-2 pt-1 border-t border-slate-200">
+                    <Navigation className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block">Destination:</span>
+                      <strong className="text-slate-900 block leading-tight">
+                        Enterprise Tech Park (Bellandur Hub Gate 2)
+                      </strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* DRIVER & CAB DETAILS CARD */}
+              <div className="bg-white border-2 border-slate-900 p-3.5 shadow-sm space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2.5">
+                    <div className="w-10 h-10 bg-slate-900 text-white flex items-center justify-center">
+                      <Car className="w-5 h-5 text-amber-400" />
+                    </div>
+                    <div>
+                      <h4 className="font-black text-sm text-slate-900">{driverName}</h4>
+                      <p className="text-xs text-slate-500">
+                        Atharva Chauffeur • <span className="text-emerald-700 font-bold">{driverRating}</span>
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Vehicle Number Plate */}
+                  <div className="bg-amber-300 border-2 border-slate-900 px-2.5 py-1 text-center shadow-sm">
+                    <span className="text-[9px] uppercase font-black text-slate-800 block leading-none">IND</span>
+                    <span className="font-mono font-black text-xs text-slate-950 tracking-wider">
+                      {vehiclePlate}
+                    </span>
+                  </div>
+                </div>
+
+                <p className="text-xs text-slate-600 bg-slate-50 p-2 border border-slate-200">
+                  Vehicle: <strong>{vehicleModel}</strong>
+                </p>
+
+                {/* Quick Action Buttons for Driver */}
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <a
+                    href={`tel:${driverPhone}`}
+                    className="py-2 px-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold flex items-center justify-center space-x-1.5 transition-colors shadow-sm"
                   >
-                    Change Pickup Location ➔
+                    <Phone className="w-3.5 h-3.5" />
+                    <span>Call Chauffeur</span>
+                  </a>
+
+                  <button
+                    onClick={handleShareTrip}
+                    className="py-2 px-3 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-800 font-bold flex items-center justify-center space-x-1.5 transition-colors"
+                  >
+                    <Share2 className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Share Ride</span>
                   </button>
                 </div>
               </div>
-              <div className="flex items-start space-x-2 pt-1 border-t border-slate-200">
-                <Navigation className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-                <div>
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Destination:</span>
-                  <strong className="text-slate-900 block leading-tight">
-                    Enterprise Tech Park (Bellandur Hub Gate 2)
-                  </strong>
+
+              {/* DYNAMIC QR CODE & OTP BOARDING PASS */}
+              <div className="bg-white border-2 border-slate-900 p-4 text-center space-y-3 shadow-md">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                  <span className="text-[11px] font-black uppercase text-slate-700 tracking-wider flex items-center space-x-1">
+                    <QrCode className="w-4 h-4 text-blue-600" />
+                    <span>Contactless QR Boarding Pass</span>
+                  </span>
+                  <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 border border-emerald-300">
+                    Single-Use Token
+                  </span>
+                </div>
+
+                {/* Render Real Dynamic QR Code */}
+                <div className="flex justify-center py-1">
+                  <QRCodeBadge
+                    payload={qrPayload}
+                    size={170}
+                    pin={boardingPin}
+                  />
+                </div>
+
+                <p className="text-xs text-slate-500">
+                  Show this QR code to Driver <strong className="text-slate-800">{driverName}</strong> when boarding vehicle {vehiclePlate}.
+                </p>
+
+                {/* 4-DIGIT BACKUP BOARDING PIN */}
+                <div className="bg-amber-50 border-2 border-dashed border-amber-400 p-3 rounded-none">
+                  <span className="text-[10px] uppercase font-extrabold text-amber-900 block tracking-wider">
+                    OR SHARE 4-DIGIT BOARDING PIN
+                  </span>
+                  <div className="font-mono text-3xl font-black tracking-[0.35em] text-slate-900 my-1">
+                    {boardingPin}
+                  </div>
+                  <span className="text-[10px] text-amber-800">
+                    Valid for Trip #{tripCode}
+                  </span>
                 </div>
               </div>
+            </>
+          ) : (
+            <div className="bg-slate-50 border border-slate-200 p-8 text-center space-y-2">
+              <Car className="w-10 h-10 text-slate-400 mx-auto" />
+              <h4 className="font-black text-slate-800 text-sm">No Active Commute Dispatched</h4>
+              <p className="text-xs text-slate-500 max-w-xs mx-auto">
+                {pendingRequests.length > 0
+                  ? 'Your ride request has been submitted to Transport Admin and is awaiting Vendor Cab allocation.'
+                  : 'You do not have any active trips scheduled for today. Use the button above to schedule your shift ride.'}
+              </p>
             </div>
-          </div>
-
-          {/* DRIVER & CAB DETAILS CARD */}
-          <div className="bg-white border-2 border-slate-900 p-3.5 shadow-sm space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2.5">
-                <div className="w-10 h-10 bg-slate-900 text-white flex items-center justify-center">
-                  <Car className="w-5 h-5 text-amber-400" />
-                </div>
-                <div>
-                  <h4 className="font-black text-sm text-slate-900">{driverName}</h4>
-                  <p className="text-xs text-slate-500">
-                    Atharva Chauffeur • <span className="text-emerald-700 font-bold">{driverRating}</span>
-                  </p>
-                </div>
-              </div>
-
-              {/* Vehicle Number Plate */}
-              <div className="bg-amber-300 border-2 border-slate-900 px-2.5 py-1 text-center shadow-sm">
-                <span className="text-[9px] uppercase font-black text-slate-800 block leading-none">IND</span>
-                <span className="font-mono font-black text-xs text-slate-950 tracking-wider">
-                  {vehiclePlate}
-                </span>
-              </div>
-            </div>
-
-            <p className="text-xs text-slate-600 bg-slate-50 p-2 border border-slate-200">
-              Vehicle: <strong>{vehicleModel}</strong>
-            </p>
-
-            {/* Quick Action Buttons for Driver */}
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <a
-                href={`tel:${driverPhone}`}
-                className="py-2 px-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold flex items-center justify-center space-x-1.5 transition-colors shadow-sm"
-              >
-                <Phone className="w-3.5 h-3.5" />
-                <span>Call Chauffeur</span>
-              </a>
-
-              <button
-                onClick={handleShareTrip}
-                className="py-2 px-3 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-800 font-bold flex items-center justify-center space-x-1.5 transition-colors"
-              >
-                <Share2 className="w-3.5 h-3.5 text-blue-600" />
-                <span>Share Ride</span>
-              </button>
-            </div>
-          </div>
-
-          {/* DYNAMIC QR CODE & OTP BOARDING PASS */}
-          <div className="bg-white border-2 border-slate-900 p-4 text-center space-y-3 shadow-md">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-              <span className="text-[11px] font-black uppercase text-slate-700 tracking-wider flex items-center space-x-1">
-                <QrCode className="w-4 h-4 text-blue-600" />
-                <span>Contactless QR Boarding Pass</span>
-              </span>
-              <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 border border-emerald-300">
-                Single-Use Token
-              </span>
-            </div>
-
-            {/* Render Real Dynamic QR Code */}
-            <div className="flex justify-center py-1">
-              <QRCodeBadge
-                payload={qrPayload}
-                size={170}
-                pin={boardingPin}
-              />
-            </div>
-
-            <p className="text-xs text-slate-500">
-              Show this QR code to Driver <strong className="text-slate-800">{driverName}</strong> when boarding vehicle {vehiclePlate}.
-            </p>
-
-            {/* 4-DIGIT BACKUP BOARDING PIN */}
-            <div className="bg-amber-50 border-2 border-dashed border-amber-400 p-3 rounded-none">
-              <span className="text-[10px] uppercase font-extrabold text-amber-900 block tracking-wider">
-                OR SHARE 4-DIGIT BOARDING PIN
-              </span>
-              <div className="font-mono text-3xl font-black tracking-[0.35em] text-slate-900 my-1">
-                {boardingPin}
-              </div>
-              <span className="text-[10px] text-amber-800">
-                Valid for Trip #{tripCode}
-              </span>
-            </div>
-          </div>
+          )}
 
           {/* EMERGENCY SOS TRIGGER BUTTON */}
           <div className="pt-2">

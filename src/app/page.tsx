@@ -587,41 +587,6 @@ export default function ETSPortal() {
     }
   };
 
-  const handleSimulateEmployeeBooking = async () => {
-    try {
-      const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-      const names = ['Kavita Sundaram', 'Amrutha Rao', 'Priya Sharma', 'Rahul Sen', 'Deepak Verma'];
-      const chosenName = names[Math.floor(Math.random() * names.length)];
-      const res = await fetch('/api/portal/requests', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'create_request',
-          employeeId: `EMP-${randomSuffix}`,
-          employeeCode: `EMP-${randomSuffix}`,
-          employeeName: chosenName,
-          employeePhone: `+91 98450 ${Math.floor(10000 + Math.random() * 90000)}`,
-          department: 'Enterprise Engineering',
-          direction: 'LOGIN',
-          shiftDate: new Date().toISOString().split('T')[0],
-          shiftTime: '13:30',
-          officeCampus: 'Enterprise Tech Park, Tower B',
-          pickupAddress: 'HAL 2nd Stage, Indiranagar',
-          dropAddress: 'Enterprise Tech Park, Tower B',
-          bookingType: 'REGULAR_SHIFT',
-        }),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        showToast(`📱 Employee App booked ride! New request #${data.request?.bookingCode} arrived in Admin Queue.`);
-        await fetchLiveBackendTrips();
-      }
-    } catch (e) {
-      showToast('Error simulating booking');
-    }
-  };
-
   useEffect(() => {
     fetchLiveBackendTrips();
     const interval = setInterval(fetchLiveBackendTrips, 3000);
@@ -3147,18 +3112,12 @@ export default function ETSPortal() {
 
                 <div className="flex items-center space-x-2">
                   <button
-                    onClick={handleSimulateEmployeeBooking}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3 py-1.5 transition-colors flex items-center space-x-1.5 shadow-xs"
-                  >
-                    <Smartphone className="w-3.5 h-3.5" />
-                    <span>+ Simulate Employee Ride Booking</span>
-                  </button>
-                  <button
                     onClick={fetchLiveBackendTrips}
-                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs p-1.5 border border-slate-300"
+                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs px-3 py-1.5 border border-slate-300 flex items-center space-x-1.5"
                     title="Refresh Requests"
                   >
-                    <RefreshCw className="w-3.5 h-3.5" />
+                    <RefreshCw className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Sync Roster</span>
                   </button>
                 </div>
               </div>
@@ -3337,7 +3296,7 @@ export default function ETSPortal() {
                     {rideRequests.filter((r) => (requestFilter === 'ALL' ? true : r.status === requestFilter)).length === 0 && (
                       <tr>
                         <td colSpan={7} className="text-center py-6 text-slate-400 text-xs">
-                          No ride requests found in this queue. Click &quot;+ Simulate Employee Ride Booking&quot; to test.
+                          No ride requests found in this queue. Scheduled requests from the Employee App will appear here in real-time.
                         </td>
                       </tr>
                     )}

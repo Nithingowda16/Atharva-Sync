@@ -7,171 +7,7 @@ import { BookingDraft, RideRecord } from '../types';
 import { getApiBaseUrl, API_ENDPOINTS } from './apiConfig';
 import { authService } from './authService';
 
-function buildFallbackRide(): RideRecord {
-  return {
-    id: 'trip-ath-8821',
-    tripCode: 'ATH-8821',
-    date: new Date().toISOString().split('T')[0],
-    shiftTime: '13:30',
-    direction: 'LOGIN',
-    status: 'IN_TRANSIT',
-    boardingStatus: 'WAITING',
-    boardingOtp: '7492',
-    pickup: {
-      id: 'pickup-indiranagar',
-      name: 'Gate 2, Golden Palms Apts, Indiranagar 100ft Road',
-      landmark: 'Near 100ft Metro Station',
-      pickupTime: '13:00',
-      latitude: 12.9719,
-      longitude: 77.6412,
-    },
-    destination: {
-      id: 'dest-bellandur',
-      name: 'Enterprise Tech Park, Tower B',
-      campus: 'Outer Ring Road Campus',
-      city: 'Bengaluru',
-    },
-    vehicle: {
-      id: 'veh-8821',
-      plateNumber: 'KA-03-HA-8821',
-      model: 'Innova Crysta 2.4 VX',
-      make: 'Toyota',
-      color: 'Pearl White',
-      seatingCapacity: 4,
-    },
-    driver: {
-      id: 'drv-suresh',
-      fullName: 'Suresh Babu',
-      phone: '+91 98765 43210',
-      rating: 4.92,
-    },
-    etaMinutes: 7,
-    currentLocation: {
-      latitude: 12.9760,
-      longitude: 77.6320,
-      heading: 45,
-      speed: 34,
-      lastUpdated: new Date().toISOString(),
-    },
-  };
-}
-
-function buildInitialRides(): RideRecord[] {
-  const today = new Date().toISOString().split('T')[0];
-  const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
-
-  return [
-    {
-      id: 'trip-sched-today-login',
-      tripCode: 'ATH-9102L',
-      date: today,
-      shiftTime: '09:30',
-      direction: 'LOGIN',
-      status: 'SCHEDULED',
-      boardingStatus: 'WAITING',
-      boardingOtp: '7492',
-      pickup: {
-        id: 'p-home',
-        name: 'Gate 2, Golden Palms Apts, Indiranagar 100ft Road',
-        landmark: 'Near 100ft Metro Station',
-        pickupTime: '08:45',
-        latitude: 12.9719,
-        longitude: 77.6412,
-      },
-      destination: {
-        id: 'dest-hq',
-        name: 'Enterprise Tech Park, Tower B',
-        campus: 'Outer Ring Road Campus',
-        city: 'Bengaluru',
-      },
-      driver: {
-        id: 'drv-suresh',
-        fullName: 'Suresh Babu',
-        phone: '+91 98765 43210',
-        rating: 4.92,
-      },
-      vehicle: {
-        id: 'veh-8821',
-        plateNumber: 'KA-03-HA-8821',
-        model: 'Innova Crysta 2.4 VX',
-        make: 'Toyota',
-        color: 'Pearl White',
-      },
-    },
-    {
-      id: 'trip-sched-today-logout',
-      tripCode: 'ATH-9103D',
-      date: today,
-      shiftTime: '18:30',
-      direction: 'LOGOUT',
-      status: 'SCHEDULED',
-      boardingStatus: 'WAITING',
-      boardingOtp: '7492',
-      pickup: {
-        id: 'p-office',
-        name: 'Enterprise Tech Park, Tower B (Main Exit)',
-        landmark: 'Main Exit Bay 3',
-        pickupTime: '18:25',
-        latitude: 12.9260,
-        longitude: 77.6762,
-      },
-      destination: {
-        id: 'dest-home',
-        name: 'Gate 2, Golden Palms Apts, Indiranagar',
-        campus: 'Indiranagar 100ft Road',
-        city: 'Bengaluru',
-      },
-    },
-    {
-      id: 'trip-sched-tomo-login',
-      tripCode: 'ATH-9104L',
-      date: tomorrow,
-      shiftTime: '09:30',
-      direction: 'LOGIN',
-      status: 'SCHEDULED',
-      boardingStatus: 'WAITING',
-      boardingOtp: '7492',
-      pickup: {
-        id: 'p-home',
-        name: 'Gate 2, Golden Palms Apts, Indiranagar 100ft Road',
-        landmark: 'Near 100ft Metro Station',
-        pickupTime: '08:45',
-        latitude: 12.9719,
-        longitude: 77.6412,
-      },
-      destination: {
-        id: 'dest-hq',
-        name: 'Enterprise Tech Park, Tower B',
-        campus: 'Outer Ring Road Campus',
-        city: 'Bengaluru',
-      },
-    },
-    {
-      id: 'trip-sched-tomo-logout',
-      tripCode: 'ATH-9105D',
-      date: tomorrow,
-      shiftTime: '18:30',
-      direction: 'LOGOUT',
-      status: 'SCHEDULED',
-      boardingStatus: 'WAITING',
-      boardingOtp: '7492',
-      pickup: {
-        id: 'p-office',
-        name: 'Enterprise Tech Park, Tower B (Main Exit)',
-        landmark: 'Main Exit Bay 3',
-        pickupTime: '18:25',
-      },
-      destination: {
-        id: 'dest-home',
-        name: 'Gate 2, Golden Palms Apts, Indiranagar',
-        campus: 'Indiranagar 100ft Road',
-        city: 'Bengaluru',
-      },
-    },
-  ];
-}
-
-let userBookingsStore: RideRecord[] = buildInitialRides();
+let userBookingsStore: RideRecord[] = [];
 
 export const bookingService = {
   /**
@@ -216,7 +52,7 @@ export const bookingService = {
             boardingOtp: c.boardingOtp || '7492',
             pickup: {
               id: 'p-1',
-              name: c.pickup?.address || 'Golden Palms Apts, Indiranagar',
+              name: c.pickup?.address || 'Pickup Point',
               landmark: 'Pickup Node',
               pickupTime: c.scheduledPickupTime || '13:00',
               latitude: c.pickup?.latitude || 12.9719,
@@ -257,10 +93,10 @@ export const bookingService = {
         }
       }
     } catch (e) {
-      console.warn('Backend commute sync notice, using active fallback:', e);
+      console.warn('Backend commute sync notice:', e);
     }
 
-    return userBookingsStore.length > 0 ? userBookingsStore : [buildFallbackRide()];
+    return userBookingsStore;
   },
 
   async getUpcomingRides(): Promise<RideRecord[]> {

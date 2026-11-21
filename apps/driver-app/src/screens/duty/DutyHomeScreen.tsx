@@ -82,10 +82,10 @@ export const DutyHomeScreen: React.FC<DutyHomeScreenProps> = ({
   const handleStartDutySuccess = async () => {
     setIsAuthModalOpen(false);
     setIsOnDuty(true);
-    const updated = await offlineStorage.updateDutyStatus('AVAILABLE');
+    await offlineStorage.updateDutyStatus('AVAILABLE');
     onDutyToggle('AVAILABLE');
-    // Pre-cache or load roster trip
-    const trip = await tripService.setupInitialRosterIfEmpty(profile.assignedVehiclePlate);
+    // Fetch live assigned trip from database
+    const trip = await tripService.getActiveTrip(profile.id, profile.assignedVehiclePlate);
     setActiveTrip(trip);
   };
 
