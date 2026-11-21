@@ -67,7 +67,7 @@ export const EmployeeMobileApp: React.FC<EmployeeMobileAppProps> = ({
   const [hasActiveCommute, setHasActiveCommute] = useState<boolean>(false);
   const [pendingRequests, setPendingRequests] = useState<any[]>([]);
   const [isBookModalOpen, setIsBookModalOpen] = useState(false);
-  const [bookShiftTime, setBookShiftTime] = useState('13:30');
+  const [bookShiftTime, setBookShiftTime] = useState('09:00');
   const [bookDirection, setBookDirection] = useState<'LOGIN' | 'LOGOUT'>('LOGIN');
   const [bookPickupInput, setBookPickupInput] = useState('Gate 2, Golden Palms Apts, Indiranagar 100ft Road');
   const [isSubmittingBooking, setIsSubmittingBooking] = useState(false);
@@ -562,6 +562,7 @@ export const EmployeeMobileApp: React.FC<EmployeeMobileAppProps> = ({
                   onChange={(e) => setBookShiftTime(e.target.value)}
                   className="w-full p-2 border border-slate-300 text-xs font-semibold bg-white"
                 >
+                  <option value="09:00">09:00 Shift (Morning Commute)</option>
                   <option value="09:30">09:30 Shift</option>
                   <option value="11:30">11:30 Shift</option>
                   <option value="13:30">13:30 Shift</option>

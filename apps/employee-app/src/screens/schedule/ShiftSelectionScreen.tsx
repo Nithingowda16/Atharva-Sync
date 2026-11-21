@@ -39,6 +39,15 @@ interface ShiftSelectionScreenProps {
 
 const DEFAULT_LOGIN_SHIFTS: ShiftRecord[] = [
   {
+    id: 'shift-0900',
+    shiftTime: '09:00',
+    travelDurationMinutes: 35,
+    direction: 'LOGIN',
+    shiftWindow: 'Pickup window: 08:15 - 08:30',
+    cutoffTime: '07:00',
+    isAvailable: true,
+  },
+  {
     id: 'shift-0930',
     shiftTime: '09:30',
     travelDurationMinutes: 35,
@@ -211,7 +220,7 @@ export const ShiftSelectionScreen: React.FC<ShiftSelectionScreenProps> = ({
         <View style={styles.quickSelectorSection}>
           <Text style={styles.quickSelectorTitle}>Select Shift Timing:</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
-            {['09:30', '13:30', '14:00', '17:30', '18:30', '21:30', '22:30'].map((time) => {
+            {['09:00', '09:30', '13:30', '14:00', '17:30', '18:30', '21:30', '22:30'].map((time) => {
               const isSelected = selectedShift?.shiftTime === time;
               return (
                 <TouchableOpacity

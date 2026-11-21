@@ -403,7 +403,60 @@ export default function ETSPortal() {
   
   // LOGIN / LOGOUT direction & Controls
   const [tripDirection, setTripDirection] = useState<'LOGIN' | 'LOGOUT'>('LOGIN');
-  const [selectedShift, setSelectedShift] = useState<string>('13:30');
+  const [selectedShift, setSelectedShift] = useState<string>('09:00');
+  const [trackingTripCode, setTrackingTripCode] = useState<string | null>(null);
+  const [isAllocatingCabId, setIsAllocatingCabId] = useState<string | null>(null);
+
+  // Normalize shift time strings e.g. "09:00", "9:00", "9:00 AM", "09:00 AM", "9 AM"
+  const normalizeShiftTime = (t: string): string => {
+    if (!t) return '';
+    const clean = t.trim().toLowerCase();
+    const m = clean.match(/(\d{1,2}):?(\d{2})?\s*(am|pm)?/i);
+    if (!m) return clean;
+    let h = parseInt(m[1], 10);
+    const min = m[2] ? parseInt(m[2], 10) : 0;
+    const mer = m[3]?.toLowerCase();
+    if (mer === 'pm' && h < 12) h += 12;
+    if (mer === 'am' && h === 12) h = 0;
+    return `${h.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}`;
+  };
+
+  const isShiftMatch = (itemTime: string, targetShift: string): boolean => {
+    if (!itemTime) return false;
+    if (targetShift === 'ALL') return true;
+    return normalizeShiftTime(itemTime) === normalizeShiftTime(targetShift);
+  };
+
+  const handleDirectAllocateCab = async (requestId: string, targetPlate?: string) => {
+    setIsAllocatingCabId(requestId);
+    try {
+      const cab = AVAILABLE_CABS.find((c) => c.plate === targetPlate) || AVAILABLE_CABS[0];
+      const res = await fetch('/api/portal/requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'assign_cab',
+          requestId,
+          cabPlate: cab.plate,
+          driverId: cab.driver.includes('Suresh') ? 'drv-suresh' : 'drv-mahesh',
+          driverName: cab.driver,
+          driverPhone: cab.phone,
+          vendorActor: 'Atharva Corporate Fleet Vendor',
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        showToast(`✅ Allocated Cab ${cab.plate} (${cab.driver}) to Request!`);
+        await fetchLiveBackendTrips();
+      } else {
+        showToast('Error allocating cab');
+      }
+    } catch (e) {
+      showToast('Failed to allocate cab to request');
+    } finally {
+      setIsAllocatingCabId(null);
+    }
+  };
   const [selectedBusinessUnit, setSelectedBusinessUnit] = useState<string>('WalmartLabs');
   const [sliderStart, setSliderStart] = useState<string>('12:00');
   const [sliderEnd, setSliderEnd] = useState<string>('20:00');
@@ -1604,38 +1657,70 @@ export default function ETSPortal() {
                 </div>
               </div>
 
-              {/* Time Shift Quick Select Pills */}
+              {/* Time Shift Quick Select Pills (Includes 09:00 AM & Dynamic Shift Badges) */}
               <div className="bg-white border-b border-slate-200 px-6 py-2 flex items-center space-x-2 overflow-x-auto text-xs">
                 <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mr-1 shrink-0">
                   {tripDirection} Shifts:
                 </span>
-                {(tripDirection === 'LOGIN'
-                  ? ['12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30']
-                  : ['22:30', '23:00', '23:30', '00:00', '00:30', '01:00', '01:30', '02:00', '02:30', '03:00', '03:30', '04:00', '04:30', '05:00']
-                ).map((shiftTime) => (
-                  <button
-                    key={shiftTime}
-                    onClick={() => {
-                      setSelectedShift(shiftTime);
-                      showToast(`Shift window selected: ${shiftTime}`);
-                    }}
-                    className={`px-3 py-1 border text-xs font-semibold rounded-full transition-all shrink-0 ${
-                      selectedShift === shiftTime
-                        ? 'border-[#0f5fc2] text-[#0f5fc2] bg-blue-50/70 font-bold shadow-xs'
-                        : 'border-slate-300 text-slate-600 hover:border-slate-400 bg-white'
-                    }`}
-                  >
-                    {shiftTime}
-                  </button>
-                ))}
+                {(() => {
+                  const baseShifts = tripDirection === 'LOGIN'
+                    ? ['ALL', '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30']
+                    : ['ALL', '17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00', '22:30', '23:00', '23:30', '00:00', '00:30', '01:00'];
+                  
+                  const customShiftTimes = Array.from(new Set([
+                    ...rideRequests.map((r: any) => r.shiftTime),
+                    ...dbTrips.map((t: any) => t.shift || t.shiftTime)
+                  ])).filter(Boolean);
+
+                  const allShifts = Array.from(new Set([...baseShifts, ...customShiftTimes]));
+
+                  return allShifts.map((shiftTime) => {
+                    const count = shiftTime === 'ALL'
+                      ? rideRequests.filter((r: any) => !tripDirection || r.direction === tripDirection).length +
+                        dbTrips.filter((t: any) => !t.direction || t.direction === tripDirection).length
+                      : rideRequests.filter((r: any) => (!tripDirection || r.direction === tripDirection) && isShiftMatch(r.shiftTime, shiftTime)).length +
+                        dbTrips.filter((t: any) => (!t.direction || t.direction === tripDirection) && isShiftMatch(t.shift || t.shiftTime, shiftTime)).length;
+
+                    return (
+                      <button
+                        key={shiftTime}
+                        type="button"
+                        onClick={() => {
+                          setSelectedShift(shiftTime);
+                          showToast(`Filtered operations for ${shiftTime} shift`);
+                        }}
+                        className={`px-3 py-1 border text-xs font-semibold rounded-full transition-all shrink-0 flex items-center space-x-1.5 ${
+                          selectedShift === shiftTime
+                            ? 'border-[#0f5fc2] text-[#0f5fc2] bg-blue-50/80 font-black shadow-xs ring-1 ring-[#0f5fc2]'
+                            : 'border-slate-300 text-slate-600 hover:border-slate-400 bg-white'
+                        }`}
+                      >
+                        <span>{shiftTime}</span>
+                        {count > 0 && (
+                          <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full ${
+                            selectedShift === shiftTime ? 'bg-[#0f5fc2] text-white' : 'bg-blue-100 text-[#0f5fc2]'
+                          }`}>
+                            {count}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  });
+                })()}
 
                 <div className="relative pl-1 shrink-0">
                   <button
-                    onClick={() => showToast('Displaying all shifts consolidated')}
-                    className="px-3 py-1 border border-slate-300 bg-white text-slate-600 hover:border-slate-400 flex items-center space-x-1.5 text-xs font-medium rounded-full"
+                    onClick={() => {
+                      setSelectedShift('ALL');
+                      showToast('Displaying all shifts consolidated');
+                    }}
+                    className={`px-3 py-1 border text-xs font-medium rounded-full flex items-center space-x-1 ${
+                      selectedShift === 'ALL'
+                        ? 'border-[#0f5fc2] bg-blue-50 text-[#0f5fc2] font-bold'
+                        : 'border-slate-300 bg-white text-slate-600 hover:border-slate-400'
+                    }`}
                   >
-                    <span>Shifts</span>
-                    <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                    <span>All Shifts</span>
                   </button>
                 </div>
               </div>
@@ -1647,322 +1732,290 @@ export default function ETSPortal() {
                 <div className="lg:col-span-8 bg-white border border-slate-200 shadow-sm flex flex-col min-h-[580px]">
                   
                   {dashboardMode === 'Operations' ? (
-                    /* OPERATIONS MODE VIEW */
-                    <div className="flex-1 flex flex-col p-4 space-y-4">
-                      
-                      {/* Operational Lifecycle Summary Cards (Pre-Trip, In-Progress, Completed) */}
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        {/* 1. Pre-Trip Lane */}
-                        <div className="border border-slate-200 bg-slate-50/70 p-3 space-y-2">
-                          <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 uppercase tracking-wide">
-                            <span>2 Trips not started</span>
-                            <span className="text-[10px] text-slate-400">Pre-Trip</span>
-                          </div>
-                          <div className="grid grid-cols-2 gap-2">
-                            <div className="bg-white border border-slate-200 p-2 shadow-xs space-y-1">
-                              <div className="flex items-center justify-between">
-                                <span className="text-[11px] font-bold text-slate-700">Yet to Start</span>
-                                <span className="text-xs font-black text-slate-900">1 &gt;</span>
+                    /* OPERATIONS MODE VIEW: LIVE SCHEDULED & BOOKED CABS DASHBOARD */
+                    <div className="flex-1 flex flex-col p-5 space-y-4">
+                      {(() => {
+                        const matchingRequests = rideRequests.filter((r) => {
+                          const dirMatch = !tripDirection || r.direction === tripDirection;
+                          return dirMatch && isShiftMatch(r.shiftTime, selectedShift);
+                        });
+
+                        const matchingTrips = dbTrips.filter((t) => {
+                          const dirMatch = !tripDirection || t.direction === tripDirection;
+                          return dirMatch && isShiftMatch(t.shift || t.shiftTime, selectedShift);
+                        });
+
+                        const totalScheduled = matchingRequests.length + matchingTrips.length;
+                        const pendingAdminCount = matchingRequests.filter((r) => r.status === 'PENDING_ADMIN').length;
+                        const pushedToVendorCount = matchingRequests.filter((r) => r.status === 'PUSHED_TO_VENDOR').length;
+                        const assignedCabsCount =
+                          matchingRequests.filter((r) => r.status === 'ASSIGNED_BY_VENDOR').length + matchingTrips.length;
+
+                        if (totalScheduled === 0) {
+                          return (
+                            <div className="flex-1 flex flex-col items-center justify-center p-16 text-center bg-white border border-slate-200 shadow-xs min-h-[460px]">
+                              <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-3 text-slate-400">
+                                <Car className="w-8 h-8" />
                               </div>
-                              <div className="flex items-center space-x-2 text-[10px] font-semibold text-slate-600 pt-0.5">
-                                <span className="flex items-center space-x-0.5"><span>👥</span><span>3</span></span>
-                                <span className="flex items-center space-x-0.5 text-red-600 font-bold" title="Critical/Escort"><span>🔴</span><span>1</span></span>
-                                <span className="flex items-center space-x-0.5 text-blue-600 font-bold" title="Regular"><span>🔵</span><span>2</span></span>
+                              <h3 className="text-lg font-black text-slate-800">No trips</h3>
+                              <p className="text-xs text-slate-500 max-w-sm mt-1.5 leading-relaxed">
+                                {selectedShift === 'ALL'
+                                  ? 'No employee ride requests or booked cabs found in the system.'
+                                  : `No employee rides or cabs scheduled for the ${selectedShift} shift.`}
+                              </p>
+                              <p className="text-[11px] text-slate-400 mt-2">
+                                When an employee books or schedules a ride (e.g. at {selectedShift}), it will appear here immediately in real-time.
+                              </p>
+                              {selectedShift !== 'ALL' && (
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedShift('ALL')}
+                                  className="mt-4 px-4 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold border border-slate-300 transition-colors"
+                                >
+                                  View All Shifts ({rideRequests.length} Total)
+                                </button>
+                              )}
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div className="space-y-4">
+                            {/* Operational Lifecycle Summary Cards (Live Counts for Selected Shift) */}
+                            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                              <div className="border border-slate-200 bg-slate-50 p-3 shadow-xs">
+                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide block">
+                                  Shift {selectedShift} Total
+                                </span>
+                                <div className="text-xl font-black text-slate-900 mt-1">
+                                  {totalScheduled} <span className="text-xs font-semibold text-slate-500">Scheduled</span>
+                                </div>
+                              </div>
+
+                              <div className="border border-amber-200 bg-amber-50/60 p-3 shadow-xs">
+                                <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wide block">
+                                  Awaiting Admin Push
+                                </span>
+                                <div className="text-xl font-black text-amber-800 mt-1">
+                                  {pendingAdminCount} <span className="text-xs font-semibold text-amber-600">Pending</span>
+                                </div>
+                              </div>
+
+                              <div className="border border-blue-200 bg-blue-50/60 p-3 shadow-xs">
+                                <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wide block">
+                                  Pushed to Vendor
+                                </span>
+                                <div className="text-xl font-black text-blue-800 mt-1">
+                                  {pushedToVendorCount} <span className="text-xs font-semibold text-blue-600">Unassigned</span>
+                                </div>
+                              </div>
+
+                              <div className="border border-emerald-200 bg-emerald-50/60 p-3 shadow-xs">
+                                <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wide block">
+                                  Cab Allocated / Active
+                                </span>
+                                <div className="text-xl font-black text-emerald-800 mt-1">
+                                  {assignedCabsCount} <span className="text-xs font-semibold text-emerald-600">Dispatched</span>
+                                </div>
                               </div>
                             </div>
 
-                            <button
-                              type="button"
-                              onClick={() => setIsIncompleteTripsModalOpen(true)}
-                              className="bg-[#fff1f0] hover:bg-[#ffe4e1] border border-[#ffa39e] p-2 shadow-xs space-y-1 text-left transition-colors cursor-pointer"
-                              title="Click to view incomplete/delayed trips"
-                            >
-                              <div className="flex items-center justify-between">
-                                <span className="text-[11px] font-bold text-[#cf1322]">Incomplete Trips</span>
-                                <span className="text-xs font-black text-[#cf1322]">1 &gt;</span>
+                            {/* Active Trip Telemetry Card (If an assigned trip is selected for tracking) */}
+                            {trackingTripCode && (
+                              <div className="border border-blue-300 bg-blue-50/30 p-3 space-y-2 shadow-xs animate-in fade-in">
+                                <div className="flex items-center justify-between border-b border-blue-100 pb-2">
+                                  <div className="flex items-center space-x-2">
+                                    <Navigation className="w-4 h-4 text-blue-600" />
+                                    <span className="font-bold text-xs text-blue-900">
+                                      Live Tracking Trip #{trackingTripCode}
+                                    </span>
+                                  </div>
+                                  <button
+                                    onClick={() => setTrackingTripCode(null)}
+                                    className="text-xs text-slate-500 hover:text-slate-800 font-bold px-2 py-0.5"
+                                  >
+                                    ✕ Close Map
+                                  </button>
+                                </div>
+                                <GoogleMapsTracker
+                                  vehiclePlate="KA-03-HA-8821"
+                                  driverName="Suresh Babu"
+                                  pickupAddress={
+                                    matchingRequests.find((r) => r.bookingCode === trackingTripCode || r.assignedTripCode === trackingTripCode)
+                                      ?.pickupAddress || 'Indiranagar 100ft Rd'
+                                  }
+                                />
                               </div>
-                              <div className="flex items-center space-x-2 text-[10px] font-semibold text-[#cf1322] pt-0.5">
-                                <span className="flex items-center space-x-0.5"><span>👥</span><span>0</span></span>
-                                <span className="text-[9px] bg-[#ff4d4f] text-white px-1 py-0.2 font-bold uppercase rounded-xs">Warning</span>
+                            )}
+
+                            {/* Live Shift Booked Cabs & Commute Schedule Table */}
+                            <div className="border border-slate-200 overflow-hidden shadow-xs">
+                              <div className="bg-slate-50 border-b border-slate-200 px-4 py-2.5 flex items-center justify-between">
+                                <div className="flex items-center space-x-2">
+                                  <Car className="w-4 h-4 text-[#0f5fc2]" />
+                                  <span className="font-bold text-xs text-slate-800">
+                                    Booked Cabs &amp; Schedules ({selectedShift === 'ALL' ? 'All Shifts' : `${selectedShift} Shift`})
+                                  </span>
+                                  <span className="bg-blue-100 text-[#0f5fc2] text-[10px] font-bold px-1.5 py-0.5">
+                                    {totalScheduled} Commuters
+                                  </span>
+                                </div>
+                                <span className="text-[11px] text-slate-500">
+                                  Live Sync • Direction: <strong>{tripDirection}</strong>
+                                </span>
                               </div>
-                            </button>
-                          </div>
-                        </div>
 
-                        {/* 2. In-Progress Lane */}
-                        <div className="border border-slate-200 bg-slate-50/70 p-3 space-y-2">
-                          <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 uppercase tracking-wide">
-                            <span>1 Trips in Progress &gt;</span>
-                            <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.2 rounded-xs">LIVE</span>
-                          </div>
-                          <div className="bg-white border border-slate-200 p-2 shadow-xs space-y-1">
-                            <div className="flex items-center justify-between">
-                              <span className="text-[11px] font-bold text-slate-700">On Time Trips</span>
-                              <span className="text-xs font-black text-emerald-600">100%</span>
-                            </div>
-                            <div className="text-[10px] text-slate-500 font-medium pt-0.5">
-                              On Time Pickup: <strong className="text-emerald-700">100%</strong>
-                            </div>
-                          </div>
-                        </div>
+                              <div className="overflow-x-auto">
+                                <table className="w-full text-left text-xs">
+                                  <thead className="bg-slate-50/80 text-slate-500 font-semibold uppercase tracking-wider border-b border-slate-200">
+                                    <tr>
+                                      <th className="py-2.5 px-3">Booking Code</th>
+                                      <th className="py-2.5 px-3">Employee Details</th>
+                                      <th className="py-2.5 px-3">Shift &amp; Direction</th>
+                                      <th className="py-2.5 px-3">Pickup Address</th>
+                                      <th className="py-2.5 px-3">Status Pipeline</th>
+                                      <th className="py-2.5 px-3">Assigned Cab</th>
+                                      <th className="py-2.5 px-3 text-right">Actions</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-slate-100">
+                                    {matchingRequests.map((req) => (
+                                      <tr key={req.id} className="hover:bg-slate-50 transition-colors">
+                                        <td className="py-2.5 px-3 font-mono font-bold text-blue-700">
+                                          #{req.bookingCode}
+                                        </td>
+                                        <td className="py-2.5 px-3 font-semibold text-slate-800">
+                                          <div>{req.employeeName}</div>
+                                          <div className="text-[11px] text-slate-400 font-normal">
+                                            {req.employeeCode} • {req.department}
+                                          </div>
+                                        </td>
+                                        <td className="py-2.5 px-3">
+                                          <span className="bg-blue-100 text-[#0f5fc2] px-2 py-0.5 font-bold font-mono text-[11px] inline-block">
+                                            {req.shiftTime}
+                                          </span>
+                                          <span className="block text-[10px] text-slate-500 font-bold mt-0.5">
+                                            {req.direction}
+                                          </span>
+                                        </td>
+                                        <td className="py-2.5 px-3 text-slate-600 max-w-xs truncate" title={req.pickupAddress}>
+                                          <div>{req.pickupAddress}</div>
+                                          <div className="text-[10px] text-slate-400 font-medium">➔ {req.officeCampus}</div>
+                                        </td>
+                                        <td className="py-2.5 px-3">
+                                          {req.status === 'PENDING_ADMIN' && (
+                                            <span className="bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 font-bold text-[10px] uppercase tracking-wide inline-flex items-center space-x-1">
+                                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                                              <span>Awaiting Push</span>
+                                            </span>
+                                          )}
+                                          {req.status === 'PUSHED_TO_VENDOR' && (
+                                            <span className="bg-blue-100 text-blue-900 border border-blue-300 px-2 py-0.5 font-bold text-[10px] uppercase tracking-wide inline-flex items-center space-x-1">
+                                              <span>Pushed to Vendor</span>
+                                            </span>
+                                          )}
+                                          {req.status === 'ASSIGNED_BY_VENDOR' && (
+                                            <span className="bg-emerald-100 text-emerald-900 border border-emerald-300 px-2 py-0.5 font-bold text-[10px] uppercase tracking-wide inline-flex items-center space-x-1">
+                                              <span>✓ Cab Allocated</span>
+                                            </span>
+                                          )}
+                                        </td>
+                                        <td className="py-2.5 px-3">
+                                          {req.assignedVehiclePlate ? (
+                                            <div className="text-xs">
+                                              <div className="font-bold text-slate-900">{req.assignedVehiclePlate}</div>
+                                              <div className="text-[11px] text-slate-500">{req.assignedDriverName}</div>
+                                              <div className="text-[10px] font-mono font-bold text-blue-700">OTP: {req.boardingOtp}</div>
+                                            </div>
+                                          ) : (
+                                            <span className="text-slate-400 text-xs italic">Unallocated</span>
+                                          )}
+                                        </td>
+                                        <td className="py-2.5 px-3 text-right">
+                                          {req.status === 'PENDING_ADMIN' && (
+                                            <button
+                                              onClick={() => handleAdminPushToVendor(req.id)}
+                                              disabled={isPushingRequest === req.id}
+                                              className="bg-amber-600 hover:bg-amber-700 text-white font-bold px-2.5 py-1 text-xs shadow-xs transition-colors cursor-pointer"
+                                            >
+                                              {isPushingRequest === req.id ? 'Pushing...' : 'Push to Vendor ➔'}
+                                            </button>
+                                          )}
+                                          {req.status === 'PUSHED_TO_VENDOR' && (
+                                            <button
+                                              onClick={() => handleDirectAllocateCab(req.id)}
+                                              disabled={isAllocatingCabId === req.id}
+                                              className="bg-[#0f5fc2] hover:bg-blue-700 text-white font-bold px-2.5 py-1 text-xs shadow-xs transition-colors cursor-pointer"
+                                            >
+                                              {isAllocatingCabId === req.id ? 'Allocating...' : 'Allocate Cab 🚕'}
+                                            </button>
+                                          )}
+                                          {req.status === 'ASSIGNED_BY_VENDOR' && (
+                                            <button
+                                              onClick={() => setTrackingTripCode(req.assignedTripCode || req.bookingCode)}
+                                              className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-2.5 py-1 text-xs shadow-xs transition-colors cursor-pointer"
+                                            >
+                                              Track on Map 📍
+                                            </button>
+                                          )}
+                                        </td>
+                                      </tr>
+                                    ))}
 
-                        {/* 3. Completed Lane */}
-                        <div className="border border-slate-200 bg-slate-50/70 p-3 space-y-2">
-                          <div className="flex items-center justify-between text-[11px] font-bold text-slate-600 uppercase tracking-wide">
-                            <span>3 Trips Completed &gt;</span>
-                            <span className="text-[10px] text-slate-400">Shift SLA</span>
-                          </div>
-                          <div className="bg-white border border-slate-200 p-2 shadow-xs space-y-1">
-                            <div className="flex items-center justify-between">
-                              <span className="text-[11px] font-bold text-slate-700">Completed on Time</span>
-                              <span className="text-xs font-black text-[#0f5fc2]">100%</span>
-                            </div>
-                            <div className="text-[10px] text-slate-500 font-medium pt-0.5">
-                              OTA (On-Time Arrival): <strong className="text-[#0f5fc2]">100%</strong>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Live Google Maps Tracking Section */}
-                      <div className="space-y-2 border border-slate-200 bg-white p-3 shadow-xs">
-                        
-                        {/* Map Floating Control Bar */}
-                        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2 text-xs">
-                          <div className="flex items-center space-x-2">
-                            <Navigation className="w-3.5 h-3.5 text-[#0f5fc2]" />
-                            <span className="font-bold text-slate-800 text-xs">
-                              Live Fleet Radar: {activeTripData.tripId} ({activeTripData.vehiclePlate})
-                            </span>
-                            <span className="text-[10px] font-mono bg-blue-100 text-[#0f5fc2] px-1.5 py-0.5 font-bold">
-                              {tripDirection}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center space-x-1.5 text-xs">
-                            {/* Satellite / Roadmap / Hybrid dropdown */}
-                            <div className="relative">
-                              <select
-                                value={mapType}
-                                onChange={(e) => setMapType(e.target.value as any)}
-                                className="border border-slate-300 bg-white py-1 pl-2 pr-6 text-xs font-semibold text-slate-700 appearance-none focus:outline-none"
-                              >
-                                <option value="satellite">Satellite</option>
-                                <option value="roadmap">Roadmap</option>
-                                <option value="hybrid">Hybrid</option>
-                              </select>
-                              <ChevronDown className="w-3 h-3 text-slate-400 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                            </div>
-
-                            {/* Location: Fixed / Mobile */}
-                            <button
-                              type="button"
-                              onClick={() => setMapFixedLocation(!mapFixedLocation)}
-                              className={`px-2 py-1 border text-xs font-semibold transition-colors ${
-                                mapFixedLocation ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-700 border-slate-300'
-                              }`}
-                            >
-                              Location: {mapFixedLocation ? 'Fixed' : 'Mobile'}
-                            </button>
-
-                            {/* Speed Toggle */}
-                            <button
-                              type="button"
-                              onClick={() => setMapShowSpeed(!mapShowSpeed)}
-                              className={`px-2 py-1 border text-xs font-semibold transition-colors ${
-                                mapShowSpeed ? 'bg-blue-50 text-[#0f5fc2] border-blue-300 font-bold' : 'bg-white text-slate-500 border-slate-300'
-                              }`}
-                            >
-                              Speed: {mapShowSpeed ? 'On' : 'Off'}
-                            </button>
-
-                            {/* Traffic Toggle */}
-                            <button
-                              type="button"
-                              onClick={() => setMapShowTraffic(!mapShowTraffic)}
-                              className={`px-2 py-1 border text-xs font-semibold transition-colors ${
-                                mapShowTraffic ? 'bg-emerald-50 text-emerald-700 border-emerald-300 font-bold' : 'bg-white text-slate-500 border-slate-300'
-                              }`}
-                            >
-                              Traffic: {mapShowTraffic ? 'On' : 'Off'}
-                            </button>
-
-                            {/* OTA Toggle */}
-                            <button
-                              type="button"
-                              onClick={() => setMapShowOTA(!mapShowOTA)}
-                              className={`px-2 py-1 border text-xs font-semibold transition-colors ${
-                                mapShowOTA ? 'bg-blue-50 text-[#0f5fc2] border-blue-300 font-bold' : 'bg-white text-slate-500 border-slate-300'
-                              }`}
-                            >
-                              OTA: {mapShowOTA ? 'On' : 'Off'}
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* Interactive Google Map Container */}
-                        <GoogleMapsTracker
-                          pickupCoords={{ latitude: activeTripData.currentLat, longitude: activeTripData.currentLng }}
-                          pickupAddress={passengerState.pickupAddress}
-                          driverCoords={{ latitude: activeTripData.currentLat, longitude: activeTripData.currentLng }}
-                          vehiclePlate={activeTripData.vehiclePlate}
-                          driverName={activeTripData.driverName}
-                          onPickupReassigned={(newCoords, address) => {
-                            showToast('Pickup node updated and pushed to Driver app!');
-                          }}
-                        />
-
-                        {/* Collapsible Vehicle Detail Panel */}
-                        <div className="border border-slate-200 bg-slate-50/60 p-3 space-y-2 mt-2">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-2">
-                              <button
-                                type="button"
-                                onClick={() => setIsVehiclePanelCollapsed(!isVehiclePanelCollapsed)}
-                                className="text-slate-600 hover:text-slate-900 p-0.5"
-                              >
-                                <ChevronDown className={`w-4 h-4 transition-transform ${isVehiclePanelCollapsed ? '-rotate-90' : 'rotate-0'}`} />
-                              </button>
-                              <span className="font-mono font-bold text-xs text-slate-900">
-                                ECO_ETS - ECO-355 (KA-05-AP-0348)
-                              </span>
-                              <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.2">
-                                In Transit • 37 km/h
-                              </span>
-                            </div>
-                            <span className="text-[11px] text-slate-500">
-                              Driver: <strong>Rajesh Kumar</strong> (+91 98765 43210)
-                            </span>
-                          </div>
-
-                          {!isVehiclePanelCollapsed && (
-                            <div className="grid grid-cols-2 md:grid-cols-6 gap-2 text-[11px] pt-1 border-t border-slate-200">
-                              <div>
-                                <span className="text-slate-400 block text-[10px] uppercase font-semibold">Duty Start</span>
-                                <span className="font-bold text-slate-800">11 Nov 11:45</span>
-                              </div>
-                              <div>
-                                <span className="text-slate-400 block text-[10px] uppercase font-semibold">Duty End</span>
-                                <span className="font-bold text-slate-800">11 Nov 16:30</span>
-                              </div>
-                              <div>
-                                <span className="text-slate-400 block text-[10px] uppercase font-semibold">Duration</span>
-                                <span className="font-bold text-slate-800">04h 45m</span>
-                              </div>
-                              <div>
-                                <span className="text-slate-400 block text-[10px] uppercase font-semibold">Traveled KM</span>
-                                <span className="font-mono font-bold text-blue-700">18.4 KM</span>
-                              </div>
-                              <div>
-                                <span className="text-slate-400 block text-[10px] uppercase font-semibold">Total KM</span>
-                                <span className="font-mono font-bold text-slate-800">42.6 KM</span>
-                              </div>
-                              <div>
-                                <span className="text-slate-400 block text-[10px] uppercase font-semibold">Map KM</span>
-                                <span className="font-mono font-bold text-slate-800">41.9 KM</span>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Trip Detail Table */}
-                        <div className="border border-slate-200 overflow-x-auto mt-2">
-                          <table className="w-full text-left text-xs">
-                            <thead className="bg-slate-50 text-slate-500 font-semibold uppercase tracking-wider border-b border-slate-200">
-                              <tr>
-                                <th className="py-2 px-2.5">Trip ID</th>
-                                <th className="py-2 px-2.5">Emp</th>
-                                <th className="py-2 px-2.5">Dist (KM)</th>
-                                <th className="py-2 px-2.5">Ref Trip KM</th>
-                                <th className="py-2 px-2.5">Appvd Empty KM</th>
-                                <th className="py-2 px-2.5">Ref Empty KM</th>
-                                <th className="py-2 px-2.5">Start</th>
-                                <th className="py-2 px-2.5">End</th>
-                                <th className="py-2 px-2.5">Dir</th>
-                                <th className="py-2 px-2.5">Type</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100 font-mono text-[11px]">
-                              <tr className="hover:bg-slate-50">
-                                <td className="py-2 px-2.5 font-bold text-blue-700">ATH-8821</td>
-                                <td className="py-2 px-2.5">4</td>
-                                <td className="py-2 px-2.5">18.2</td>
-                                <td className="py-2 px-2.5">18.0</td>
-                                <td className="py-2 px-2.5">2.4</td>
-                                <td className="py-2 px-2.5">2.0</td>
-                                <td className="py-2 px-2.5">11:45</td>
-                                <td className="py-2 px-2.5">13:15</td>
-                                <td className="py-2 px-2.5 font-sans font-bold text-blue-800">LOGIN</td>
-                                <td className="py-2 px-2.5 font-sans text-emerald-700 font-semibold">Scheduled</td>
-                              </tr>
-                              <tr className="hover:bg-slate-50">
-                                <td className="py-2 px-2.5 font-bold text-blue-700">ATH-4310</td>
-                                <td className="py-2 px-2.5">4</td>
-                                <td className="py-2 px-2.5">14.6</td>
-                                <td className="py-2 px-2.5">14.5</td>
-                                <td className="py-2 px-2.5">1.8</td>
-                                <td className="py-2 px-2.5">1.8</td>
-                                <td className="py-2 px-2.5">13:30</td>
-                                <td className="py-2 px-2.5">14:45</td>
-                                <td className="py-2 px-2.5 font-sans font-bold text-blue-800">LOGIN</td>
-                                <td className="py-2 px-2.5 font-sans text-amber-700 font-semibold">Delayed</td>
-                              </tr>
-                            </tbody>
-                          </table>
-                        </div>
-
-                        {/* Planned Trips & Device Information Row */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
-                          {/* Planned Trips Box */}
-                          <div className="border border-slate-200 p-2.5 space-y-1.5 bg-slate-50/40">
-                            <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wide block">
-                              Planned Trips between 11 Nov, 12:30 and 11 Nov, 19:31
-                            </span>
-                            <div className="space-y-1 text-xs">
-                              <div className="flex items-center justify-between bg-white border border-slate-200 p-1.5 font-mono text-[11px]">
-                                <span>#ATH-9011 (Force Urbania)</span>
-                                <span className="font-bold text-slate-800">12 Commuters • 16:30</span>
-                              </div>
-                              <div className="flex items-center justify-between bg-white border border-slate-200 p-1.5 font-mono text-[11px]">
-                                <span>#ATH-8822 (Toyota Innova)</span>
-                                <span className="font-bold text-slate-800">4 Commuters • 18:00</span>
+                                    {/* Also render active DB trips matching this shift */}
+                                    {matchingTrips.map((trip) => (
+                                      <tr key={trip.id} className="hover:bg-slate-50 transition-colors bg-blue-50/20">
+                                        <td className="py-2.5 px-3 font-mono font-bold text-blue-700">
+                                          #{trip.tripCode}
+                                        </td>
+                                        <td className="py-2.5 px-3 font-semibold text-slate-800">
+                                          {trip.passengers?.map((p: any) => (
+                                            <div key={p.id}>
+                                              <div>{p.fullName}</div>
+                                              <div className="text-[11px] text-slate-400 font-normal">
+                                                {p.employeeCode} • PIN: {p.boardingOtp}
+                                              </div>
+                                            </div>
+                                          ))}
+                                        </td>
+                                        <td className="py-2.5 px-3">
+                                          <span className="bg-blue-100 text-[#0f5fc2] px-2 py-0.5 font-bold font-mono text-[11px] inline-block">
+                                            {trip.shiftTime || trip.shift || selectedShift}
+                                          </span>
+                                          <span className="block text-[10px] text-slate-500 font-bold mt-0.5">
+                                            {trip.direction || tripDirection}
+                                          </span>
+                                        </td>
+                                        <td className="py-2.5 px-3 text-slate-600 max-w-xs truncate">
+                                          {trip.passengers?.[0]?.pickupAddress || trip.routeName}
+                                        </td>
+                                        <td className="py-2.5 px-3">
+                                          <span className="bg-emerald-100 text-emerald-900 border border-emerald-300 px-2 py-0.5 font-bold text-[10px] uppercase tracking-wide inline-flex items-center space-x-1">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                            <span>Active On-Duty</span>
+                                          </span>
+                                        </td>
+                                        <td className="py-2.5 px-3">
+                                          <div className="font-bold text-slate-900">{trip.vehicle?.plateNumber}</div>
+                                          <div className="text-[11px] text-slate-500">{trip.driver?.fullName}</div>
+                                        </td>
+                                        <td className="py-2.5 px-3 text-right">
+                                          <button
+                                            onClick={() => setTrackingTripCode(trip.tripCode)}
+                                            className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-2.5 py-1 text-xs shadow-xs transition-colors cursor-pointer"
+                                          >
+                                            Track on Map 📍
+                                          </button>
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
                               </div>
                             </div>
                           </div>
-
-                          {/* Device Information & Driver Actions Box */}
-                          <div className="border border-slate-200 p-2.5 space-y-2 bg-slate-50/40">
-                            <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wide block">
-                              Hardware & Chauffeur Telematics
-                            </span>
-                            <div className="grid grid-cols-2 gap-2 text-[10px] font-mono text-slate-700 bg-white border border-slate-200 p-2">
-                              <div><span className="text-slate-400 block text-[9px] uppercase">Device Type</span><strong>BYOD Mobile</strong></div>
-                              <div><span className="text-slate-400 block text-[9px] uppercase">Client App Version</span><strong>v6.8.54</strong></div>
-                              <div><span className="text-slate-400 block text-[9px] uppercase">Handset Model</span><strong>OnePlus | CPH2381</strong></div>
-                              <div><span className="text-slate-400 block text-[9px] uppercase">Platform OS</span><strong>Android 14</strong></div>
-                            </div>
-                            <div className="flex items-center space-x-1.5 text-xs">
-                              <button
-                                type="button"
-                                onClick={() => showToast('Calling Driver Rajesh Kumar (+91 98765 43210)...')}
-                                className="flex-1 bg-white hover:bg-slate-100 border border-slate-300 py-1.5 px-2 text-[11px] font-bold text-slate-800 flex items-center justify-center space-x-1 transition-colors"
-                              >
-                                <PhoneCall className="w-3 h-3 text-emerald-600" />
-                                <span>Contact Chauffeur</span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setIsLocationModalOpen(true)}
-                                className="flex-1 bg-[#0f5fc2] hover:bg-blue-700 text-white py-1.5 px-2 text-[11px] font-bold flex items-center justify-center space-x-1 transition-colors"
-                              >
-                                <Navigation className="w-3 h-3" />
-                                <span>Route Assistance</span>
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-
-                      </div>
+                        );
+                      })()}
                     </div>
                   ) : (
                     /* CAB ALLOCATION MODE VIEW */
