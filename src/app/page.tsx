@@ -4317,27 +4317,17 @@ export default function ETSPortal() {
       {/* SIGN OUT CONFIRMATION MODAL */}
       {isSignOutConfirmOpen && (
         <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white border border-slate-300 shadow-2xl max-w-md w-full p-6 space-y-4 rounded-none">
-            <div className="flex items-start space-x-3.5">
-              <div className="w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center flex-shrink-0">
+          <div className="bg-white border border-slate-300 shadow-2xl max-w-sm w-full p-6 space-y-4 rounded-none">
+            <div className="flex items-center space-x-3.5">
+              <div className="w-10 h-10 rounded-full bg-red-50 text-red-600 flex items-center justify-center flex-shrink-0 border border-red-100">
                 <LogOut className="w-5 h-5" />
               </div>
-              <div>
-                <h3 className="text-base font-black text-slate-900">
-                  Confirm Sign Out
-                </h3>
-                <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                  Are you sure you want to sign out of <strong>Atharva Travels Enterprise Transport Portal</strong>? Your active operational session will be ended.
-                </p>
-              </div>
+              <h3 className="text-base font-bold text-slate-900 leading-snug">
+                Are you sure you want to sign out?
+              </h3>
             </div>
 
-            <div className="bg-amber-50 border border-amber-200 px-3 py-2 text-[11px] text-amber-800 flex items-center space-x-2">
-              <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
-              <span>All active vehicle telemetry and dispatch data are synchronized with the server.</span>
-            </div>
-
-            <div className="flex items-center justify-end space-x-2.5 pt-2 border-t border-slate-200">
+            <div className="flex items-center justify-end space-x-2.5 pt-3 border-t border-slate-200">
               <button
                 type="button"
                 onClick={() => setIsSignOutConfirmOpen(false)}
@@ -4354,7 +4344,7 @@ export default function ETSPortal() {
                 className="px-4 py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-700 shadow-sm transition-colors flex items-center space-x-1.5 cursor-pointer"
               >
                 <LogOut className="w-3.5 h-3.5" />
-                <span>Yes, Sign Out</span>
+                <span>Sign Out</span>
               </button>
             </div>
           </div>
