@@ -20,7 +20,10 @@ export async function GET(request: NextRequest) {
       search,
     });
 
-    return NextResponse.json({ success: true, count: trips.length, trips });
+    const vehicles = await db.getVehicles();
+    const drivers = await db.getDrivers();
+
+    return NextResponse.json({ success: true, count: trips.length, trips, vehicles, drivers });
   } catch (error: any) {
     console.error('Error fetching trips:', error);
     return NextResponse.json({ error: error.message || 'Failed to fetch trips' }, { status: 500 });

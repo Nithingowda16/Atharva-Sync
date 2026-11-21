@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Building2,
   ShieldAlert,
@@ -83,13 +83,14 @@ interface CommuterRecord {
   tripId: string;
   direction: 'LOGIN' | 'LOGOUT';
   shift: string;
+  shiftDate?: string;
   address: string;
   coords: { latitude: number; longitude: number };
   vehiclePlate: string;
   driverName: string;
   driverPhone: string;
   boardingOtp: string;
-  status: 'SCHEDULED' | 'BOARDED' | 'EN_ROUTE' | 'COMPLETED';
+  status: 'SCHEDULED' | 'BOARDED' | 'EN_ROUTE' | 'COMPLETED' | 'NO_SHOW';
   eta: string;
   isReassigned?: boolean;
   reassignmentReason?: string;
@@ -139,249 +140,16 @@ interface RouteAllocationRecord {
   }[];
 }
 
-const COMMUTER_ROSTER: CommuterRecord[] = [
-  {
-    id: 'c-1',
-    empCode: 'EMP-9042',
-    name: 'Amrutha Rao',
-    department: 'Core Supply Chain Engineering',
-    phone: '+91 98450 11223',
-    tripId: 'ATH-8821',
-    direction: 'LOGIN',
-    shift: '13:30',
-    address: 'Golden Palms Apts, Indiranagar 100ft Road',
-    coords: { latitude: 12.9719, longitude: 77.6412 },
-    vehiclePlate: 'KA-03-HA-8821',
-    driverName: 'Suresh Babu',
-    driverPhone: '+91 98765 43210',
-    boardingOtp: '7492',
-    status: 'EN_ROUTE',
-    eta: '7 mins away',
-  },
-  {
-    id: 'c-2',
-    empCode: 'EMP-9018',
-    name: 'Priya Sharma',
-    department: 'Product Management',
-    phone: '+91 98711 22334',
-    tripId: 'ATH-8821',
-    direction: 'LOGIN',
-    shift: '13:30',
-    address: 'HAL 2nd Stage, 80ft Road, Indiranagar',
-    coords: { latitude: 12.9800, longitude: 77.6250 },
-    vehiclePlate: 'KA-03-HA-8821',
-    driverName: 'Suresh Babu',
-    driverPhone: '+91 98765 43210',
-    boardingOtp: '3190',
-    status: 'BOARDED',
-    eta: 'Boarded at 07:18 AM',
-  },
-  {
-    id: 'c-3',
-    empCode: 'EMP-9033',
-    name: 'Karthik Natarajan',
-    department: 'Cloud Infrastructure & DevOps',
-    phone: '+91 99887 33445',
-    tripId: 'ATH-4310',
-    direction: 'LOGIN',
-    shift: '14:00',
-    address: 'Domlur Layout, Inner Ring Road',
-    coords: { latitude: 12.9620, longitude: 77.6480 },
-    vehiclePlate: 'KA-05-MJ-4310',
-    driverName: 'Mahesh Gowda',
-    driverPhone: '+91 98450 77112',
-    boardingOtp: '5821',
-    status: 'SCHEDULED',
-    eta: '14 mins away',
-  },
-  {
-    id: 'c-4',
-    empCode: 'EMP-9042',
-    name: 'Amrutha Rao',
-    department: 'Core Supply Chain Engineering',
-    phone: '+91 98450 11223',
-    tripId: 'ATH-8821',
-    direction: 'LOGOUT',
-    shift: '22:30',
-    address: 'Golden Palms Apts, Indiranagar 100ft Road',
-    coords: { latitude: 12.9719, longitude: 77.6412 },
-    vehiclePlate: 'KA-03-HA-8821',
-    driverName: 'Suresh Babu',
-    driverPhone: '+91 98765 43210',
-    boardingOtp: '8841',
-    status: 'EN_ROUTE',
-    eta: 'Departed Campus',
-    hasEscortGuard: true,
-    escortGuardName: 'Ramesh Singh (#ESC-402)',
-  },
-  {
-    id: 'c-5',
-    empCode: 'EMP-9018',
-    name: 'Priya Sharma',
-    department: 'Product Management',
-    phone: '+91 98711 22334',
-    tripId: 'ATH-8821',
-    direction: 'LOGOUT',
-    shift: '22:30',
-    address: 'HAL 2nd Stage, 80ft Road, Indiranagar',
-    coords: { latitude: 12.9800, longitude: 77.6250 },
-    vehiclePlate: 'KA-03-HA-8821',
-    driverName: 'Suresh Babu',
-    driverPhone: '+91 98765 43210',
-    boardingOtp: '6029',
-    status: 'BOARDED',
-    eta: 'Boarded at Campus Gate 1',
-    hasEscortGuard: true,
-    escortGuardName: 'Ramesh Singh (#ESC-402)',
-  },
-  {
-    id: 'c-6',
-    empCode: 'EMP-9055',
-    name: 'Sneha Patil',
-    department: 'Retail Marketplace Platform',
-    phone: '+91 97411 99001',
-    tripId: 'ATH-7021',
-    direction: 'LOGOUT',
-    shift: '21:30',
-    address: 'Koramangala 4th Block, 17th Main Rd',
-    coords: { latitude: 12.9340, longitude: 77.6220 },
-    vehiclePlate: 'KA-01-EQ-9011',
-    driverName: 'Venkatesh R.',
-    driverPhone: '+91 97400 33881',
-    boardingOtp: '4192',
-    status: 'SCHEDULED',
-    eta: 'Departs in 8 mins',
-    hasEscortGuard: true,
-    escortGuardName: 'Sunil Kumar (#ESC-510)',
-  },
-];
-
-const TRIPS_DATA: Record<string, TripRecord> = {
-  'ATH-8821': {
-    tripId: 'ATH-8821',
-    direction: 'LOGIN',
-    shift: '13:30',
-    route: 'Indiranagar 100ft Rd ➔ HAL ➔ Bellandur Campus',
-    vehiclePlate: 'KA-03-HA-8821',
-    vehicleModel: 'Toyota Innova Crysta',
-    driverName: 'Suresh Babu',
-    driverPhone: '+91 98765 43210',
-    speed: '34 km/h',
-    eta: '7 mins away',
-    currentLat: 12.9760,
-    currentLng: 77.6320,
-    passengers: [
-      { empCode: 'EMP-9042', name: 'Amrutha Rao' },
-      { empCode: 'EMP-9018', name: 'Priya Sharma' },
-    ],
-    escortGuard: 'Ramesh Singh (#ESC-402)',
-  },
-  'ATH-4310': {
-    tripId: 'ATH-4310',
-    direction: 'LOGIN',
-    shift: '14:00',
-    route: 'Whitefield ITPL ➔ Marathahalli ➔ Bellandur Campus',
-    vehiclePlate: 'KA-05-MJ-4310',
-    vehicleModel: 'Toyota Innova',
-    driverName: 'Mahesh Gowda',
-    driverPhone: '+91 98450 77112',
-    speed: '28 km/h',
-    eta: '14 mins away',
-    currentLat: 12.9840,
-    currentLng: 77.7280,
-    passengers: [
-      { empCode: 'EMP-9033', name: 'Karthik Natarajan' },
-    ],
-  },
-  'ATH-7021': {
-    tripId: 'ATH-7021',
-    direction: 'LOGOUT',
-    shift: '21:30',
-    route: 'Koramangala ➔ HSR Layout ➔ Bellandur Campus',
-    vehiclePlate: 'KA-01-EQ-9011',
-    vehicleModel: 'Force Urbania Tempo',
-    driverName: 'Venkatesh R.',
-    driverPhone: '+91 97400 33881',
-    speed: '31 km/h',
-    eta: '8 mins away',
-    currentLat: 12.9340,
-    currentLng: 77.6220,
-    passengers: [
-      { empCode: 'EMP-9055', name: 'Sneha Patil' },
-    ],
-    escortGuard: 'Sunil Kumar (#ESC-510)',
-  },
-};
-
-const INITIAL_ROUTES: RouteAllocationRecord[] = [
-  {
-    routeId: '3902992',
-    status: 'PENDING',
-    firstPickup: 'Domlur',
-    firstPickupTime: '10:43',
-    drop: '*Tech Park Campus (0.00 km)',
-    distanceKm: '11.4 km',
-    assignedCount: 0,
-    totalCapacity: 3,
-    isBackToBack: false,
-    needsMarshal: false,
-    hasSpecialNeeds: false,
-    passengers: [
-      { empCode: 'EMP-9033', name: 'Karthik Natarajan', pickupNode: 'Domlur Inner Ring Rd', pickupTime: '10:43', phone: '+91 99887 33445', pin: '5821' },
-      { empCode: 'EMP-9042', name: 'Amrutha Rao', pickupNode: 'Indiranagar 100ft Rd', pickupTime: '10:52', phone: '+91 98450 11223', pin: '7492' },
-      { empCode: 'EMP-9018', name: 'Priya Sharma', pickupNode: 'HAL 2nd Stage 80ft Rd', pickupTime: '11:02', phone: '+91 98711 22334', pin: '3190' },
-    ],
-  },
-  {
-    routeId: '3902995',
-    status: 'ALLOCATED',
-    firstPickup: 'Indiranagar 100ft Road',
-    firstPickupTime: '10:55',
-    drop: '*Tech Park Campus (0.00 km)',
-    distanceKm: '8.2 km',
-    assignedCount: 3,
-    totalCapacity: 3,
-    assignedCabPlate: 'KA-03-HA-8821',
-    assignedDriver: 'Suresh Babu',
-    assignedDriverPhone: '+91 98765 43210',
-    isBackToBack: true,
-    needsMarshal: false,
-    hasSpecialNeeds: false,
-    passengers: [
-      { empCode: 'EMP-9012', name: 'Ananya Deshmukh', pickupNode: '12th Main Indiranagar', pickupTime: '10:55', phone: '+91 98710 44551', pin: '1920' },
-      { empCode: 'EMP-9044', name: 'Vikram Seth', pickupNode: 'ESI Hospital Junction', pickupTime: '11:05', phone: '+91 98451 22119', pin: '8832' },
-      { empCode: 'EMP-9081', name: 'Deepa Roy', pickupNode: 'Old Airport Road', pickupTime: '11:14', phone: '+91 99001 77221', pin: '4519' },
-    ],
-  },
-  {
-    routeId: '3903001',
-    status: 'ALLOCATED',
-    firstPickup: 'Whitefield ITPL',
-    firstPickupTime: '11:15',
-    drop: '*Tech Park Campus (0.00 km)',
-    distanceKm: '16.8 km',
-    assignedCount: 4,
-    totalCapacity: 4,
-    assignedCabPlate: 'KA-05-MJ-4310',
-    assignedDriver: 'Mahesh Gowda',
-    assignedDriverPhone: '+91 98450 77112',
-    isBackToBack: false,
-    needsMarshal: true,
-    hasSpecialNeeds: false,
-    passengers: [
-      { empCode: 'EMP-9102', name: 'Rajesh G.', pickupNode: 'ITPL Main Gate', pickupTime: '11:15', phone: '+91 98860 33412', pin: '7102' },
-      { empCode: 'EMP-9114', name: 'Sunita Menon', pickupNode: 'Kundalahalli Gate', pickupTime: '11:25', phone: '+91 97422 11990', pin: '9921' },
-      { empCode: 'EMP-9122', name: 'Tanmay Saxena', pickupNode: 'Marathahalli Bridge', pickupTime: '11:34', phone: '+91 99160 55411', pin: '3481' },
-      { empCode: 'EMP-9130', name: 'Megha Iyer', pickupNode: 'Devarabisanahalli Outer Ring Rd', pickupTime: '11:42', phone: '+91 98455 88992', pin: '6012' },
-    ],
-  },
-];
-
-const AVAILABLE_CABS = [
-  { plate: 'KA-03-HA-8821', model: 'Toyota Innova Crysta', driver: 'Suresh Babu', phone: '+91 98765 43210', capacity: '4 Seater', eta: '1.2 km away from Domlur' },
-  { plate: 'KA-05-MJ-4310', model: 'Toyota Innova', driver: 'Mahesh Gowda', phone: '+91 98450 77112', capacity: '4 Seater', eta: '2.8 km away from Domlur' },
-  { plate: 'KA-01-EQ-9011', model: 'Force Urbania Tempo', driver: 'Venkatesh R.', phone: '+91 97400 33881', capacity: '12 Seater', eta: 'In Premise Depot (Ready)' },
-];
+export interface AvailableCabRecord {
+  vehicleId?: string;
+  driverId?: string;
+  plate: string;
+  model: string;
+  driver: string;
+  phone: string;
+  capacity: string;
+  eta: string;
+}
 
 export default function ETSPortal() {
   // Maintenance mode bypass state (persisted in localStorage so developers stay unlocked)
@@ -431,10 +199,38 @@ export default function ETSPortal() {
     return normalizeShiftTime(itemTime) === normalizeShiftTime(targetShift);
   };
 
+  const [dbVehicles, setDbVehicles] = useState<any[]>([]);
+  const [dbDrivers, setDbDrivers] = useState<any[]>([]);
+
+  const availableCabs: AvailableCabRecord[] = useMemo(() => {
+    if (dbVehicles.length === 0) return [];
+    return dbVehicles.map((v) => {
+      const driver = dbDrivers.find((d) => d.assignedVehicleId === v.id) || dbDrivers[0] || {
+        id: 'drv-default',
+        fullName: 'Fleet Chauffeur',
+        phone: '+91 98765 43210',
+      };
+      return {
+        vehicleId: v.id,
+        driverId: driver.id || 'drv-suresh',
+        plate: v.plateNumber,
+        model: `${v.make} ${v.model}`,
+        driver: driver.fullName,
+        phone: driver.phone,
+        capacity: `${v.seatingCapacity} Seater`,
+        eta: v.isActive ? 'Active on Fleet Radar' : 'Standby Depot',
+      };
+    });
+  }, [dbVehicles, dbDrivers]);
+
   const handleDirectAllocateCab = async (requestId: string, targetPlate?: string) => {
     setIsAllocatingCabId(requestId);
     try {
-      const cab = AVAILABLE_CABS.find((c) => c.plate === targetPlate) || AVAILABLE_CABS[0];
+      const cab = availableCabs.find((c) => c.plate === targetPlate) || availableCabs[0];
+      if (!cab) {
+        showToast('No vehicle available for allocation');
+        return;
+      }
       const res = await fetch('/api/portal/requests', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -442,7 +238,7 @@ export default function ETSPortal() {
           action: 'assign_cab',
           requestId,
           cabPlate: cab.plate,
-          driverId: cab.driver.includes('Suresh') ? 'drv-suresh' : 'drv-mahesh',
+          driverId: cab.driverId || 'drv-suresh',
           driverName: cab.driver,
           driverPhone: cab.phone,
           vendorActor: 'Atharva Corporate Fleet Vendor',
@@ -708,10 +504,10 @@ export default function ETSPortal() {
   const [searchVehicleInput, setSearchVehicleInput] = useState('');
   const [searchEmpInput, setSearchEmpInput] = useState('');
   const [searchTripInput, setSearchTripInput] = useState('');
-  const [selectedActiveTripId, setSelectedActiveTripId] = useState<string>('ATH-8821');
+  const [selectedActiveTripId, setSelectedActiveTripId] = useState<string>('');
 
   // ALLOCATE CABS State
-  const [routesList, setRoutesList] = useState<RouteAllocationRecord[]>(INITIAL_ROUTES);
+  const [routesList, setRoutesList] = useState<RouteAllocationRecord[]>([]);
   const [allocateDate, setAllocateDate] = useState('09/11/2026');
   const [allocateOffice, setAllocateOffice] = useState('ALL');
   const [allocateShiftType, setAllocateShiftType] = useState('Login');
@@ -719,7 +515,7 @@ export default function ETSPortal() {
   const [allocateSubTab, setAllocateSubTab] = useState<'Pending' | 'Allocated'>('Pending');
   const [allocateSort, setAllocateSort] = useState('Employees');
   const [allocateSortOrder, setAllocateSortOrder] = useState('Desc');
-  const [selectedRouteId, setSelectedRouteId] = useState('3902992');
+  const [selectedRouteId, setSelectedRouteId] = useState('');
 
   // Live Location Issue Reassignment Modal
   const [passengerState, setPassengerState] = useState({
@@ -758,7 +554,14 @@ export default function ETSPortal() {
 
       if (tripsRes.ok) {
         const data = await tripsRes.json();
-        if (data.trips) setDbTrips(data.trips);
+        if (data.trips) {
+          setDbTrips(data.trips);
+          if (data.trips.length > 0 && !selectedActiveTripId) {
+            setSelectedActiveTripId(data.trips[0].tripCode || data.trips[0].id);
+          }
+        }
+        if (data.vehicles) setDbVehicles(data.vehicles);
+        if (data.drivers) setDbDrivers(data.drivers);
       }
 
       if (telemRes.ok) {
@@ -833,6 +636,75 @@ export default function ETSPortal() {
       }
     } catch (e) {}
   };
+
+  // Synchronize routesList directly from real database trips and pending ride requests
+  useEffect(() => {
+    const list: RouteAllocationRecord[] = [];
+
+    // 1. Allocated routes from genuine database trips
+    for (const trip of dbTrips) {
+      list.push({
+        routeId: trip.tripCode || trip.id,
+        status: 'ALLOCATED',
+        firstPickup: trip.passengers?.[0]?.pickupAddress || trip.routeName?.split('➔')[0]?.trim() || 'Central Bay',
+        firstPickupTime: trip.passengers?.[0]?.scheduledPickupTime || trip.shiftTime || '09:00',
+        drop: trip.passengers?.[0]?.dropAddress || trip.corporateClient || 'Enterprise Tech Park',
+        distanceKm: `${trip.totalDistanceKm || 12.4} km`,
+        assignedCount: trip.passengers?.length || 0,
+        totalCapacity: trip.vehicle?.seatingCapacity || 4,
+        assignedCabPlate: trip.vehicle?.plateNumber,
+        assignedDriver: trip.driver?.fullName,
+        assignedDriverPhone: trip.driver?.phone,
+        isBackToBack: false,
+        needsMarshal: trip.passengers?.some((p: any) => p.femaleSafeguard) || false,
+        hasSpecialNeeds: false,
+        passengers: (trip.passengers || []).map((p: any) => ({
+          empCode: p.employeeCode,
+          name: p.fullName,
+          pickupNode: p.pickupAddress,
+          pickupTime: p.scheduledPickupTime || trip.shiftTime || '09:00',
+          phone: p.phone,
+          pin: p.boardingOtp || '----',
+        })),
+      });
+    }
+
+    // 2. Pending routes from unassigned/pushed ride requests
+    const pendingRequests = rideRequests.filter(
+      (r: any) => r.status === 'PUSHED_TO_VENDOR' || r.status === 'PENDING_ADMIN'
+    );
+    for (const req of pendingRequests) {
+      const routeId = req.bookingCode ? req.bookingCode.replace('REQ-', 'RO-') : `RO-${req.id.slice(0, 6)}`;
+      list.push({
+        routeId,
+        status: 'PENDING',
+        firstPickup: req.pickupAddress,
+        firstPickupTime: req.shiftTime,
+        drop: req.dropAddress,
+        distanceKm: '12.0 Km',
+        assignedCount: 0,
+        totalCapacity: 4,
+        isBackToBack: false,
+        needsMarshal: false,
+        hasSpecialNeeds: false,
+        passengers: [
+          {
+            empCode: req.employeeCode,
+            name: req.employeeName,
+            pickupNode: req.pickupAddress,
+            pickupTime: req.shiftTime,
+            phone: req.employeePhone,
+            pin: req.boardingOtp || '0000',
+          },
+        ],
+      });
+    }
+
+    setRoutesList(list);
+    if (list.length > 0 && !selectedRouteId) {
+      setSelectedRouteId(list[0].routeId);
+    }
+  }, [dbTrips, rideRequests]);
 
   const handleAdminPushToVendor = async (requestId: string, targetVendor: string = 'Eco Rent a Car') => {
     try {
@@ -1069,21 +941,21 @@ export default function ETSPortal() {
   };
 
   // Cab Allocation Handler (Persisted in PostgreSQL/Prisma Unified DB)
-  const handleAllocateCabToRoute = async (routeId: string, cab: typeof AVAILABLE_CABS[0]) => {
+  const handleAllocateCabToRoute = async (routeId: string, cab: AvailableCabRecord) => {
     try {
       const selectedRoute = routesList.find(r => r.routeId === routeId);
       const res = await fetch('/api/trips', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          shiftDate: new Date().toISOString().split('T')[0],
-          shiftTime: selectedShift || '13:30',
+          shiftDate: selectedDate || new Date().toISOString().split('T')[0],
+          shiftTime: selectedShift && selectedShift !== 'ALL' ? selectedShift : '09:00',
           type: tripDirection,
           corporateClient: selectedBusinessUnit,
-          routeName: selectedRoute ? `${selectedRoute.firstPickup} → ${selectedRoute.drop}` : 'Indiranagar → Campus',
-          vehicleId: cab.plate === 'KA-03-HA-8821' ? 'veh-8821' : cab.plate === 'KA-05-MJ-4310' ? 'veh-4310' : 'veh-9011',
-          driverId: cab.driver.includes('Suresh') ? 'drv-suresh' : cab.driver.includes('Mahesh') ? 'drv-mahesh' : 'drv-venkatesh',
-          passengers: selectedRoute ? selectedRoute.passengers.map((e, idx) => ({
+          routeName: selectedRoute ? `${selectedRoute.firstPickup} → ${selectedRoute.drop}` : 'Transit Corridor → Campus',
+          vehicleId: cab.vehicleId || 'veh-8821',
+          driverId: cab.driverId || 'drv-suresh',
+          passengers: selectedRoute && selectedRoute.passengers.length > 0 ? selectedRoute.passengers.map((e, idx) => ({
             employeeId: `emp-${e.name.toLowerCase().replace(/[^a-z0-9]/g, '')}`,
             employeeCode: e.empCode,
             fullName: e.name,
@@ -1098,17 +970,18 @@ export default function ETSPortal() {
             scheduledPickupTime: e.pickupTime,
           })) : [
             {
-              employeeId: 'emp-amrutha',
-              employeeCode: 'EMP-9042',
-              fullName: 'Amrutha Rao',
-              phone: '+91 98450 11223',
-              gender: 'FEMALE',
-              femaleSafeguard: true,
-              pickupAddress: 'Gate 2, Golden Palms Apts, Indiranagar',
+              employeeId: 'emp-auto',
+              employeeCode: 'EMP-AUTO',
+              fullName: 'Assigned Commuter',
+              phone: '+91 98450 00000',
+              gender: 'MALE',
+              femaleSafeguard: false,
+              department: 'Operations',
+              pickupAddress: selectedRoute?.firstPickup || 'Pickup Node',
               pickupCoords: { latitude: 12.9719, longitude: 77.6412 },
-              dropAddress: 'Enterprise Tech Park, Tower B',
+              dropAddress: selectedRoute?.drop || 'Campus',
               dropCoords: { latitude: 12.9352, longitude: 77.6946 },
-              scheduledPickupTime: '13:00',
+              scheduledPickupTime: selectedRoute?.firstPickupTime || '09:00',
             }
           ],
           actor: currentUser ? `${currentUser.fullName} (${currentUser.staffCode || currentUser.email})` : 'Atharva Super Admin',
@@ -1131,10 +1004,10 @@ export default function ETSPortal() {
               action: 'assign_cab',
               requestId: matchingReq.id,
               cabPlate: cab.plate,
-              driverId: cab.driver.includes('Suresh') ? 'drv-suresh' : cab.driver.includes('Mahesh') ? 'drv-mahesh' : 'drv-venkatesh',
+              driverId: cab.driverId || 'drv-suresh',
               driverName: cab.driver,
               driverPhone: cab.phone,
-              vendorActor: 'Corporate Vendor Desk (Eco Rent a Car)',
+              vendorActor: 'Corporate Vendor Desk (Atharva Travels)',
             }),
           }).catch(() => {});
         }
@@ -1209,58 +1082,167 @@ export default function ETSPortal() {
   const effectiveEmpQuery = (searchEmployeeQuery || searchEmpInput).trim().toLowerCase();
   const effectiveTripQuery = searchTripInput.trim().toUpperCase();
 
-  const filteredCommuters = COMMUTER_ROSTER.filter((c) => {
-    const matchesDirection = c.direction === tripDirection;
+  const liveCommuters: CommuterRecord[] = useMemo(() => {
+    const list: CommuterRecord[] = [];
+    const seenEmpCodes = new Set<string>();
 
-    if (effectiveEmpQuery) {
-      return (
-        c.empCode.toLowerCase().includes(effectiveEmpQuery) ||
-        c.name.toLowerCase().includes(effectiveEmpQuery) ||
-        c.phone.toLowerCase().includes(effectiveEmpQuery)
-      );
+    for (const trip of dbTrips) {
+      if (!trip.passengers || !Array.isArray(trip.passengers)) continue;
+      for (const p of trip.passengers) {
+        const uniqueKey = `${p.employeeCode}-${trip.shiftDate || ''}-${trip.shiftTime || ''}-${trip.type || ''}`;
+        if (seenEmpCodes.has(uniqueKey)) continue;
+        seenEmpCodes.add(uniqueKey);
+
+        const isBoarded = p.boardingStatus === 'BOARDED';
+        const isNoShow = p.boardingStatus === 'NO_SHOW';
+        const isEnRoute = trip.status === 'IN_TRANSIT';
+
+        list.push({
+          id: p.id || `pax-${p.employeeCode}`,
+          empCode: p.employeeCode,
+          name: p.fullName,
+          department: p.department || 'Enterprise Client Ops',
+          phone: p.phone,
+          tripId: trip.tripCode || trip.id,
+          direction: trip.type || 'LOGIN',
+          shift: trip.shiftTime || '09:00',
+          shiftDate: trip.shiftDate,
+          address: (trip.type === 'LOGOUT' ? p.dropAddress : p.pickupAddress) || 'Corporate Node',
+          coords: (trip.type === 'LOGOUT' ? p.dropCoords : p.pickupCoords) || { latitude: 12.9719, longitude: 77.6412 },
+          vehiclePlate: trip.vehicle?.plateNumber || 'TBD',
+          driverName: trip.driver?.fullName || 'Assigned Driver',
+          driverPhone: trip.driver?.phone || '',
+          boardingOtp: p.boardingOtp || '----',
+          status: isBoarded ? 'BOARDED' : isNoShow ? 'NO_SHOW' : isEnRoute ? 'EN_ROUTE' : 'SCHEDULED',
+          eta: isBoarded ? 'Boarded' : isEnRoute ? 'En Route' : 'Scheduled',
+          hasEscortGuard: trip.hasEscortGuard || p.femaleSafeguard,
+          escortGuardName: trip.escortGuardName || (p.femaleSafeguard ? 'Security Marshal' : undefined),
+        });
+      }
     }
 
-    if (effectiveTripQuery) {
-      return c.tripId.toUpperCase().includes(effectiveTripQuery);
+    for (const req of rideRequests) {
+      const uniqueKey = `${req.employeeCode}-${req.shiftDate || ''}-${req.shiftTime || ''}-${req.direction || ''}`;
+      if (seenEmpCodes.has(uniqueKey)) continue;
+      seenEmpCodes.add(uniqueKey);
+
+      list.push({
+        id: req.id,
+        empCode: req.employeeCode,
+        name: req.employeeName,
+        department: req.department || 'Enterprise Ops',
+        phone: req.employeePhone,
+        tripId: req.assignedTripId || req.bookingCode,
+        direction: req.direction,
+        shift: req.shiftTime,
+        shiftDate: req.shiftDate,
+        address: (req.direction === 'LOGOUT' ? req.dropAddress : req.pickupAddress) || 'Pickup Point',
+        coords: (req.direction === 'LOGOUT' ? req.dropCoords : req.pickupCoords) || { latitude: 12.9719, longitude: 77.6412 },
+        vehiclePlate: req.assignedCabPlate || 'Pending Allocation',
+        driverName: req.assignedDriverName || 'Awaiting Cab',
+        driverPhone: req.assignedDriverPhone || '',
+        boardingOtp: req.boardingOtp || '----',
+        status: req.status === 'ASSIGNED_BY_VENDOR' ? 'SCHEDULED' : 'SCHEDULED',
+        eta: req.status === 'ASSIGNED_BY_VENDOR' ? 'Cab Assigned' : 'Awaiting Cab',
+        hasEscortGuard: false,
+      });
     }
 
-    const matchesShift = selectedShift ? c.shift === selectedShift : true;
-    return matchesDirection && matchesShift;
-  });
+    return list;
+  }, [dbTrips, rideRequests]);
+
+  const filteredCommuters = useMemo(() => {
+    return liveCommuters.filter((c) => {
+      if (c.shiftDate && selectedDate && c.shiftDate !== selectedDate) {
+        return false;
+      }
+
+      const matchesDirection = c.direction === tripDirection;
+
+      if (effectiveEmpQuery) {
+        return (
+          c.empCode.toLowerCase().includes(effectiveEmpQuery) ||
+          c.name.toLowerCase().includes(effectiveEmpQuery) ||
+          c.phone.toLowerCase().includes(effectiveEmpQuery)
+        );
+      }
+
+      if (effectiveTripQuery) {
+        return c.tripId.toUpperCase().includes(effectiveTripQuery);
+      }
+
+      const matchesShift = isShiftMatch(c.shift, selectedShift);
+      return matchesDirection && matchesShift;
+    });
+  }, [liveCommuters, selectedDate, tripDirection, effectiveEmpQuery, effectiveTripQuery, selectedShift]);
 
   const searchedEmployee = effectiveEmpQuery
-    ? COMMUTER_ROSTER.find(
+    ? liveCommuters.find(
         (c) =>
           c.empCode.toLowerCase().includes(effectiveEmpQuery) ||
           c.name.toLowerCase().includes(effectiveEmpQuery)
-      )
+      ) || null
     : null;
 
   const searchedTrip = effectiveTripQuery
-    ? Object.values(TRIPS_DATA).find((t) => t.tripId.includes(effectiveTripQuery))
+    ? dbTrips.find((t) => (t.tripCode && t.tripCode.toUpperCase().includes(effectiveTripQuery)) || (t.id && t.id.toUpperCase().includes(effectiveTripQuery))) || null
     : null;
 
-  const currentDbTrip = dbTrips.find((t) => t.id === selectedActiveTripId || t.tripCode === selectedActiveTripId) || dbTrips[0];
+  const currentDbTrip = dbTrips.find((t) => t.id === selectedActiveTripId || t.tripCode === selectedActiveTripId) || (dbTrips.length > 0 ? dbTrips[0] : null);
 
   const activeTripData = currentDbTrip
     ? {
-        tripId: currentDbTrip.tripCode,
-        vehiclePlate: currentDbTrip.vehicle.plateNumber,
-        driverName: currentDbTrip.driver.fullName,
-        driverPhone: currentDbTrip.driver.phone,
-        route: currentDbTrip.routeName,
+        tripId: currentDbTrip.tripCode || currentDbTrip.id,
+        vehiclePlate: currentDbTrip.vehicle?.plateNumber || 'Unassigned',
+        driverName: currentDbTrip.driver?.fullName || 'Unassigned',
+        driverPhone: currentDbTrip.driver?.phone || '',
+        route: currentDbTrip.routeName || 'Indiranagar ➔ Campus',
         currentLat: currentDbTrip.currentLocation?.latitude || 12.9719,
         currentLng: currentDbTrip.currentLocation?.longitude || 77.6412,
         status: currentDbTrip.status,
-        passengersCount: currentDbTrip.passengers.length,
-        boardedCount: currentDbTrip.passengers.filter((p: any) => p.boardingStatus === 'BOARDED').length,
+        passengersCount: currentDbTrip.passengers?.length || 0,
+        boardedCount: currentDbTrip.passengers?.filter((p: any) => p.boardingStatus === 'BOARDED').length || 0,
       }
-    : (TRIPS_DATA[selectedActiveTripId] || TRIPS_DATA['ATH-8821']);
+    : null;
 
   // Current active route for Allocate Cabs
-  const currentSelectedRoute = routesList.find(r => r.routeId === selectedRouteId) || routesList[0];
+  const currentSelectedRoute = routesList.find(r => r.routeId === selectedRouteId) || (routesList.length > 0 ? routesList[0] : null);
   const pendingRoutesCount = routesList.filter(r => r.status === 'PENDING').length;
-  const allocatedRoutesCount = 42 + (routesList.filter(r => r.status === 'ALLOCATED').length - 2);
+  const allocatedRoutesCount = routesList.filter(r => r.status === 'ALLOCATED').length;
+  const totalRoutesCount = routesList.length;
+
+  const inPremiseVehicles = useMemo(() => {
+    return dbVehicles.filter(v => v.isActive).map((v) => {
+      const driver = dbDrivers.find(d => d.assignedVehicleId === v.id) || dbDrivers[0] || { fullName: 'Depot Standby', phone: 'N/A' };
+      return {
+        id: v.id,
+        plate: v.plateNumber,
+        model: `${v.make} ${v.model} (${v.seatingCapacity} Seater)`,
+        driver: driver.fullName,
+        phone: driver.phone,
+        location: 'Corporate Central Hub - Depot Bay',
+      };
+    });
+  }, [dbVehicles, dbDrivers]);
+
+  const delayedVehiclesList = useMemo(() => {
+    return dbTrips
+      .filter(t => t.status === 'IN_TRANSIT' || t.status === 'PASSENGER_BOARDING' || t.status === 'SCHEDULED')
+      .map(t => ({
+        plate: t.vehicle?.plateNumber || 'TBD',
+        driver: t.driver?.fullName || 'Assigned Driver',
+        trip: t.tripCode || t.id,
+        exp: t.shiftTime || '09:00',
+        curr: t.shiftTime || '09:00',
+        delay: '+0m',
+        loc: t.routeName || 'En Route',
+        reason: 'Normal transit corridor traffic',
+      }));
+  }, [dbTrips]);
+
+  const incompleteTripsList = useMemo(() => {
+    return dbTrips.filter(t => t.status === 'SCHEDULED' || t.status === 'PASSENGER_BOARDING' || t.status === 'DRIVER_ARRIVED');
+  }, [dbTrips]);
 
   return (
     <div className="min-h-screen flex flex-col bg-[#fbfcfe] text-slate-800 font-sans selection:bg-blue-100 selection:text-blue-900">
@@ -2547,7 +2529,7 @@ export default function ETSPortal() {
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
                                   {filteredCommuters.length > 0 ? (
-                                    filteredCommuters.map((commuter) => {
+                                    filteredCommuters.map((commuter: CommuterRecord) => {
                                       const livePax = currentDbTrip?.passengers?.find(
                                         (p: any) =>
                                           p.employeeCode === commuter.empCode ||
@@ -2763,31 +2745,31 @@ export default function ETSPortal() {
                   )}
 
                   {searchedTrip && (
-                    <div className="bg-white border-2 border-emerald-600 p-4 shadow-md space-y-3 animate-in fade-in">
+                    <div className="bg-white border-2 border-emerald-600 p-4 shadow-md space-y-3 animate-in fade-in rounded-xl">
                       <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                         <div className="flex items-center space-x-2">
                           <Car className="w-4 h-4 text-emerald-600" />
-                          <span className="font-bold text-xs text-slate-900">Trip #{searchedTrip.tripId}</span>
+                          <span className="font-bold text-xs text-slate-900">Trip #{searchedTrip.tripCode || searchedTrip.id}</span>
                         </div>
-                        <span className="font-mono text-xs font-bold bg-emerald-100 text-emerald-800 px-1.5 py-0.5">{searchedTrip.vehiclePlate}</span>
+                        <span className="font-mono text-xs font-bold bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded">{searchedTrip.vehicle?.plateNumber || 'Cab Assigned'}</span>
                       </div>
                       <div className="space-y-1.5 text-xs">
                         <div className="flex justify-between">
                           <span className="text-slate-400 text-[10px] uppercase font-semibold">Driver</span>
-                          <span className="font-semibold text-slate-800">{searchedTrip.driverName}</span>
+                          <span className="font-semibold text-slate-800">{searchedTrip.driver?.fullName || 'Chauffeur Assigned'}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-slate-400 text-[10px] uppercase font-semibold">Telemetry</span>
-                          <span className="font-bold text-emerald-700">{searchedTrip.speed} • {searchedTrip.eta}</span>
+                          <span className="text-slate-400 text-[10px] uppercase font-semibold">Route &amp; Status</span>
+                          <span className="font-bold text-emerald-700">{searchedTrip.status} • {searchedTrip.routeName}</span>
                         </div>
                       </div>
                       <button
                         onClick={() => {
-                          setSelectedActiveTripId(searchedTrip.tripId);
+                          setSelectedActiveTripId(searchedTrip.tripCode || searchedTrip.id);
                           setRosterSubTab('assigned');
-                          showToast(`Tracking Trip #${searchedTrip.tripId} on Google Maps radar`);
+                          showToast(`Tracking Trip #${searchedTrip.tripCode || searchedTrip.id} on Google Maps radar`);
                         }}
-                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 text-xs text-center"
+                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 text-xs text-center rounded-lg"
                       >
                         Track on Map
                       </button>
@@ -2904,7 +2886,7 @@ export default function ETSPortal() {
                     </thead>
                     <tbody>
                       <tr className="font-extrabold text-sm text-slate-800 bg-white">
-                        <td className="py-1">43</td>
+                        <td className="py-1">{totalRoutesCount}</td>
                         <td className="py-1 border-l border-slate-200 text-emerald-700">{allocatedRoutesCount}</td>
                         <td className="py-1 border-l border-slate-200 text-amber-600">{pendingRoutesCount}</td>
                       </tr>
@@ -3045,126 +3027,145 @@ export default function ETSPortal() {
                 </div>
 
                 {/* COLUMN 2: SELECTED ROUTE PASSENGERS & STOPS (Middle 5 cols) */}
-                <div className="lg:col-span-5 bg-white border border-slate-200 shadow-sm p-5 space-y-4 min-h-[460px]">
-                  <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                    <div>
-                      <h3 className="font-bold text-sm text-slate-900">
-                        Route Manifest: #{currentSelectedRoute.routeId}
-                      </h3>
-                      <span className="text-xs text-slate-500">
-                        {currentSelectedRoute.firstPickup} ➔ {currentSelectedRoute.drop} • {currentSelectedRoute.distanceKm}
-                      </span>
-                    </div>
-                    <span className="bg-blue-100 text-[#0f5fc2] text-xs font-bold px-2 py-0.5">
-                      {currentSelectedRoute.passengers.length} Employees Rostered
-                    </span>
-                  </div>
-
-                  <div className="space-y-3">
-                    {currentSelectedRoute.passengers.map((p, idx) => (
-                      <div key={p.empCode} className="border border-slate-200 p-3 bg-slate-50/50 flex items-start justify-between text-xs">
-                        <div className="flex items-start space-x-3">
-                          <div className="w-5 h-5 bg-[#0f5fc2] text-white flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
-                            {idx + 1}
-                          </div>
-                          <div>
-                            <div className="font-bold text-slate-900">{p.name} ({p.empCode})</div>
-                            <div className="text-slate-600 text-[11px] mt-0.5 flex items-center space-x-1">
-                              <MapPin className="w-3 h-3 text-emerald-600 shrink-0" />
-                              <span>{p.pickupNode}</span>
-                            </div>
-                            <span className="text-slate-400 text-[10px] block mt-0.5">
-                              Pickup Time: <strong>{p.pickupTime}</strong> • Contact: {p.phone}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="text-right">
-                          <span className="font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 border border-blue-200 text-xs block">
-                            PIN: {p.pin}
+                <div className="lg:col-span-5 bg-white border border-slate-200 shadow-sm p-5 space-y-4 min-h-[460px] rounded-xl">
+                  {currentSelectedRoute ? (
+                    <>
+                      <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                        <div>
+                          <h3 className="font-bold text-sm text-slate-900">
+                            Route Manifest: #{currentSelectedRoute.routeId}
+                          </h3>
+                          <span className="text-xs text-slate-500">
+                            {currentSelectedRoute.firstPickup} ➔ {currentSelectedRoute.drop} • {currentSelectedRoute.distanceKm}
                           </span>
-                          <button
-                            onClick={() => setIsLocationModalOpen(true)}
-                            className="text-[#0f5fc2] hover:underline font-bold text-[10px] mt-2 block"
-                          >
-                            Reassign Node
-                          </button>
                         </div>
+                        <span className="bg-blue-100 text-[#0f5fc2] text-xs font-bold px-2 py-0.5 rounded-md">
+                          {currentSelectedRoute.passengers.length} Employees Rostered
+                        </span>
                       </div>
-                    ))}
-                  </div>
 
-                  {currentSelectedRoute.assignedCabPlate && (
-                    <div className="p-3.5 bg-emerald-50 border border-emerald-300 text-xs space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-emerald-900 block text-xs">✓ Vehicle Allocated</span>
-                        <button
-                          onClick={() => handleDeallocateCabFromRoute(currentSelectedRoute.routeId)}
-                          className="text-red-600 hover:text-red-800 font-bold text-[11px] hover:underline"
-                        >
-                          Deallocate / Re-assign
-                        </button>
+                      <div className="space-y-3">
+                        {currentSelectedRoute.passengers.map((p, idx) => (
+                          <div key={p.empCode} className="border border-slate-200 p-3 bg-slate-50/50 flex items-start justify-between text-xs rounded-lg">
+                            <div className="flex items-start space-x-3">
+                              <div className="w-5 h-5 bg-[#0f5fc2] text-white flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5 rounded">
+                                {idx + 1}
+                              </div>
+                              <div>
+                                <div className="font-bold text-slate-900">{p.name} ({p.empCode})</div>
+                                <div className="text-slate-600 text-[11px] mt-0.5 flex items-center space-x-1">
+                                  <MapPin className="w-3 h-3 text-emerald-600 shrink-0" />
+                                  <span>{p.pickupNode}</span>
+                                </div>
+                                <span className="text-slate-400 text-[10px] block mt-0.5">
+                                  Pickup Time: <strong>{p.pickupTime}</strong> • Contact: {p.phone}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="text-right">
+                              <span className="font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 border border-blue-200 text-xs block rounded">
+                                PIN: {p.pin}
+                              </span>
+                              <button
+                                onClick={() => setIsLocationModalOpen(true)}
+                                className="text-[#0f5fc2] hover:underline font-bold text-[10px] mt-2 block"
+                              >
+                                Reassign Node
+                              </button>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                      <p className="text-slate-700">
-                        Cab Plate: <strong>{currentSelectedRoute.assignedCabPlate}</strong> • Driver: <strong>{currentSelectedRoute.assignedDriver}</strong>
+
+                      {currentSelectedRoute.assignedCabPlate && (
+                        <div className="p-3.5 bg-emerald-50 border border-emerald-300 text-xs space-y-2 rounded-lg">
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-emerald-900 block text-xs">✓ Vehicle Allocated</span>
+                            <button
+                              onClick={() => handleDeallocateCabFromRoute(currentSelectedRoute.routeId)}
+                              className="text-red-600 hover:text-red-800 font-bold text-[11px] hover:underline"
+                            >
+                              Deallocate / Re-assign
+                            </button>
+                          </div>
+                          <p className="text-slate-700">
+                            Cab Plate: <strong>{currentSelectedRoute.assignedCabPlate}</strong> • Driver: <strong>{currentSelectedRoute.assignedDriver}</strong>
+                          </p>
+                          <span className="text-[10px] text-emerald-700 font-semibold block">
+                            Driver notification dispatched & trip lock confirmed.
+                          </span>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="flex-1 flex flex-col items-center justify-center p-12 text-center text-slate-400 min-h-[360px]">
+                      <Car className="w-10 h-10 mb-3 text-slate-300" />
+                      <p className="text-sm font-bold text-slate-700">No Route Selected</p>
+                      <p className="text-xs text-slate-400 mt-1 max-w-xs">
+                        Select a route from the pending or allocated queue on the left to view the manifest.
                       </p>
-                      <span className="text-[10px] text-emerald-700 font-semibold block">
-                        Driver notification dispatched & trip lock confirmed.
-                      </span>
                     </div>
                   )}
                 </div>
 
                 {/* COLUMN 3: CABS AVAILABLE FOR ALLOCATION (Right 4 cols) */}
-                <div className="lg:col-span-4 bg-white border border-slate-200 shadow-sm p-5 space-y-4 min-h-[460px]">
+                <div className="lg:col-span-4 bg-white border border-slate-200 shadow-sm p-5 space-y-4 min-h-[460px] rounded-xl">
                   <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                     <h3 className="font-bold text-sm text-slate-900">Cabs</h3>
                     <span className="text-xs text-slate-400">Available Fleet Near Zone</span>
                   </div>
 
                   <div className="space-y-3">
-                    {AVAILABLE_CABS.map((cab) => (
-                      <div key={cab.plate} className="border border-slate-200 p-3.5 hover:border-blue-400 transition-colors bg-white space-y-2">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="font-bold text-slate-900 text-sm">{cab.plate}</span>
-                          <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5">
-                            {cab.capacity}
-                          </span>
-                        </div>
+                    {availableCabs.length > 0 ? (
+                      availableCabs.map((cab) => (
+                        <div key={cab.plate} className="border border-slate-200 p-3.5 hover:border-blue-400 transition-colors bg-white space-y-2 rounded-lg">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-bold text-slate-900 text-sm">{cab.plate}</span>
+                            <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded">
+                              {cab.capacity}
+                            </span>
+                          </div>
 
-                        <div className="text-xs text-slate-600">
-                          <div>{cab.model} • Driver: <strong className="text-slate-800">{cab.driver}</strong></div>
-                          <div className="text-[11px] text-slate-500 mt-0.5 flex items-center space-x-1">
-                            <Navigation className="w-3 h-3 text-blue-600" />
-                            <span>{cab.eta}</span>
+                          <div className="text-xs text-slate-600">
+                            <div>{cab.model} • Driver: <strong className="text-slate-800">{cab.driver}</strong></div>
+                            <div className="text-[11px] text-slate-500 mt-0.5 flex items-center space-x-1">
+                              <Navigation className="w-3 h-3 text-blue-600" />
+                              <span>{cab.eta}</span>
+                            </div>
+                          </div>
+
+                          <div className="pt-1 flex items-center space-x-2">
+                            <button
+                              disabled={!currentSelectedRoute}
+                              onClick={() => currentSelectedRoute && handleAllocateCabToRoute(currentSelectedRoute.routeId, cab)}
+                              className="flex-1 bg-[#0f5fc2] hover:bg-blue-700 disabled:opacity-50 text-white font-bold py-1.5 text-xs transition-colors shadow-sm rounded-lg"
+                            >
+                              Allocate Cab
+                            </button>
+                            <a
+                              href={`tel:${cab.phone}`}
+                              className="p-1.5 border border-slate-300 text-slate-600 hover:bg-slate-100 rounded-lg"
+                              title="Call Driver"
+                            >
+                              <Phone className="w-3.5 h-3.5" />
+                            </a>
                           </div>
                         </div>
-
-                        <div className="pt-1 flex items-center space-x-2">
-                          <button
-                            onClick={() => handleAllocateCabToRoute(currentSelectedRoute.routeId, cab)}
-                            className="flex-1 bg-[#0f5fc2] hover:bg-blue-700 text-white font-bold py-1.5 text-xs transition-colors shadow-sm"
-                          >
-                            Allocate Cab
-                          </button>
-                          <a
-                            href={`tel:${cab.phone}`}
-                            className="p-1.5 border border-slate-300 text-slate-600 hover:bg-slate-100"
-                            title="Call Driver"
-                          >
-                            <Phone className="w-3.5 h-3.5" />
-                          </a>
-                        </div>
+                      ))
+                    ) : (
+                      <div className="p-8 text-center text-xs text-slate-400">
+                        No cabs available for allocation in this zone.
                       </div>
-                    ))}
+                    )}
                   </div>
 
                   <div className="pt-2">
                     <button
-                      onClick={() => showToast('Opening Atharva Master Fleet Live Radar...')}
-                      className="w-full bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold py-2 border border-slate-300 text-center"
+                      onClick={() => showToast(`Opening Atharva Master Fleet Live Radar (${inPremiseVehicles.length} vehicles)...`)}
+                      className="w-full bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold py-2 border border-slate-300 text-center rounded-lg"
                     >
-                      View All 42 Depoted Fleet Vehicles
+                      View All {inPremiseVehicles.length} Depoted Fleet Vehicles
                     </button>
                   </div>
                 </div>
@@ -3369,31 +3370,31 @@ export default function ETSPortal() {
               <button
                 type="button"
                 onClick={() => setIsInPremiseModalOpen(true)}
-                className="border border-slate-300 hover:border-blue-500 hover:bg-blue-50/50 px-3 py-1 text-slate-700 font-semibold text-xs flex items-center space-x-2 transition-colors bg-white shadow-xs cursor-pointer"
+                className="border border-slate-300 hover:border-blue-500 hover:bg-blue-50/50 px-3 py-1 text-slate-700 font-semibold text-xs flex items-center space-x-2 transition-colors bg-white shadow-xs cursor-pointer rounded-lg"
                 title="Click to view vehicles inside campus premises"
               >
                 <span>In premise vehicles</span>
-                <span className="w-4 h-4 bg-[#0f5fc2] text-white flex items-center justify-center text-[10px] font-bold">12</span>
+                <span className="w-4 h-4 bg-[#0f5fc2] text-white flex items-center justify-center text-[10px] font-bold rounded-full">{inPremiseVehicles.length}</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setIsAdhocTripsModalOpen(true)}
-                className="border border-slate-300 hover:border-blue-500 hover:bg-blue-50/50 px-3 py-1 text-slate-700 font-semibold text-xs flex items-center space-x-2 transition-colors bg-white shadow-xs cursor-pointer"
+                className="border border-slate-300 hover:border-blue-500 hover:bg-blue-50/50 px-3 py-1 text-slate-700 font-semibold text-xs flex items-center space-x-2 transition-colors bg-white shadow-xs cursor-pointer rounded-lg"
                 title="Click to view or create adhoc transport requests"
               >
                 <span>Adhoc trips</span>
-                <span className="w-4 h-4 bg-[#0f5fc2] text-white flex items-center justify-center text-[10px] font-bold">0</span>
+                <span className="w-4 h-4 bg-[#0f5fc2] text-white flex items-center justify-center text-[10px] font-bold rounded-full">0</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setIsDelayedVehiclesModalOpen(true)}
-                className="border border-slate-300 hover:border-blue-500 hover:bg-blue-50/50 px-3 py-1 text-slate-700 font-semibold text-xs flex items-center space-x-2 transition-colors bg-white shadow-xs cursor-pointer"
+                className="border border-slate-300 hover:border-blue-500 hover:bg-blue-50/50 px-3 py-1 text-slate-700 font-semibold text-xs flex items-center space-x-2 transition-colors bg-white shadow-xs cursor-pointer rounded-lg"
                 title="Click to view delayed vehicles and SLA status"
               >
                 <span>Delayed Vehicles</span>
-                <span className="w-4 h-4 bg-[#0f5fc2] text-white flex items-center justify-center text-[10px] font-bold">7</span>
+                <span className="w-4 h-4 bg-[#0f5fc2] text-white flex items-center justify-center text-[10px] font-bold rounded-full">{delayedVehiclesList.length}</span>
               </button>
             </div>
 
@@ -3951,16 +3952,16 @@ export default function ETSPortal() {
                   <Navigation className="w-4 h-4 text-blue-600" />
                   <span>Atharva Fleet Live Telemetry Radar (Bangalore Central Zone)</span>
                 </h3>
-                <span className="text-xs text-slate-500 font-semibold">42 Vehicles Operating in Real-Time</span>
+                <span className="text-xs text-slate-500 font-semibold">{dbVehicles.length || dbTrips.length} Vehicles Operating in Real-Time</span>
               </div>
 
-              <div className="overflow-hidden border border-slate-200 shadow-sm bg-white">
+              <div className="overflow-hidden border border-slate-200 shadow-sm bg-white rounded-xl">
                 <GoogleMapsTracker
-                  pickupCoords={{ latitude: activeTripData.currentLat, longitude: activeTripData.currentLng }}
+                  pickupCoords={{ latitude: activeTripData?.currentLat || 12.9719, longitude: activeTripData?.currentLng || 77.6412 }}
                   pickupAddress={passengerState.pickupAddress}
-                  driverCoords={{ latitude: activeTripData.currentLat, longitude: activeTripData.currentLng }}
-                  vehiclePlate={activeTripData.vehiclePlate}
-                  driverName={activeTripData.driverName}
+                  driverCoords={{ latitude: activeTripData?.currentLat || 12.9719, longitude: activeTripData?.currentLng || 77.6412 }}
+                  vehiclePlate={activeTripData?.vehiclePlate || 'Fleet Cab'}
+                  driverName={activeTripData?.driverName || 'Fleet Driver'}
                   onPickupReassigned={(newCoords, address) => {
                     showToast('Admin updated pickup node & pushed waypoint to driver app!');
                   }}
@@ -3972,7 +3973,7 @@ export default function ETSPortal() {
             <div className="grid md:grid-cols-3 gap-6">
               
               {/* TELEMETRY FEED (2 COLS) */}
-              <div className="md:col-span-2 bg-white border border-slate-200 p-5 shadow-sm space-y-4">
+              <div className="md:col-span-2 bg-white border border-slate-200 p-5 shadow-sm space-y-4 rounded-xl">
                 <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                   <h3 className="font-bold text-sm text-slate-900 flex items-center space-x-2">
                     <Car className="w-4 h-4 text-blue-600" />
@@ -3982,53 +3983,57 @@ export default function ETSPortal() {
                 </div>
 
                 <div className="space-y-3">
-                  <div className="p-3.5 bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
-                    <div>
-                      <span className="font-bold text-slate-900 text-sm">KA-03-HA-8821</span>
-                      <span className="text-slate-600 block">Toyota Innova Crysta • Driver: Suresh Babu (+91 98765 43210)</span>
-                      <span className="text-blue-700 font-semibold block mt-0.5">Route: Indiranagar ➔ Tech Park Campus (3 Passengers)</span>
+                  {dbTrips.length > 0 ? (
+                    dbTrips.slice(0, 5).map((trip) => (
+                      <div key={trip.id} className="p-3.5 bg-slate-50 border border-slate-200 flex items-center justify-between text-xs rounded-lg">
+                        <div>
+                          <span className="font-bold text-slate-900 text-sm">{trip.vehicle?.plateNumber || 'Fleet Vehicle'}</span>
+                          <span className="text-slate-600 block">{trip.vehicle?.make} {trip.vehicle?.model} • Driver: {trip.driver?.fullName} ({trip.driver?.phone})</span>
+                          <span className="text-blue-700 font-semibold block mt-0.5">Route: {trip.routeName} ({trip.passengers?.length || 0} Passengers)</span>
+                        </div>
+                        <div className="text-right">
+                          <span className={`px-2 py-0.5 font-bold rounded ${trip.status === 'IN_TRANSIT' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-blue-100 text-blue-800 border border-blue-300'}`}>
+                            {trip.status}
+                          </span>
+                          <button onClick={() => { setSelectedActiveTripId(trip.tripCode || trip.id); setIsLocationModalOpen(true); }} className="block mt-1.5 text-blue-700 hover:underline font-bold">
+                            Reassign Node
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="p-6 text-center text-xs text-slate-400">
+                      No live telemetry streams active at this time.
                     </div>
-                    <div className="text-right">
-                      <span className="bg-emerald-100 text-emerald-800 border border-emerald-300 px-2 py-0.5 font-bold">On-Time (34 km/h)</span>
-                      <button onClick={() => setIsLocationModalOpen(true)} className="block mt-1.5 text-blue-700 hover:underline font-bold">
-                        Reassign Node
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="p-3.5 bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
-                    <div>
-                      <span className="font-bold text-slate-900 text-sm">KA-05-MJ-4310</span>
-                      <span className="text-slate-600 block">Toyota Innova • Driver: Mahesh Gowda (+91 98450 77112)</span>
-                      <span className="text-blue-700 font-semibold block mt-0.5">Route: Whitefield ➔ Tech Park Campus (4 Passengers)</span>
-                    </div>
-                    <div className="text-right">
-                      <span className="bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 font-bold">+4m Delay</span>
-                      <span className="block text-slate-500 mt-1">Light Traffic</span>
-                    </div>
-                  </div>
+                  )}
                 </div>
               </div>
 
               {/* DISPATCH ACTION LOG (1 COL) */}
-              <div className="bg-white border border-slate-200 p-5 shadow-sm space-y-4">
+              <div className="bg-white border border-slate-200 p-5 shadow-sm space-y-4 rounded-xl">
                 <h3 className="font-bold text-sm text-slate-900 flex items-center space-x-2 border-b border-slate-100 pb-3">
                   <Navigation className="w-4 h-4 text-blue-600" />
                   <span>Driver Reassignment Dispatch Log</span>
                 </h3>
 
-                <div className="p-3.5 bg-blue-50/70 border border-blue-200 text-xs space-y-1.5">
-                  <span className="font-bold text-blue-900 block">Trip #ATH-8821 Dispatched</span>
-                  <p className="text-slate-700">Route: <strong>Domlur ➔ Indiranagar ➔ Tech Park Main Campus</strong></p>
-                  <p className="text-blue-800 italic">"Automatic route optimization synchronized"</p>
-                  <span className="text-[10px] text-emerald-700 font-bold block pt-1">
-                    ✓ GPS Waypoint successfully pushed to driver navigation unit
-                  </span>
-                </div>
+                {activeTripData ? (
+                  <div className="p-3.5 bg-blue-50/70 border border-blue-200 text-xs space-y-1.5 rounded-lg">
+                    <span className="font-bold text-blue-900 block">Trip #{activeTripData.tripId} Dispatched</span>
+                    <p className="text-slate-700">Route: <strong>{activeTripData.route}</strong></p>
+                    <p className="text-blue-800 italic">"Automatic route optimization synchronized"</p>
+                    <span className="text-[10px] text-emerald-700 font-bold block pt-1">
+                      ✓ GPS Waypoint successfully pushed to driver navigation unit
+                    </span>
+                  </div>
+                ) : (
+                  <div className="p-6 text-center text-xs text-slate-400 border border-slate-200 rounded-lg">
+                    No active trip selected for dispatch telemetry.
+                  </div>
+                )}
 
                 <button
                   onClick={() => setIsLocationModalOpen(true)}
-                  className="w-full bg-[#0f5fc2] hover:bg-blue-700 text-white font-bold py-2.5 text-xs transition-colors shadow-sm"
+                  className="w-full bg-[#0f5fc2] hover:bg-blue-700 text-white font-bold py-2.5 text-xs transition-colors shadow-sm rounded-lg"
                 >
                   Manual Geolocation Dispatch
                 </button>
@@ -4046,8 +4051,8 @@ export default function ETSPortal() {
       <LocationIssueModal
         isOpen={isLocationModalOpen}
         onClose={() => setIsLocationModalOpen(false)}
-        tripId={activeTripData.tripId}
-        employeeId="emp-9042"
+        tripId={activeTripData?.tripId || 'TRIP-MAIN'}
+        employeeId="emp-commuter"
         currentAddress={passengerState.pickupAddress}
         onLocationUpdated={(newAddress, newCoords) => {
           setPassengerState(prev => {
@@ -4354,12 +4359,12 @@ export default function ETSPortal() {
       {/* MODAL 1: IN PREMISE VEHICLES MODAL */}
       {isInPremiseModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white border border-slate-300 shadow-2xl max-w-4xl w-full p-6 space-y-4">
+          <div className="bg-white border border-slate-300 shadow-2xl max-w-4xl w-full p-6 space-y-4 rounded-2xl">
             <div className="flex items-center justify-between border-b border-slate-200 pb-3">
               <div>
                 <h3 className="text-base font-black text-slate-900 flex items-center space-x-2">
                   <Car className="w-5 h-5 text-[#0f5fc2]" />
-                  <span>In Premise Depot Vehicles (12 Active)</span>
+                  <span>In Premise Depot Vehicles ({inPremiseVehicles.length} Active)</span>
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
                   Vehicles currently parked, staging, or standing by within campus holding bays.
@@ -4374,7 +4379,7 @@ export default function ETSPortal() {
               </button>
             </div>
 
-            <div className="border border-slate-200 overflow-x-auto max-h-96">
+            <div className="border border-slate-200 overflow-x-auto max-h-96 rounded-xl">
               <table className="w-full text-left text-xs">
                 <thead className="bg-slate-50 text-slate-500 font-semibold uppercase tracking-wider border-b border-slate-200 sticky top-0">
                   <tr>
@@ -4388,37 +4393,38 @@ export default function ETSPortal() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium">
-                  {[
-                    { id: 'ECO-355', plate: 'KA-05-AP-0348', model: 'Toyota Innova (6 Seater)', driver: 'Rajesh Kumar', phone: '+91 98765 43210', location: 'WalmartLabs - Bay 2' },
-                    { id: 'ECO-478', plate: 'KA-03-HA-8821', model: 'Toyota Innova Crysta (6 Seater)', driver: 'Suresh Babu', phone: '+91 98450 11223', location: 'WalmartLabs - Gate 4' },
-                    { id: 'ATH-102', plate: 'KA-01-EQ-9011', model: 'Force Urbania (12 Seater)', driver: 'Venkatesh R.', phone: '+91 97400 33881', location: 'Enterprise Tech Park - Depot' },
-                    { id: 'ATH-108', plate: 'KA-05-MJ-4310', model: 'Toyota Innova (4 Seater)', driver: 'Mahesh Gowda', phone: '+91 98450 77112', location: 'Corporate Central Hub' },
-                    { id: 'ATH-114', plate: 'KA-04-E-6620', model: 'Tempo Traveller (18 Seater)', driver: 'Nagaraj K.', phone: '+91 98860 11992', location: 'Bellandur Tech Corridor' },
-                    { id: 'ATH-119', plate: 'KA-53-B-7712', model: 'Force Urbania (12 Seater)', driver: 'Girish Patil', phone: '+91 99160 44321', location: 'Global Tech Park - Gate 1' },
-                  ].map((cab) => (
-                    <tr key={cab.id} className="hover:bg-slate-50">
-                      <td className="py-2.5 px-3 font-mono font-bold text-blue-700">{cab.id}</td>
-                      <td className="py-2.5 px-3 font-mono font-bold text-slate-800">{cab.plate}</td>
-                      <td className="py-2.5 px-3 text-slate-600">{cab.model}</td>
-                      <td className="py-2.5 px-3 font-semibold text-slate-800">{cab.driver}</td>
-                      <td className="py-2.5 px-3 font-mono text-slate-600">{cab.phone}</td>
-                      <td className="py-2.5 px-3 text-slate-600">{cab.location}</td>
-                      <td className="py-2.5 px-3 text-right">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIsInPremiseModalOpen(false);
-                            setDashboardMode('Operations');
-                            setSearchVehicleInput(cab.plate);
-                            showToast(`Focused vehicle ${cab.plate} on Operations radar`);
-                          }}
-                          className="bg-[#0f5fc2] hover:bg-blue-700 text-white font-bold px-2.5 py-1 text-[11px] shadow-xs"
-                        >
-                          Track on Map
-                        </button>
+                  {inPremiseVehicles.length > 0 ? (
+                    inPremiseVehicles.map((cab: any) => (
+                      <tr key={cab.id} className="hover:bg-slate-50">
+                        <td className="py-2.5 px-3 font-mono font-bold text-blue-700">{cab.id}</td>
+                        <td className="py-2.5 px-3 font-mono font-bold text-slate-800">{cab.plate}</td>
+                        <td className="py-2.5 px-3 text-slate-600">{cab.model}</td>
+                        <td className="py-2.5 px-3 font-semibold text-slate-800">{cab.driver}</td>
+                        <td className="py-2.5 px-3 font-mono text-slate-600">{cab.phone}</td>
+                        <td className="py-2.5 px-3 text-slate-600">{cab.location}</td>
+                        <td className="py-2.5 px-3 text-right">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsInPremiseModalOpen(false);
+                              setDashboardMode('Operations');
+                              setSearchVehicleInput(cab.plate);
+                              showToast(`Focused vehicle ${cab.plate} on Operations radar`);
+                            }}
+                            className="bg-[#0f5fc2] hover:bg-blue-700 text-white font-bold px-2.5 py-1 text-[11px] shadow-xs rounded-lg"
+                          >
+                            Track on Map
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={7} className="py-8 text-center text-xs text-slate-400">
+                        No vehicles currently parked or staging in premise depot.
                       </td>
                     </tr>
-                  ))}
+                  )}
                 </tbody>
               </table>
             </div>
@@ -4427,7 +4433,7 @@ export default function ETSPortal() {
               <button
                 type="button"
                 onClick={() => setIsInPremiseModalOpen(false)}
-                className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-1.5 text-xs"
+                className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-1.5 text-xs rounded-lg"
               >
                 Close
               </button>
@@ -4538,12 +4544,12 @@ export default function ETSPortal() {
       {/* MODAL 3: DELAYED VEHICLES AUDIT MODAL */}
       {isDelayedVehiclesModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white border border-slate-300 shadow-2xl max-w-4xl w-full p-6 space-y-4">
+          <div className="bg-white border border-slate-300 shadow-2xl max-w-4xl w-full p-6 space-y-4 rounded-2xl">
             <div className="flex items-center justify-between border-b border-slate-200 pb-3">
               <div>
                 <h3 className="text-base font-black text-slate-900 flex items-center space-x-2">
                   <Clock className="w-5 h-5 text-amber-600" />
-                  <span>Delayed Fleet Vehicles (7 Exceeding SLA)</span>
+                  <span>Delayed Fleet Vehicles ({delayedVehiclesList.length} Exceeding SLA)</span>
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
                   Live vehicles with ETA exceeding acceptable client contractual threshold (+10 mins).
@@ -4558,7 +4564,7 @@ export default function ETSPortal() {
               </button>
             </div>
 
-            <div className="border border-slate-200 overflow-x-auto max-h-96">
+            <div className="border border-slate-200 overflow-x-auto max-h-96 rounded-xl">
               <table className="w-full text-left text-xs">
                 <thead className="bg-slate-50 text-slate-500 font-semibold uppercase tracking-wider border-b border-slate-200 sticky top-0">
                   <tr>
@@ -4574,31 +4580,35 @@ export default function ETSPortal() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium">
-                  {[
-                    { plate: 'KA-05-MJ-4310', driver: 'Mahesh Gowda', trip: 'ATH-4310', exp: '13:15', curr: '13:29', delay: '+14m', loc: 'Marathahalli Bridge', reason: 'ORR Flyover repair jam' },
-                    { plate: 'KA-04-E-6620', driver: 'Nagaraj K.', trip: 'SH-01', exp: '11:45', curr: '11:58', delay: '+13m', loc: 'KR Puram Tin Factory', reason: 'Heavy railway bridge bottleneck' },
-                    { plate: 'KA-01-EQ-9011', driver: 'Muniswamy R.', trip: 'SH-03', exp: '13:00', curr: '13:12', delay: '+12m', loc: 'Koramangala 80ft Rd', reason: 'Metro rail pillar construction' },
-                  ].map((row, idx) => (
-                    <tr key={idx} className="hover:bg-slate-50">
-                      <td className="py-2.5 px-3 font-mono font-bold text-slate-900">{row.plate}</td>
-                      <td className="py-2.5 px-3 font-semibold">{row.driver}</td>
-                      <td className="py-2.5 px-3 font-mono text-blue-700 font-bold">{row.trip}</td>
-                      <td className="py-2.5 px-3 text-slate-500">{row.exp}</td>
-                      <td className="py-2.5 px-3 font-bold text-red-600">{row.curr}</td>
-                      <td className="py-2.5 px-3 font-black text-red-700 bg-red-50">{row.delay}</td>
-                      <td className="py-2.5 px-3 text-slate-700">{row.loc}</td>
-                      <td className="py-2.5 px-3 text-slate-500 italic">{row.reason}</td>
-                      <td className="py-2.5 px-3 text-right">
-                        <button
-                          type="button"
-                          onClick={() => showToast(`Calling ${row.driver} to re-route...`)}
-                          className="bg-amber-600 hover:bg-amber-700 text-white font-bold px-2.5 py-1 text-[11px]"
-                        >
-                          Contact Driver
-                        </button>
+                  {delayedVehiclesList.length > 0 ? (
+                    delayedVehiclesList.map((row: any, idx: number) => (
+                      <tr key={idx} className="hover:bg-slate-50">
+                        <td className="py-2.5 px-3 font-mono font-bold text-slate-900">{row.plate}</td>
+                        <td className="py-2.5 px-3 font-semibold">{row.driver}</td>
+                        <td className="py-2.5 px-3 font-mono text-blue-700 font-bold">{row.trip}</td>
+                        <td className="py-2.5 px-3 text-slate-500">{row.exp}</td>
+                        <td className="py-2.5 px-3 font-bold text-red-600">{row.curr}</td>
+                        <td className="py-2.5 px-3 font-black text-red-700 bg-red-50">{row.delay}</td>
+                        <td className="py-2.5 px-3 text-slate-700">{row.loc}</td>
+                        <td className="py-2.5 px-3 text-slate-500 italic">{row.reason}</td>
+                        <td className="py-2.5 px-3 text-right">
+                          <button
+                            type="button"
+                            onClick={() => showToast(`Calling ${row.driver} to re-route...`)}
+                            className="bg-amber-600 hover:bg-amber-700 text-white font-bold px-2.5 py-1 text-[11px] rounded-lg"
+                          >
+                            Contact Driver
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={9} className="py-8 text-center text-xs text-slate-400">
+                        No delayed vehicles reported. All scheduled trips are operating within contractual SLA limits.
                       </td>
                     </tr>
-                  ))}
+                  )}
                 </tbody>
               </table>
             </div>
@@ -4607,7 +4617,7 @@ export default function ETSPortal() {
               <button
                 type="button"
                 onClick={() => setIsDelayedVehiclesModalOpen(false)}
-                className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-1.5 text-xs"
+                className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-1.5 text-xs rounded-lg"
               >
                 Close
               </button>
@@ -4619,7 +4629,7 @@ export default function ETSPortal() {
       {/* MODAL 4: DEDICATED INCOMPLETE TRIPS SCREEN / VIEW */}
       {isIncompleteTripsModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white border border-slate-300 shadow-2xl max-w-5xl w-full p-6 space-y-4">
+          <div className="bg-white border border-slate-300 shadow-2xl max-w-5xl w-full p-6 space-y-4 rounded-2xl">
             
             {/* Header: ← Incomplete Trips */}
             <div className="flex items-center justify-between border-b border-slate-200 pb-3">
@@ -4627,7 +4637,7 @@ export default function ETSPortal() {
                 <button
                   type="button"
                   onClick={() => setIsIncompleteTripsModalOpen(false)}
-                  className="p-1.5 hover:bg-slate-100 text-slate-700 transition-colors flex items-center space-x-1"
+                  className="p-1.5 hover:bg-slate-100 text-slate-700 transition-colors flex items-center space-x-1 rounded-lg"
                   title="Return to Main Operations"
                 >
                   <ArrowLeft className="w-5 h-5" />
@@ -4635,8 +4645,8 @@ export default function ETSPortal() {
                 <div>
                   <h3 className="text-base font-black text-slate-900 tracking-tight flex items-center space-x-2">
                     <span>Incomplete Trips</span>
-                    <span className="bg-[#ff4d4f] text-white text-[10px] font-bold px-2 py-0.5 uppercase">
-                      1 Trip Requiring Intervention
+                    <span className="bg-[#ff4d4f] text-white text-[10px] font-bold px-2 py-0.5 uppercase rounded-md">
+                      {incompleteTripsList.length} Trip{incompleteTripsList.length === 1 ? '' : 's'} Requiring Intervention
                     </span>
                   </h3>
                   <p className="text-xs text-slate-500 mt-0.5">
@@ -4654,12 +4664,12 @@ export default function ETSPortal() {
               </button>
             </div>
 
-            {/* Filter Bar: Incomplete Trips (1) ▼ | Search Trip ID | All ▼ | View On Map | ⓘ */}
-            <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-50 p-3 border border-slate-200 text-xs font-semibold">
+            {/* Filter Bar */}
+            <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-50 p-3 border border-slate-200 text-xs font-semibold rounded-xl">
               <div className="flex items-center space-x-2">
                 <div className="relative">
-                  <select className="border border-slate-300 bg-white py-1.5 pl-3 pr-7 text-xs font-bold text-slate-800 appearance-none focus:outline-none">
-                    <option value="1">Incomplete Trips (1)</option>
+                  <select className="border border-slate-300 bg-white py-1.5 pl-3 pr-7 text-xs font-bold text-slate-800 appearance-none focus:outline-none rounded-lg">
+                    <option value="1">Incomplete Trips ({incompleteTripsList.length})</option>
                     <option value="all">All Exceptions</option>
                   </select>
                   <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -4668,14 +4678,14 @@ export default function ETSPortal() {
                 <div className="relative">
                   <input
                     type="text"
-                    placeholder="Search Trip ID (e.g. ATH-4310)"
-                    className="border border-slate-300 bg-white py-1.5 pl-7 pr-3 text-xs w-52 placeholder:text-slate-400 focus:outline-none"
+                    placeholder="Search Trip ID"
+                    className="border border-slate-300 bg-white py-1.5 pl-7 pr-3 text-xs w-52 placeholder:text-slate-400 focus:outline-none rounded-lg"
                   />
                   <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2 top-1/2 -translate-y-1/2" />
                 </div>
 
                 <div className="relative">
-                  <select className="border border-slate-300 bg-white py-1.5 pl-3 pr-7 text-xs font-semibold text-slate-700 appearance-none focus:outline-none">
+                  <select className="border border-slate-300 bg-white py-1.5 pl-3 pr-7 text-xs font-semibold text-slate-700 appearance-none focus:outline-none rounded-lg">
                     <option value="all">All Issues</option>
                     <option value="delayed">Delayed &gt; 10m</option>
                     <option value="escort">Missing Marshal</option>
@@ -4690,9 +4700,9 @@ export default function ETSPortal() {
                   onClick={() => {
                     setIsIncompleteTripsModalOpen(false);
                     setDashboardMode('Operations');
-                    showToast('Plotting incomplete trip ATH-4310 on Google Maps radar');
+                    showToast('Displaying active trips on Google Maps radar');
                   }}
-                  className="bg-[#0f5fc2] hover:bg-blue-700 text-white font-bold px-3 py-1.5 shadow-xs flex items-center space-x-1.5"
+                  className="bg-[#0f5fc2] hover:bg-blue-700 text-white font-bold px-3 py-1.5 shadow-xs flex items-center space-x-1.5 rounded-lg"
                 >
                   <Navigation className="w-3.5 h-3.5" />
                   <span>View On Map</span>
@@ -4701,7 +4711,7 @@ export default function ETSPortal() {
                 <button
                   type="button"
                   onClick={() => showToast('Incomplete trips: Trips that failed to start within 15 mins of planned shift time.')}
-                  className="p-1.5 text-slate-500 hover:text-slate-800 border border-slate-300 bg-white"
+                  className="p-1.5 text-slate-500 hover:text-slate-800 border border-slate-300 bg-white rounded-lg"
                   title="Policy Information"
                 >
                   <Info className="w-3.5 h-3.5" />
@@ -4710,7 +4720,7 @@ export default function ETSPortal() {
             </div>
 
             {/* Table of Incomplete Trips */}
-            <div className="border border-slate-200 overflow-x-auto">
+            <div className="border border-slate-200 overflow-x-auto rounded-xl">
               <table className="w-full text-left text-xs">
                 <thead className="bg-slate-50 text-slate-500 font-semibold uppercase tracking-wider border-b border-slate-200">
                   <tr>
@@ -4725,34 +4735,46 @@ export default function ETSPortal() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium">
-                  <tr className="hover:bg-slate-50">
-                    <td className="py-3 px-3 font-mono font-bold text-red-700">ATH-4310</td>
-                    <td className="py-3 px-3">
-                      <span className="font-bold text-slate-800">13:30</span>
-                      <span className="text-[10px] bg-blue-100 text-blue-800 font-bold px-1.5 py-0.2 ml-1">LOGIN</span>
-                    </td>
-                    <td className="py-3 px-3 font-mono font-bold text-slate-900">KA-05-MJ-4310</td>
-                    <td className="py-3 px-3">Mahesh Gowda (+91 98450 77112)</td>
-                    <td className="py-3 px-3 text-slate-600">Domlur &gt; Marathahalli</td>
-                    <td className="py-3 px-3 text-slate-500 font-mono">13:30</td>
-                    <td className="py-3 px-3">
-                      <span className="text-[#cf1322] font-semibold bg-[#fff1f0] border border-[#ffa39e] px-2 py-0.5 text-[10px] block w-fit">
-                        Chauffeur Re-routing (Delayed +14m)
-                      </span>
-                    </td>
-                    <td className="py-3 px-3 text-right">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsIncompleteTripsModalOpen(false);
-                          showToast('Cab re-allocated: Dispatched backup Innova KA-03-HA-8821!');
-                        }}
-                        className="bg-[#0f5fc2] hover:bg-blue-700 text-white font-bold px-3 py-1 text-xs shadow-xs"
-                      >
-                        Reassign Cab
-                      </button>
-                    </td>
-                  </tr>
+                  {incompleteTripsList.length > 0 ? (
+                    incompleteTripsList.map((trip: any) => (
+                      <tr key={trip.id} className="hover:bg-slate-50">
+                        <td className="py-3 px-3 font-mono font-bold text-red-700">{trip.tripCode || trip.id}</td>
+                        <td className="py-3 px-3">
+                          <span className="font-bold text-slate-800">{trip.shiftTime}</span>
+                          <span className="text-[10px] bg-blue-100 text-blue-800 font-bold px-1.5 py-0.2 ml-1 rounded">
+                            {trip.type}
+                          </span>
+                        </td>
+                        <td className="py-3 px-3 font-mono font-bold text-slate-900">{trip.vehicle?.plateNumber}</td>
+                        <td className="py-3 px-3">{trip.driver?.fullName} ({trip.driver?.phone})</td>
+                        <td className="py-3 px-3 text-slate-600">{trip.routeName}</td>
+                        <td className="py-3 px-3 text-slate-500 font-mono">{trip.scheduledStartTime || trip.shiftTime}</td>
+                        <td className="py-3 px-3">
+                          <span className="text-[#cf1322] font-semibold bg-[#fff1f0] border border-[#ffa39e] px-2 py-0.5 text-[10px] block w-fit rounded">
+                            Pending Departure / Boarding Incomplete
+                          </span>
+                        </td>
+                        <td className="py-3 px-3 text-right">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsIncompleteTripsModalOpen(false);
+                              showToast(`Triaged trip ${trip.tripCode || trip.id}!`);
+                            }}
+                            className="bg-[#0f5fc2] hover:bg-blue-700 text-white font-bold px-3 py-1 text-xs shadow-xs rounded-lg"
+                          >
+                            Reassign Cab
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={8} className="py-8 text-center text-xs text-slate-400">
+                        No incomplete trips. All active and scheduled trips are cleared.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -4761,7 +4783,7 @@ export default function ETSPortal() {
               <button
                 type="button"
                 onClick={() => setIsIncompleteTripsModalOpen(false)}
-                className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-1.5 text-xs"
+                className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-1.5 text-xs rounded-lg"
               >
                 Close View
               </button>
