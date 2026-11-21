@@ -25,76 +25,95 @@ textarea,
 /* 2. UNIVERSAL CURVED EDGES ACROSS COMPLETE WEBSITE ("make all the edges curve") */
 
 /* All Buttons Curved */
-button:not(.rounded-full):not([class*="rounded-full"]) {
-  border-radius: 8px !important;
+button:not(.rounded-full):not([class*="rounded-full"]),
+[role="button"]:not(.rounded-full):not([class*="rounded-full"]) {
+  border-radius: 10px !important;
 }
 
 /* All Inputs, Selects, and Textareas Curved */
 input:not(.rounded-full):not([class*="rounded-full"]),
 select:not(.rounded-full):not([class*="rounded-full"]),
 textarea:not(.rounded-full):not([class*="rounded-full"]) {
-  border-radius: 8px !important;
+  border-radius: 10px !important;
 }
 
-/* Cards, White Containers, Panels & Elevated Surfaces Curved */
-.bg-white.border,
-.bg-white.shadow-sm,
-.bg-white.shadow-md,
-.bg-white.shadow-lg,
-.bg-white.shadow-xl,
-.bg-white.shadow-2xl,
-.bg-slate-50.border,
-.bg-slate-100.border,
-.bg-amber-50.border,
-.bg-blue-50.border,
-.bg-red-50.border,
-.bg-emerald-50.border {
-  border-radius: 12px !important;
+/* All Cards, Panels, Stat Blocks, Summary Tiles, Boxes & Elevated Surfaces Curved */
+div[class*="shadow"],
+div[class*="border"][class*="p-"],
+div[class*="border"][class*="px-"],
+div[class*="border"][class*="py-"],
+div[class*="border"][class*="bg-"],
+div[class*="border"][class*="space-y"],
+div[class*="border-2"],
+div[class*="border-slate"],
+div[class*="border-amber"],
+div[class*="border-blue"],
+div[class*="border-emerald"],
+div[class*="border-red"],
+div[class*="border-purple"],
+div[class*="border-gray"],
+div[class*="bg-amber-"][class*="border"],
+div[class*="bg-blue-"][class*="border"],
+div[class*="bg-emerald-"][class*="border"],
+div[class*="bg-slate-"][class*="border"],
+div[class*="bg-white"][class*="border"],
+div[class*="bg-white"][class*="shadow"],
+section[class*="border"],
+article[class*="border"],
+aside[class*="border"] {
+  border-radius: 14px !important;
 }
 
 /* Modals & Dialog Boxes Curved */
 [role="dialog"] > div,
-.fixed.inset-0 > div {
-  border-radius: 16px !important;
+.fixed.inset-0 > div,
+.fixed [class*="bg-white"][class*="shadow"] {
+  border-radius: 20px !important;
 }
 
 /* Tables & Data Grid Containers Curved */
 table {
   border-collapse: separate !important;
   border-spacing: 0 !important;
-  border-radius: 10px !important;
+  border-radius: 12px !important;
   overflow: hidden !important;
+}
+
+div.overflow-x-auto,
+div[class*="overflow-hidden"][class*="border"] {
+  border-radius: 14px !important;
 }
 
 /* Curved Table Header & Footer Corners */
 thead tr:first-child th:first-child {
-  border-top-left-radius: 10px !important;
+  border-top-left-radius: 12px !important;
 }
 thead tr:first-child th:last-child {
-  border-top-right-radius: 10px !important;
+  border-top-right-radius: 12px !important;
 }
 tbody tr:last-child td:first-child {
-  border-bottom-left-radius: 10px !important;
+  border-bottom-left-radius: 12px !important;
 }
 tbody tr:last-child td:last-child {
-  border-bottom-right-radius: 10px !important;
+  border-bottom-right-radius: 12px !important;
 }
 
 /* Pills, Badges, Labels, and Tags Curved */
 span.badge,
-span[class*="px-"][class*="py-"][class*="bg-"] {
-  border-radius: 6px !important;
+span[class*="px-"][class*="py-"]:not(.w-1\.5):not(.w-2):not([class*="rounded-full"]),
+span[class*="border"]:not(.w-1\.5):not(.w-2):not([class*="rounded-full"]) {
+  border-radius: 8px !important;
 }
 
 /* Dropdown menus & Popups Curved */
 [class*="shadow-xl"],
 [class*="shadow-2xl"] {
-  border-radius: 12px !important;
+  border-radius: 14px !important;
 }
 
 /* Overwrite any legacy rounded-none utility class so it stays curved */
 .rounded-none {
-  border-radius: 10px !important;
+  border-radius: 12px !important;
 }
 
 /* Retain full circular shapes for avatars, status dots, and round icons */
@@ -106,6 +125,12 @@ span[class*="px-"][class*="py-"][class*="bg-"] {
 /* Keep full-width sticky navigation bars edge-to-edge with the browser */
 header,
 header.sticky {
+  border-radius: 0px !important;
+}
+
+/* Exclude hairline dividers */
+.h-px,
+.w-px {
   border-radius: 0px !important;
 }
 

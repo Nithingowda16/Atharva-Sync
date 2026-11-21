@@ -2104,7 +2104,7 @@ export default function ETSPortal() {
               <div className="flex-1 p-4 grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
                 
                 {/* Left 8 Cols: Operations Lifecycle & Map OR Cab Allocation Roster */}
-                <div className="lg:col-span-8 bg-white border border-slate-200 shadow-sm flex flex-col min-h-[580px]">
+                <div className="lg:col-span-8 bg-white border border-slate-200 shadow-sm flex flex-col min-h-[580px] rounded-2xl overflow-hidden">
                   
                   {dashboardMode === 'Operations' ? (
                     /* OPERATIONS MODE VIEW: LIVE SCHEDULED & BOOKED CABS DASHBOARD */
@@ -2172,7 +2172,7 @@ export default function ETSPortal() {
                           <div className="space-y-4">
                             {/* Operational Lifecycle Summary Cards (Live Counts for Selected Shift) */}
                             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                              <div className="border border-slate-200 bg-slate-50 p-3 shadow-xs">
+                              <div className="border border-slate-200 bg-slate-50 p-3 shadow-xs rounded-2xl">
                                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide block">
                                   Shift {selectedShift} Total
                                 </span>
@@ -2181,7 +2181,7 @@ export default function ETSPortal() {
                                 </div>
                               </div>
 
-                              <div className="border border-amber-200 bg-amber-50/60 p-3 shadow-xs">
+                              <div className="border border-amber-200 bg-amber-50/60 p-3 shadow-xs rounded-2xl">
                                 <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wide block">
                                   Awaiting Admin Push
                                 </span>
@@ -2190,7 +2190,7 @@ export default function ETSPortal() {
                                 </div>
                               </div>
 
-                              <div className="border border-blue-200 bg-blue-50/60 p-3 shadow-xs">
+                              <div className="border border-blue-200 bg-blue-50/60 p-3 shadow-xs rounded-2xl">
                                 <span className="text-[10px] font-bold text-blue-700 uppercase tracking-wide block">
                                   Pushed to Vendor
                                 </span>
@@ -2199,7 +2199,7 @@ export default function ETSPortal() {
                                 </div>
                               </div>
 
-                              <div className="border border-emerald-200 bg-emerald-50/60 p-3 shadow-xs">
+                              <div className="border border-emerald-200 bg-emerald-50/60 p-3 shadow-xs rounded-2xl">
                                 <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wide block">
                                   Cab Allocated / Active
                                 </span>
@@ -2211,7 +2211,7 @@ export default function ETSPortal() {
 
                             {/* Active Trip Telemetry Card (If an assigned trip is selected for tracking) */}
                             {trackingTripCode && (
-                              <div className="border border-blue-300 bg-blue-50/30 p-3 space-y-2 shadow-xs animate-in fade-in">
+                              <div className="border border-blue-300 bg-blue-50/30 p-3 space-y-2 shadow-xs animate-in fade-in rounded-2xl">
                                 <div className="flex items-center justify-between border-b border-blue-100 pb-2">
                                   <div className="flex items-center space-x-2">
                                     <Navigation className="w-4 h-4 text-blue-600" />
@@ -2238,7 +2238,7 @@ export default function ETSPortal() {
                             )}
 
                             {/* Live Shift Booked Cabs & Commute Schedule Table */}
-                            <div className="border border-slate-200 overflow-hidden shadow-xs">
+                            <div className="border border-slate-200 overflow-hidden shadow-xs rounded-2xl">
                               <div className="bg-slate-50 border-b border-slate-200 px-4 py-2.5 flex items-center justify-between">
                                 <div className="flex items-center space-x-2">
                                   <Car className="w-4 h-4 text-[#0f5fc2]" />
@@ -2609,7 +2609,7 @@ export default function ETSPortal() {
                 <div className="lg:col-span-4 space-y-3">
                   
                   {/* Announcement Banner (As shown in screenshot) */}
-                  <div className="bg-amber-50 border border-amber-200 px-3.5 py-2.5 text-xs text-amber-900 font-medium flex items-center justify-between shadow-xs">
+                  <div className="bg-amber-50 border border-amber-200 px-3.5 py-2.5 text-xs text-amber-900 font-medium flex items-center justify-between shadow-xs rounded-xl">
                     <div className="flex items-center space-x-2">
                       <Megaphone className="w-4 h-4 text-amber-600 shrink-0" />
                       <span className="font-semibold text-slate-800">A whole new landing experience!</span>
@@ -2624,7 +2624,7 @@ export default function ETSPortal() {
                   </div>
 
                   {/* Dashboard Mode Switcher */}
-                  <div className="bg-white border border-slate-200 p-3.5 shadow-sm flex items-center justify-between">
+                  <div className="bg-white border border-slate-200 p-3.5 shadow-sm flex items-center justify-between rounded-xl">
                     <span className="text-xs font-semibold text-slate-600">Dashboard mode:</span>
                     <div className="flex items-center space-x-2 text-xs font-bold">
                       <span className={dashboardMode === 'Operations' ? 'text-slate-900 font-bold' : 'text-slate-400 font-normal'}>Operations</span>
@@ -2636,18 +2636,18 @@ export default function ETSPortal() {
                           if (next === 'Operations') setRosterSubTab('assigned');
                           showToast(`Switched view to ${next} Mode`);
                         }}
-                        className={`w-11 h-6 p-0.5 border transition-colors relative cursor-pointer ${
+                        className={`w-11 h-6 p-0.5 border transition-colors relative cursor-pointer rounded-full ${
                           dashboardMode === 'Cab Allocation' ? 'bg-[#0f5fc2] border-[#0f5fc2]' : 'bg-slate-300 border-slate-400'
                         }`}
                       >
-                        <div className={`w-4 h-4 bg-white shadow-sm transition-transform ${dashboardMode === 'Cab Allocation' ? 'translate-x-5' : 'translate-x-0'}`} />
+                        <div className={`w-4 h-4 bg-white shadow-sm transition-transform rounded-full ${dashboardMode === 'Cab Allocation' ? 'translate-x-5' : 'translate-x-0'}`} />
                       </button>
                       <span className={dashboardMode === 'Cab Allocation' ? 'text-[#0f5fc2] font-bold' : 'text-slate-400 font-normal'}>Cab Allocation</span>
                     </div>
                   </div>
 
                   {/* Search Section with Working Hotkey Refs */}
-                  <div className="bg-white border border-slate-200 p-4 shadow-sm space-y-3">
+                  <div className="bg-white border border-slate-200 p-4 shadow-sm space-y-3 rounded-2xl">
                     <h3 className="font-bold text-xs uppercase tracking-wider text-slate-700">Search</h3>
                     
                     <div className="space-y-1">
@@ -2662,7 +2662,7 @@ export default function ETSPortal() {
                           value={searchVehicleInput}
                           onChange={(e) => setSearchVehicleInput(e.target.value)}
                           placeholder="e.g. KA-03-HA-8821, ECO-355"
-                          className="w-full border border-slate-300 py-2 pl-8 pr-3 text-xs placeholder:text-slate-400 focus:outline-none focus:border-blue-600 font-mono text-xs"
+                          className="w-full border border-slate-300 py-2 pl-8 pr-3 text-xs placeholder:text-slate-400 focus:outline-none focus:border-blue-600 font-mono text-xs rounded-lg"
                         />
                         <Car className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                       </div>
@@ -2680,7 +2680,7 @@ export default function ETSPortal() {
                           value={searchEmpInput}
                           onChange={(e) => setSearchEmpInput(e.target.value)}
                           placeholder="e.g. EMP-9042, 9018, Priya"
-                          className="w-full border border-slate-300 py-2 pl-8 pr-3 text-xs placeholder:text-slate-400 focus:outline-none focus:border-blue-600 font-medium"
+                          className="w-full border border-slate-300 py-2 pl-8 pr-3 text-xs placeholder:text-slate-400 focus:outline-none focus:border-blue-600 font-medium rounded-lg"
                         />
                         <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                       </div>
@@ -2698,7 +2698,7 @@ export default function ETSPortal() {
                           value={searchTripInput}
                           onChange={(e) => setSearchTripInput(e.target.value)}
                           placeholder="e.g. ATH-8821, ATH-4310"
-                          className="w-full border border-slate-300 py-2 pl-8 pr-3 text-xs placeholder:text-slate-400 focus:outline-none focus:border-blue-600 font-mono font-medium"
+                          className="w-full border border-slate-300 py-2 pl-8 pr-3 text-xs placeholder:text-slate-400 focus:outline-none focus:border-blue-600 font-mono font-medium rounded-lg"
                         />
                         <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                       </div>
@@ -2706,7 +2706,7 @@ export default function ETSPortal() {
                   </div>
 
                   {searchedEmployee && (
-                    <div className="bg-white border-2 border-[#0f5fc2] p-4 shadow-md space-y-3 animate-in fade-in">
+                    <div className="bg-white border-2 border-[#0f5fc2] p-4 shadow-md space-y-3 animate-in fade-in rounded-2xl">
                       <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                         <div className="flex items-center space-x-2">
                           <User className="w-4 h-4 text-[#0f5fc2]" />
@@ -2772,7 +2772,7 @@ export default function ETSPortal() {
                     </div>
                   )}
 
-                  <div className="bg-[#f0f6ff] border border-blue-200 p-3 shadow-sm flex items-center justify-between text-xs">
+                  <div className="bg-[#f0f6ff] border border-blue-200 p-3 shadow-sm flex items-center justify-between text-xs rounded-xl">
                     <div className="flex items-center space-x-2">
                       <span className="text-amber-500 text-base">📢</span>
                       <span className="text-slate-700 font-semibold">A whole <strong className="text-slate-900">new</strong> landing experience!</span>
@@ -2803,7 +2803,7 @@ export default function ETSPortal() {
                   {/* Date Input with Calendar Icon */}
                   <div className="flex items-center space-x-2">
                     <span className="font-medium text-slate-600">Date</span>
-                    <div className="flex items-center border border-slate-300 px-2.5 py-1 bg-white">
+                    <div className="flex items-center border border-slate-300 px-2.5 py-1 bg-white rounded-lg">
                       <input
                         type="text"
                         value={allocateDate}
@@ -2821,7 +2821,7 @@ export default function ETSPortal() {
                       <select
                         value={allocateOffice}
                         onChange={(e) => setAllocateOffice(e.target.value)}
-                        className="border border-slate-300 bg-white py-1 pl-2.5 pr-7 text-xs font-semibold text-slate-800 appearance-none focus:outline-none min-w-[130px]"
+                        className="border border-slate-300 bg-white py-1 pl-2.5 pr-7 text-xs font-semibold text-slate-800 appearance-none focus:outline-none min-w-[130px] rounded-lg"
                       >
                         <option value="ALL">ALL</option>
                         <option value="Enterprise Tech Park">Enterprise Tech Park</option>
@@ -2838,7 +2838,7 @@ export default function ETSPortal() {
                       <select
                         value={allocateShiftType}
                         onChange={(e) => setAllocateShiftType(e.target.value)}
-                        className="border border-slate-300 bg-white py-1 pl-2.5 pr-7 text-xs font-semibold text-slate-800 appearance-none focus:outline-none min-w-[110px]"
+                        className="border border-slate-300 bg-white py-1 pl-2.5 pr-7 text-xs font-semibold text-slate-800 appearance-none focus:outline-none min-w-[110px] rounded-lg"
                       >
                         <option value="Login">Login</option>
                         <option value="Logout">Logout</option>
@@ -2855,7 +2855,7 @@ export default function ETSPortal() {
                       <select
                         value={allocateShift}
                         onChange={(e) => setAllocateShift(e.target.value)}
-                        className="border border-slate-300 bg-white py-1 pl-2.5 pr-7 text-xs font-semibold text-slate-800 appearance-none focus:outline-none min-w-[100px]"
+                        className="border border-slate-300 bg-white py-1 pl-2.5 pr-7 text-xs font-semibold text-slate-800 appearance-none focus:outline-none min-w-[100px] rounded-lg"
                       >
                         <option value="All">All</option>
                         <option value="10:30">10:30</option>
@@ -2871,7 +2871,7 @@ export default function ETSPortal() {
                 </div>
 
                 {/* Right Summary KPI Metrics Table (Green Headers) */}
-                <div className="border border-slate-200 overflow-hidden shadow-sm">
+                <div className="border border-slate-200 overflow-hidden shadow-sm rounded-xl">
                   <table className="text-center text-xs">
                     <thead>
                       <tr className="border-b border-slate-200">
@@ -2938,7 +2938,7 @@ export default function ETSPortal() {
                   <select
                     value={allocateSort}
                     onChange={(e) => setAllocateSort(e.target.value)}
-                    className="border border-slate-300 bg-white py-0.5 pl-2 pr-6 text-xs text-slate-800 appearance-none focus:outline-none"
+                    className="border border-slate-300 bg-white py-0.5 pl-2 pr-6 text-xs text-slate-800 appearance-none focus:outline-none rounded-lg"
                   >
                     <option value="Employees">Employees</option>
                     <option value="Pickup Time">Pickup Time</option>
@@ -2951,7 +2951,7 @@ export default function ETSPortal() {
                   <select
                     value={allocateSortOrder}
                     onChange={(e) => setAllocateSortOrder(e.target.value)}
-                    className="border border-slate-300 bg-white py-0.5 pl-2 pr-6 text-xs text-slate-800 appearance-none focus:outline-none"
+                    className="border border-slate-300 bg-white py-0.5 pl-2 pr-6 text-xs text-slate-800 appearance-none focus:outline-none rounded-lg"
                   >
                     <option value="Desc">Desc</option>
                     <option value="Asc">Asc</option>
@@ -2961,7 +2961,7 @@ export default function ETSPortal() {
 
                 <button
                   onClick={() => showToast('Sorted routes by ' + allocateSort + ' (' + allocateSortOrder + ')')}
-                  className="border border-slate-300 bg-slate-100 hover:bg-slate-200 px-3 py-0.5 text-xs font-bold text-slate-700"
+                  className="border border-slate-300 bg-slate-100 hover:bg-slate-200 px-3 py-0.5 text-xs font-bold text-slate-700 rounded-lg"
                 >
                   GO
                 </button>
@@ -2978,7 +2978,7 @@ export default function ETSPortal() {
                       <div
                         key={route.routeId}
                         onClick={() => setSelectedRouteId(route.routeId)}
-                        className={`border p-4 shadow-sm cursor-pointer transition-all ${
+                        className={`border p-4 shadow-sm cursor-pointer transition-all rounded-xl ${
                           selectedRouteId === route.routeId
                             ? 'border-[#0f5fc2] bg-white ring-1 ring-[#0f5fc2]'
                             : 'border-slate-300 bg-white hover:border-slate-400'
@@ -2987,9 +2987,9 @@ export default function ETSPortal() {
                         <div className="flex items-center justify-between text-xs font-bold text-slate-800 pb-1.5 border-b border-slate-100">
                           <span>Route Id: {route.routeId}({route.assignedCount}/{route.totalCapacity})</span>
                           {route.status === 'ALLOCATED' ? (
-                            <span className="text-emerald-700 bg-emerald-50 px-1.5 py-0.2 text-[10px] font-bold">Allocated</span>
+                            <span className="text-emerald-700 bg-emerald-50 px-1.5 py-0.2 text-[10px] font-bold rounded">Allocated</span>
                           ) : (
-                            <span className="text-amber-700 bg-amber-50 px-1.5 py-0.2 text-[10px] font-bold">Pending</span>
+                            <span className="text-amber-700 bg-amber-50 px-1.5 py-0.2 text-[10px] font-bold rounded">Pending</span>
                           )}
                         </div>
 
@@ -3016,7 +3016,7 @@ export default function ETSPortal() {
                     ))}
 
                   {routesList.filter(r => allocateSubTab === 'Pending' ? r.status === 'PENDING' : r.status === 'ALLOCATED').length === 0 && (
-                    <div className="p-8 border border-slate-200 bg-white text-center text-xs text-slate-400">
+                    <div className="p-8 border border-slate-200 bg-white text-center text-xs text-slate-400 rounded-xl">
                       No routes in {allocateSubTab} queue.
                     </div>
                   )}
@@ -3224,13 +3224,13 @@ export default function ETSPortal() {
           {/* ========================================================================= */}
           {activeHeaderTab === 'BUS_DASHBOARD' && (
             <div className="flex-1 flex flex-col bg-[#f4f7fb] p-6 space-y-6">
-              <div className="bg-white border border-slate-200 p-5 shadow-sm flex flex-wrap items-center justify-between gap-4">
+              <div className="bg-white border border-slate-200 p-5 shadow-sm flex flex-wrap items-center justify-between gap-4 rounded-2xl">
                 <div>
                   <div className="flex items-center space-x-2">
                     <span className="text-[11px] uppercase font-extrabold tracking-widest text-[#0f5fc2]">
                       MASS TRANSIT & SHUTTLE DISPATCH
                     </span>
-                    <span className="bg-blue-100 text-[#0f5fc2] text-[10px] font-bold px-2 py-0.5">
+                    <span className="bg-blue-100 text-[#0f5fc2] text-[10px] font-bold px-2 py-0.5 rounded">
                       8 FIXED CORRIDORS
                     </span>
                   </div>
@@ -3240,12 +3240,12 @@ export default function ETSPortal() {
                 </div>
 
                 <div className="flex items-center space-x-3 text-xs">
-                  <span className="border border-slate-200 bg-slate-50 px-3 py-1.5 font-semibold text-slate-700">
+                  <span className="border border-slate-200 bg-slate-50 px-3 py-1.5 font-semibold text-slate-700 rounded-lg">
                     Active Transporter: <strong>Atharva Travels Shuttle Fleet</strong>
                   </span>
                   <button
                     onClick={() => showToast('Bus telemetry synchronized with Bangalore traffic nodes!')}
-                    className="bg-[#0f5fc2] hover:bg-blue-700 text-white font-bold px-3 py-1.5 flex items-center space-x-1.5 shadow-sm"
+                    className="bg-[#0f5fc2] hover:bg-blue-700 text-white font-bold px-3 py-1.5 flex items-center space-x-1.5 shadow-sm rounded-lg"
                   >
                     <RefreshCw className="w-3.5 h-3.5" />
                     <span>Refresh Radar</span>
@@ -3261,12 +3261,12 @@ export default function ETSPortal() {
                   { routeNo: 'SH-03', from: 'Koramangala Sony World', to: 'Tech Park Campus', occupancy: '22 / 24 Seated', driver: 'Muniswamy R.', plate: 'KA-01-EQ-9011', eta: '+3m Delay' },
                   { routeNo: 'SH-04', from: 'Electronic City Toll', to: 'Tech Park Campus', occupancy: '30 / 32 Seated', driver: 'Girish Patil', plate: 'KA-53-B-7712', eta: 'On Time (15m)' },
                 ].map((shuttle) => (
-                  <div key={shuttle.routeNo} className="bg-white border border-slate-200 p-4 shadow-sm space-y-3">
+                  <div key={shuttle.routeNo} className="bg-white border border-slate-200 p-4 shadow-sm space-y-3 rounded-2xl">
                     <div className="flex items-center justify-between">
-                      <span className="bg-[#0f5fc2] text-white font-black text-xs px-2 py-0.5">
+                      <span className="bg-[#0f5fc2] text-white font-black text-xs px-2 py-0.5 rounded">
                         ROUTE {shuttle.routeNo}
                       </span>
-                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 border border-emerald-200">
+                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 border border-emerald-200 rounded">
                         {shuttle.eta}
                       </span>
                     </div>
@@ -3292,7 +3292,7 @@ export default function ETSPortal() {
           {/* ========================================================================= */}
           {activeHeaderTab === 'ANALYTICS' && (
             <div className="flex-1 flex flex-col bg-[#f4f7fb] p-6 space-y-6">
-              <div className="bg-white border border-slate-200 p-5 shadow-sm flex flex-wrap items-center justify-between gap-4">
+              <div className="bg-white border border-slate-200 p-5 shadow-sm flex flex-wrap items-center justify-between gap-4 rounded-2xl">
                 <div>
                   <span className="text-[11px] uppercase font-extrabold tracking-widest text-[#0f5fc2] block">
                     COMMUTE SLA & ESG ANALYTICS
@@ -3303,12 +3303,12 @@ export default function ETSPortal() {
                 </div>
 
                 <div className="flex items-center space-x-2 text-xs">
-                  <span className="bg-slate-100 border border-slate-300 px-3 py-1.5 font-bold text-slate-700">
+                  <span className="bg-slate-100 border border-slate-300 px-3 py-1.5 font-bold text-slate-700 rounded-lg">
                     Reporting Window: Nov 2026
                   </span>
                   <button
                     onClick={() => showToast('Exporting executive SLA & ESG compliance report (PDF)...')}
-                    className="bg-[#0f5fc2] hover:bg-blue-700 text-white font-bold px-3 py-1.5 flex items-center space-x-1.5 shadow-sm"
+                    className="bg-[#0f5fc2] hover:bg-blue-700 text-white font-bold px-3 py-1.5 flex items-center space-x-1.5 shadow-sm rounded-lg"
                   >
                     <Download className="w-3.5 h-3.5" />
                     <span>Download Report</span>
@@ -3317,7 +3317,7 @@ export default function ETSPortal() {
               </div>
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-white border border-slate-200 p-4 shadow-sm">
+                <div className="bg-white border border-slate-200 p-4 shadow-sm rounded-2xl">
                   <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
                     On-Time Commute SLA
                   </span>
@@ -3327,7 +3327,7 @@ export default function ETSPortal() {
                   </span>
                 </div>
 
-                <div className="bg-white border border-slate-200 p-4 shadow-sm">
+                <div className="bg-white border border-slate-200 p-4 shadow-sm rounded-2xl">
                   <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
                     Total Passenger Trips
                   </span>
@@ -3337,7 +3337,7 @@ export default function ETSPortal() {
                   </span>
                 </div>
 
-                <div className="bg-white border border-slate-200 p-4 shadow-sm">
+                <div className="bg-white border border-slate-200 p-4 shadow-sm rounded-2xl">
                   <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
                     Carbon Saved (ESG Metric)
                   </span>
@@ -3347,7 +3347,7 @@ export default function ETSPortal() {
                   </span>
                 </div>
 
-                <div className="bg-white border border-slate-200 p-4 shadow-sm">
+                <div className="bg-white border border-slate-200 p-4 shadow-sm rounded-2xl">
                   <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
                     Zero Safety Incidents
                   </span>
@@ -3439,7 +3439,7 @@ export default function ETSPortal() {
       {/* MODAL: ADD EMPLOYEE (ADMIN EXCLUSIVE) */}
       {isAddEmployeeModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-in fade-in">
-          <div className="bg-white border border-slate-300 shadow-2xl max-w-lg w-full p-6 space-y-4">
+          <div className="bg-white border border-slate-300 shadow-2xl max-w-lg w-full p-6 space-y-4 rounded-2xl">
             <div className="flex items-center justify-between border-b border-slate-200 pb-3">
               <div className="flex items-center space-x-2">
                 <div className="w-8 h-8 bg-blue-100 text-[#0f5fc2] flex items-center justify-center font-black">
@@ -3810,7 +3810,7 @@ export default function ETSPortal() {
       {/* MODAL 2: ADHOC TRIPS MODAL */}
       {isAdhocTripsModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white border border-slate-300 shadow-2xl max-w-lg w-full p-6 space-y-4">
+          <div className="bg-white border border-slate-300 shadow-2xl max-w-lg w-full p-6 space-y-4 rounded-2xl">
             <div className="flex items-center justify-between border-b border-slate-200 pb-3">
               <div>
                 <h3 className="text-base font-black text-slate-900 flex items-center space-x-2">
@@ -4160,7 +4160,7 @@ export default function ETSPortal() {
       {/* MODAL 5: 24/7 SUPPORT MODAL */}
       {isSupportModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white border border-slate-300 shadow-2xl max-w-md w-full p-6 space-y-4">
+          <div className="bg-white border border-slate-300 shadow-2xl max-w-md w-full p-6 space-y-4 rounded-2xl">
             <div className="flex items-center justify-between border-b border-slate-200 pb-3">
               <div className="flex items-center space-x-2">
                 <HelpCircle className="w-5 h-5 text-[#0f5fc2]" />
@@ -4182,7 +4182,7 @@ export default function ETSPortal() {
                 Direct hotline to Bengaluru Transport Control Command for drivers, vendor leads, and corporate enterprise desk managers.
               </p>
 
-              <div className="bg-slate-50 p-3 border border-slate-200 space-y-2">
+              <div className="bg-slate-50 p-3 border border-slate-200 space-y-2 rounded-xl">
                 <div>
                   <span className="text-slate-400 block text-[10px] uppercase font-bold">24x7 Emergency Helpline</span>
                   <a href="tel:+918049652100" className="text-sm font-black text-blue-700 hover:underline">
