@@ -1768,107 +1768,93 @@ export default function ETSPortal() {
               {/* 1-Year Date Picker + Timeline Range Slider + Direction Switcher */}
               <div className="bg-white border-b border-slate-200 px-6 py-2.5 flex flex-wrap items-center justify-between gap-4 text-xs">
                 
-                {/* 1-Year Date Selector & Quick Horizon Navigation */}
-                <div className="flex items-center space-x-2 shrink-0 bg-slate-50 border border-slate-200 px-2.5 py-1">
-                  <Calendar className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                  <button
-                    type="button"
-                    onClick={handlePrevDay}
-                    className="px-1.5 py-0.5 hover:bg-slate-200 text-slate-700 font-black rounded"
-                    title="Previous Day"
-                  >
-                    ◀
-                  </button>
-                  <input
-                    type="date"
-                    value={selectedDate}
-                    onChange={(e) => {
-                      if (e.target.value) {
-                        setSelectedDate(e.target.value);
-                        showToast(`Filtered schedule for date: ${formatDisplayDate(e.target.value)}`);
-                      }
-                    }}
-                    className="bg-white border border-slate-300 font-bold px-2 py-0.5 text-xs text-slate-800 focus:outline-none"
-                    title="Choose any date in the 1-year historical & schedule horizon"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleNextDay}
-                    className="px-1.5 py-0.5 hover:bg-slate-200 text-slate-700 font-black rounded"
-                    title="Next Day"
-                  >
-                    ▶
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedDate('2026-11-21');
-                      showToast('Jumped to Today: 21 Nov 2026');
-                    }}
-                    className={`px-2 py-0.5 text-[10px] font-bold transition-colors ${
-                      selectedDate === '2026-11-21' ? 'bg-[#0f5fc2] text-white' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
-                    }`}
-                  >
-                    Today
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedDate('2026-11-11');
-                      showToast('Jumped to 11 Nov 2026 (Active Commute Roster)');
-                    }}
-                    className={`px-2 py-0.5 text-[10px] font-bold transition-colors ${
-                      selectedDate === '2026-11-11' ? 'bg-[#0f5fc2] text-white' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
-                    }`}
-                  >
-                    11 Nov 2026
-                  </button>
-                </div>
+                {/* Left: Date Display & 1-Year Navigation + Draggable Range Slider */}
+                <div className="flex items-center space-x-3 flex-1 min-w-[340px] max-w-2xl">
+                  {/* Interactive Date & Time Window Label */}
+                  <div className="flex items-center space-x-1.5 shrink-0">
+                    <div className="relative flex items-center" title="Click calendar to select any date in the 1-year horizon">
+                      <input
+                        type="date"
+                        value={selectedDate}
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            setSelectedDate(e.target.value);
+                            showToast(`Filtered schedule for: ${formatDisplayDate(e.target.value)}`);
+                          }
+                        }}
+                        className="absolute inset-0 opacity-0 cursor-pointer w-full z-20"
+                      />
+                      <Calendar className="w-3.5 h-3.5 text-[#0f5fc2] cursor-pointer" />
+                    </div>
+                    
+                    <button
+                      type="button"
+                      onClick={handlePrevDay}
+                      className="text-slate-400 hover:text-slate-800 font-bold px-0.5"
+                      title="Previous Day"
+                    >
+                      ◀
+                    </button>
+                    
+                    <span className="font-bold text-slate-800 text-xs tracking-tight whitespace-nowrap">
+                      {formatDisplayDate(selectedDate)} {minsToTimeString(sliderStartMins)} - {formatDisplayDate(selectedDate)} {minsToTimeString(sliderEndMins)}
+                    </span>
 
-                {/* Real-time Draggable Dual-Handle Operational Time Slider */}
-                <div className="flex items-center space-x-3 flex-1 min-w-[340px] max-w-xl">
-                  <span className="font-bold text-slate-800 shrink-0 text-xs tracking-tight whitespace-nowrap">
-                    {formatDisplayDate(selectedDate)} {minsToTimeString(sliderStartMins)} - {formatDisplayDate(selectedDate)} {minsToTimeString(sliderEndMins)}
-                  </span>
+                    <button
+                      type="button"
+                      onClick={handleNextDay}
+                      className="text-slate-400 hover:text-slate-800 font-bold px-0.5"
+                      title="Next Day"
+                    >
+                      ▶
+                    </button>
+                  </div>
                   
+                  {/* Real-time Draggable Dual-Handle Operational Time Slider */}
                   <div
                     ref={sliderTrackRef}
                     onClick={handleTrackClick}
                     className="relative flex-1 flex items-center max-w-md mx-2 h-7 cursor-pointer select-none"
-                    title="Drag start or end handle to adjust operational time window"
+                    title="Drag start or end square handle to adjust operational time window"
                   >
                     {/* Background Track */}
                     <div className="h-1.5 bg-slate-200 w-full rounded" />
                     {/* Active Range Bar */}
                     <div
-                      className="absolute h-1.5 bg-[#0f5fc2] rounded"
+                      className="absolute h-1.5 bg-[#0f5fc2] rounded pointer-events-none"
                       style={{
                         left: `${(sliderStartMins / 1440) * 100}%`,
                         width: `${Math.max(1, ((sliderEndMins - sliderStartMins) / 1440) * 100)}%`,
                       }}
                     />
-                    {/* Start Handle */}
-                    <div
-                      onPointerDown={(e) => handleSliderPointerDown('start', e)}
-                      onPointerMove={handleSliderPointerMove}
-                      onPointerUp={handleSliderPointerUp}
-                      onPointerCancel={handleSliderPointerUp}
-                      style={{ left: `${(sliderStartMins / 1440) * 100}%` }}
-                      className={`absolute -translate-x-1/2 w-4 h-4 bg-white border-2 border-[#0f5fc2] rounded shadow-md cursor-ew-resize hover:scale-125 transition-transform z-10 flex items-center justify-center ${
-                        isDraggingSlider === 'start' ? 'ring-2 ring-blue-400 scale-125' : ''
-                      }`}
+                    
+                    {/* Native Drag Range Input for Start Handle */}
+                    <input
+                      type="range"
+                      min={0}
+                      max={1440}
+                      step={15}
+                      value={sliderStartMins}
+                      onChange={(e) => {
+                        const val = Number(e.target.value);
+                        setSliderStartMins(Math.min(val, sliderEndMins - 15));
+                      }}
+                      className="absolute w-full h-7 appearance-none bg-transparent pointer-events-none z-20 focus:outline-none cursor-pointer [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-[#0f5fc2] [&::-webkit-slider-thumb]:rounded-none [&::-webkit-slider-thumb]:shadow-xs [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:w-3.5 [&::-moz-range-thumb]:h-3.5 [&::-moz-range-thumb]:bg-white [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-[#0f5fc2] [&::-moz-range-thumb]:rounded-none"
                       title={`Drag Start Time (${minsToTimeString(sliderStartMins)})`}
                     />
-                    {/* End Handle */}
-                    <div
-                      onPointerDown={(e) => handleSliderPointerDown('end', e)}
-                      onPointerMove={handleSliderPointerMove}
-                      onPointerUp={handleSliderPointerUp}
-                      onPointerCancel={handleSliderPointerUp}
-                      style={{ left: `${(sliderEndMins / 1440) * 100}%` }}
-                      className={`absolute -translate-x-1/2 w-4 h-4 bg-white border-2 border-[#0f5fc2] rounded shadow-md cursor-ew-resize hover:scale-125 transition-transform z-10 flex items-center justify-center ${
-                        isDraggingSlider === 'end' ? 'ring-2 ring-blue-400 scale-125' : ''
-                      }`}
+
+                    {/* Native Drag Range Input for End Handle */}
+                    <input
+                      type="range"
+                      min={0}
+                      max={1440}
+                      step={15}
+                      value={sliderEndMins}
+                      onChange={(e) => {
+                        const val = Number(e.target.value);
+                        setSliderEndMins(Math.max(val, sliderStartMins + 15));
+                      }}
+                      className="absolute w-full h-7 appearance-none bg-transparent pointer-events-none z-20 focus:outline-none cursor-pointer [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-[#0f5fc2] [&::-webkit-slider-thumb]:rounded-none [&::-webkit-slider-thumb]:shadow-xs [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:w-3.5 [&::-moz-range-thumb]:h-3.5 [&::-moz-range-thumb]:bg-white [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-[#0f5fc2] [&::-moz-range-thumb]:rounded-none"
                       title={`Drag End Time (${minsToTimeString(sliderEndMins)})`}
                     />
                   </div>
