@@ -478,7 +478,7 @@ export const EmployeeMobileApp: React.FC<EmployeeMobileAppProps> = ({
                 </p>
 
                 {/* 4-DIGIT BACKUP BOARDING PIN */}
-                <div className="bg-amber-50 border-2 border-dashed border-amber-400 p-3 rounded-none">
+                <div className="bg-amber-50 border-2 border-dashed border-amber-400 p-3 rounded-2xl">
                   <span className="text-[10px] uppercase font-extrabold text-amber-900 block tracking-wider">
                     OR SHARE 4-DIGIT BOARDING PIN
                   </span>

@@ -1267,7 +1267,7 @@ export default function ETSPortal() {
       
       {/* Toast Alert */}
       {toastMessage && (
-        <div className="fixed top-5 right-5 z-50 bg-slate-900 text-white px-5 py-3.5 rounded-none shadow-2xl border border-slate-700 flex items-center space-x-3 text-sm animate-in fade-in slide-in-from-top-4">
+        <div className="fixed top-5 right-5 z-50 bg-slate-900 text-white px-5 py-3.5 rounded-xl shadow-2xl border border-slate-700 flex items-center space-x-3 text-sm animate-in fade-in slide-in-from-top-4">
           <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
           <span className="font-medium">{toastMessage}</span>
         </div>
@@ -1291,10 +1291,10 @@ export default function ETSPortal() {
               />
             </div>
 
-            <div className="bg-white rounded-none shadow-[0_4px_30px_rgba(0,0,0,0.06)] border border-slate-100/80 w-full max-w-[430px] p-8 sm:p-9 transition-all">
+            <div className="bg-white rounded-2xl shadow-[0_4px_30px_rgba(0,0,0,0.06)] border border-slate-100/80 w-full max-w-[430px] p-8 sm:p-9 transition-all">
               
               {/* RESTRICTED ACCESS SECURITY NOTICE */}
-              <div className="mb-5 p-3 bg-slate-900 text-white flex items-start space-x-2.5 text-xs shadow-sm border-l-4 border-amber-500">
+              <div className="mb-5 p-3 bg-slate-900 text-white flex items-start space-x-2.5 text-xs shadow-sm border-l-4 border-amber-500 rounded-xl">
                 <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                 <div>
                   <span className="font-extrabold uppercase tracking-wide text-[11px] text-amber-400 block leading-tight">
@@ -1346,7 +1346,7 @@ export default function ETSPortal() {
               </div>
 
               {authError && (
-                <div className="mb-5 p-3 rounded-none bg-red-50 border border-red-200 text-red-700 text-xs flex items-start space-x-2 animate-in fade-in duration-200">
+                <div className="mb-5 p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-start space-x-2 animate-in fade-in duration-200">
                   <AlertTriangle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
                   <div className="flex-1 font-medium">{authError}</div>
                 </div>
@@ -1365,7 +1365,7 @@ export default function ETSPortal() {
                     value={identifier}
                     onChange={(e) => setIdentifier(e.target.value)}
                     placeholder="name.admin@atharvatravels.com"
-                    className="w-full text-sm text-slate-800 bg-transparent placeholder:text-slate-400 focus:outline-none py-1.5 font-normal"
+                    className="w-full text-sm text-slate-800 bg-transparent placeholder:text-slate-400 focus:outline-none py-1.5 font-normal rounded-lg"
                   />
                 </div>
 
@@ -1381,14 +1381,14 @@ export default function ETSPortal() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Password"
-                      className="w-full text-sm text-slate-800 bg-transparent placeholder:text-slate-400 focus:outline-none py-1.5 pr-8 font-normal"
+                      className="w-full text-sm text-slate-800 bg-transparent placeholder:text-slate-400 focus:outline-none py-1.5 pr-8 font-normal rounded-lg"
                     />
                   </div>
                   <button
                     type="button"
                     tabIndex={-1}
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-1 bottom-2.5 text-slate-400 hover:text-slate-600 p-0.5 transition-colors"
+                    className="absolute right-1 bottom-2.5 text-slate-400 hover:text-slate-600 p-0.5 transition-colors rounded-full"
                     title={showPassword ? 'Hide password' : 'Show password'}
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -1398,7 +1398,7 @@ export default function ETSPortal() {
                 <button
                   type="submit"
                   disabled={isAuthenticating}
-                  className={`w-full py-3 rounded-none text-sm font-semibold transition-all duration-200 mt-2 flex items-center justify-center space-x-2 ${
+                  className={`w-full py-3 rounded-xl text-sm font-semibold transition-all duration-200 mt-2 flex items-center justify-center space-x-2 ${
                     identifier && password
                       ? 'bg-[#eceff3] hover:bg-[#0f5fc2] text-[#4b5563] hover:text-white active:scale-[0.99]'
                       : 'bg-[#f1f3f6] text-slate-400 cursor-not-allowed'
@@ -1406,7 +1406,7 @@ export default function ETSPortal() {
                 >
                   {isAuthenticating ? (
                     <>
-                      <div className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-none animate-spin" />
+                      <div className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
                       <span>Verifying credentials...</span>
                     </>
                   ) : (
@@ -1789,7 +1789,7 @@ export default function ETSPortal() {
           {activeAlerts.length > 0 && (
             <div className="bg-red-50 border-b-2 border-red-500 px-6 py-3 shadow-md animate-in fade-in flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center space-x-3">
-                <div className="bg-red-600 text-white p-2 rounded-none animate-pulse">
+                <div className="bg-red-600 text-white p-2 rounded-xl animate-pulse">
                   <ShieldAlert className="w-6 h-6" />
                 </div>
                 <div>
@@ -4252,7 +4252,7 @@ export default function ETSPortal() {
 
       {isResetModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-none shadow-2xl max-w-md w-full p-6 space-y-4 border border-slate-200 animate-in fade-in zoom-in-95">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4 border border-slate-200 animate-in fade-in zoom-in-95">
             <div className="flex items-center space-x-3 text-blue-700">
               <KeyRound className="w-6 h-6" />
               <h3 className="font-bold text-lg text-slate-800">Reset Your Password</h3>
@@ -4269,7 +4269,7 @@ export default function ETSPortal() {
                     setIsResetModalOpen(false);
                     setResetSuccess(false);
                   }}
-                  className="bg-blue-600 text-white font-bold px-4 py-2 rounded-none text-xs"
+                  className="bg-blue-600 text-white font-bold px-4 py-2 rounded-xl text-xs"
                 >
                   Done
                 </button>
@@ -4291,19 +4291,19 @@ export default function ETSPortal() {
                   value={resetEmail}
                   onChange={(e) => setResetEmail(e.target.value)}
                   placeholder="Enter corporate email"
-                  className="w-full border border-slate-300 rounded-none px-3 py-2 text-sm focus:outline-none focus:border-blue-600"
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-600"
                 />
                 <div className="flex justify-end space-x-2 pt-2">
                   <button
                     type="button"
                     onClick={() => setIsResetModalOpen(false)}
-                    className="px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-none"
+                    className="px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-none shadow-sm"
+                    className="px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm"
                   >
                     Send Reset Link
                   </button>
@@ -4317,7 +4317,7 @@ export default function ETSPortal() {
       {/* SIGN OUT CONFIRMATION MODAL */}
       {isSignOutConfirmOpen && (
         <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white border border-slate-300 shadow-2xl max-w-sm w-full p-6 space-y-4 rounded-none">
+          <div className="bg-white border border-slate-300 shadow-2xl max-w-sm w-full p-6 space-y-4 rounded-2xl">
             <div className="flex items-center space-x-3.5">
               <div className="w-10 h-10 rounded-full bg-red-50 text-red-600 flex items-center justify-center flex-shrink-0 border border-red-100">
                 <LogOut className="w-5 h-5" />

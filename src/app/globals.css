@@ -20,6 +20,92 @@ textarea,
 *::before,
 *::after {
   font-family: 'Inter', 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+}
+
+/* 2. UNIVERSAL CURVED EDGES ACROSS COMPLETE WEBSITE ("make all the edges curve") */
+
+/* All Buttons Curved */
+button:not(.rounded-full):not([class*="rounded-full"]) {
+  border-radius: 8px !important;
+}
+
+/* All Inputs, Selects, and Textareas Curved */
+input:not(.rounded-full):not([class*="rounded-full"]),
+select:not(.rounded-full):not([class*="rounded-full"]),
+textarea:not(.rounded-full):not([class*="rounded-full"]) {
+  border-radius: 8px !important;
+}
+
+/* Cards, White Containers, Panels & Elevated Surfaces Curved */
+.bg-white.border,
+.bg-white.shadow-sm,
+.bg-white.shadow-md,
+.bg-white.shadow-lg,
+.bg-white.shadow-xl,
+.bg-white.shadow-2xl,
+.bg-slate-50.border,
+.bg-slate-100.border,
+.bg-amber-50.border,
+.bg-blue-50.border,
+.bg-red-50.border,
+.bg-emerald-50.border {
+  border-radius: 12px !important;
+}
+
+/* Modals & Dialog Boxes Curved */
+[role="dialog"] > div,
+.fixed.inset-0 > div {
+  border-radius: 16px !important;
+}
+
+/* Tables & Data Grid Containers Curved */
+table {
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+  border-radius: 10px !important;
+  overflow: hidden !important;
+}
+
+/* Curved Table Header & Footer Corners */
+thead tr:first-child th:first-child {
+  border-top-left-radius: 10px !important;
+}
+thead tr:first-child th:last-child {
+  border-top-right-radius: 10px !important;
+}
+tbody tr:last-child td:first-child {
+  border-bottom-left-radius: 10px !important;
+}
+tbody tr:last-child td:last-child {
+  border-bottom-right-radius: 10px !important;
+}
+
+/* Pills, Badges, Labels, and Tags Curved */
+span.badge,
+span[class*="px-"][class*="py-"][class*="bg-"] {
+  border-radius: 6px !important;
+}
+
+/* Dropdown menus & Popups Curved */
+[class*="shadow-xl"],
+[class*="shadow-2xl"] {
+  border-radius: 12px !important;
+}
+
+/* Overwrite any legacy rounded-none utility class so it stays curved */
+.rounded-none {
+  border-radius: 10px !important;
+}
+
+/* Retain full circular shapes for avatars, status dots, and round icons */
+.rounded-full,
+[class*="rounded-full"] {
+  border-radius: 9999px !important;
+}
+
+/* Keep full-width sticky navigation bars edge-to-edge with the browser */
+header,
+header.sticky {
   border-radius: 0px !important;
 }
 

@@ -85,7 +85,7 @@ export const GoogleMapsTracker: React.FC<GoogleMapsTrackerProps> = ({
       {/* 1. CLEAN TELEMETRY HEADER */}
       <div className="bg-slate-900 text-white px-4 py-3 flex flex-wrap items-center justify-between gap-3 border-b border-slate-800">
         <div className="flex items-center space-x-2.5">
-          <div className="w-7 h-7 bg-blue-600 rounded-none flex items-center justify-center text-white">
+          <div className="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center text-white">
             <Navigation className="w-4 h-4" />
           </div>
           <div>

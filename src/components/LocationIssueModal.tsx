@@ -80,11 +80,11 @@ export const LocationIssueModal: React.FC<LocationIssueModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-none shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
         
         {/* Modal Header */}
         <div className="bg-amber-500 text-white p-5 flex items-center space-x-3">
-          <div className="bg-white/20 p-2.5 rounded-none">
+          <div className="bg-white/20 p-2.5 rounded-xl">
             <AlertTriangle className="w-6 h-6 text-white" />
           </div>
           <div>
@@ -97,12 +97,12 @@ export const LocationIssueModal: React.FC<LocationIssueModalProps> = ({
 
         {successResult ? (
           <div className="p-6 text-center space-y-4">
-            <div className="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-none flex items-center justify-center mx-auto">
+            <div className="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
               <CheckCircle2 className="w-8 h-8" />
             </div>
             <h4 className="text-lg font-bold text-slate-800">Coordinates Reassigned!</h4>
             <p className="text-sm text-slate-600">{successResult.message}</p>
-            <div className="bg-slate-50 p-3 rounded-none border border-slate-200 text-xs text-left space-y-1">
+            <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs text-left space-y-1">
               <div><strong>Driver Status:</strong> <span className="text-emerald-600">Push Notification Dispatched</span></div>
               <div><strong>Route Recalculation:</strong> Adjusted (+{successResult.distanceDeltaKm} km)</div>
             </div>
@@ -111,14 +111,14 @@ export const LocationIssueModal: React.FC<LocationIssueModalProps> = ({
                 setSuccessResult(null);
                 onClose();
               }}
-              className="w-full bg-slate-900 hover:bg-slate-800 text-white py-2.5 rounded-none font-semibold text-sm transition-colors"
+              className="w-full bg-slate-900 hover:bg-slate-800 text-white py-2.5 rounded-xl font-semibold text-sm transition-colors"
             >
               Done & Return to Commute
             </button>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="p-6 space-y-4">
-            <div className="bg-slate-50 p-3 rounded-none border border-slate-200 text-xs text-slate-600">
+            <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs text-slate-600">
               <span className="font-bold text-slate-700">Current Scheduled Point:</span>
               <p className="mt-0.5 text-slate-500">{currentAddress}</p>
             </div>
@@ -136,7 +136,7 @@ export const LocationIssueModal: React.FC<LocationIssueModalProps> = ({
                     setLat('12.9784');
                     setLng('77.6386');
                   }}
-                  className="p-2 text-left border rounded-none hover:border-blue-500 hover:bg-blue-50 transition-colors"
+                  className="p-2 text-left border rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
                 >
                   🚇 Metro Station Gate A
                 </button>
@@ -147,7 +147,7 @@ export const LocationIssueModal: React.FC<LocationIssueModalProps> = ({
                     setLat('12.9725');
                     setLng('77.6430');
                   }}
-                  className="p-2 text-left border rounded-none hover:border-blue-500 hover:bg-blue-50 transition-colors"
+                  className="p-2 text-left border rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
                 >
                   📍 100ft Rd Main Junction
                 </button>
@@ -166,7 +166,7 @@ export const LocationIssueModal: React.FC<LocationIssueModalProps> = ({
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
                   placeholder="e.g., Gate 1 / Near Indiranagar Club"
-                  className="w-full pl-9 pr-3 py-2 text-sm border border-slate-300 rounded-none focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  className="w-full pl-9 pr-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 />
               </div>
             </div>
@@ -178,7 +178,7 @@ export const LocationIssueModal: React.FC<LocationIssueModalProps> = ({
                   type="text"
                   value={lat}
                   onChange={(e) => setLat(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-none focus:ring-2 focus:ring-blue-500 focus:outline-none font-mono text-xs"
+                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none font-mono text-xs"
                 />
               </div>
               <div>
@@ -187,7 +187,7 @@ export const LocationIssueModal: React.FC<LocationIssueModalProps> = ({
                   type="text"
                   value={lng}
                   onChange={(e) => setLng(e.target.value)}
-                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-none focus:ring-2 focus:ring-blue-500 focus:outline-none font-mono text-xs"
+                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none font-mono text-xs"
                 />
               </div>
             </div>
@@ -201,7 +201,7 @@ export const LocationIssueModal: React.FC<LocationIssueModalProps> = ({
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 placeholder="Brief reason for driver and transport desk..."
-                className="w-full p-2.5 text-sm border border-slate-300 rounded-none focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                className="w-full p-2.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
               />
             </div>
 
@@ -209,14 +209,14 @@ export const LocationIssueModal: React.FC<LocationIssueModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="w-1/2 py-2.5 border border-slate-300 rounded-none text-slate-700 hover:bg-slate-50 font-semibold text-sm transition-colors"
+                className="w-1/2 py-2.5 border border-slate-300 rounded-xl text-slate-700 hover:bg-slate-50 font-semibold text-sm transition-colors"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={loading}
-                className="w-1/2 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-none font-semibold text-sm transition-all flex items-center justify-center space-x-2 disabled:opacity-50"
+                className="w-1/2 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold text-sm transition-all flex items-center justify-center space-x-2 disabled:opacity-50"
               >
                 {loading ? (
                   <span>Reassigning...</span>
