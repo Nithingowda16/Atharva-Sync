@@ -466,17 +466,21 @@ export default function ETSPortal() {
   const [isSosActive, setIsSosActive] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Live Database Synchronized State (Trips, Telemetry & SOS Alerts)
+  // Live Database Synchronized State (Trips, Telemetry & SOS Alerts & Ride Requests)
   const [dbTrips, setDbTrips] = useState<any[]>([]);
   const [liveFleet, setLiveFleet] = useState<any[]>([]);
   const [activeAlerts, setActiveAlerts] = useState<any[]>([]);
+  const [rideRequests, setRideRequests] = useState<any[]>([]);
+  const [requestFilter, setRequestFilter] = useState<'ALL' | 'PENDING_ADMIN' | 'PUSHED_TO_VENDOR' | 'ASSIGNED_BY_VENDOR'>('ALL');
+  const [isPushingRequest, setIsPushingRequest] = useState<string | null>(null);
 
   const fetchLiveBackendTrips = async () => {
     try {
-      const [tripsRes, telemRes, sosRes] = await Promise.all([
+      const [tripsRes, telemRes, sosRes, reqsRes] = await Promise.all([
         fetch('/api/trips'),
         fetch('/api/telemetry'),
         fetch('/api/sos'),
+        fetch('/api/portal/requests'),
       ]);
 
       if (tripsRes.ok) {
@@ -498,7 +502,124 @@ export default function ETSPortal() {
           setActiveAlerts(actives);
         }
       }
+
+      if (reqsRes.ok) {
+        const data = await reqsRes.json();
+        if (data.requests) {
+          setRideRequests(data.requests);
+          // Auto-sync pushed requests into Vendor Portal routesList
+          const pushedReqs = data.requests.filter(
+            (r: any) => r.status === 'PUSHED_TO_VENDOR' || r.status === 'ASSIGNED_BY_VENDOR'
+          );
+          if (pushedReqs.length > 0) {
+            setRoutesList((prev) => {
+              let updated = [...prev];
+              for (const req of pushedReqs) {
+                const routeId = req.bookingCode.replace('REQ-', 'RO-');
+                const existingIdx = updated.findIndex((r) => r.routeId === routeId);
+                const isAllocated = req.status === 'ASSIGNED_BY_VENDOR';
+                if (existingIdx === -1) {
+                  updated.unshift({
+                    routeId,
+                    status: isAllocated ? 'ALLOCATED' : 'PENDING',
+                    firstPickup: req.pickupAddress,
+                    firstPickupTime: req.shiftTime,
+                    drop: req.dropAddress,
+                    distanceKm: '14.8 Km',
+                    assignedCount: isAllocated ? 1 : 0,
+                    totalCapacity: 4,
+                    assignedCabPlate: req.assignedCabPlate,
+                    assignedDriver: req.assignedDriverName,
+                    assignedDriverPhone: req.assignedDriverPhone,
+                    passengers: [
+                      {
+                        empCode: req.employeeCode,
+                        name: req.employeeName,
+                        pickupNode: req.pickupAddress,
+                        pickupTime: req.shiftTime,
+                        phone: req.employeePhone,
+                        pin: req.boardingOtp || '7492',
+                      },
+                    ],
+                  });
+                } else if (isAllocated && updated[existingIdx].status !== 'ALLOCATED') {
+                  updated[existingIdx] = {
+                    ...updated[existingIdx],
+                    status: 'ALLOCATED',
+                    assignedCount: 1,
+                    assignedCabPlate: req.assignedCabPlate,
+                    assignedDriver: req.assignedDriverName,
+                    assignedDriverPhone: req.assignedDriverPhone,
+                  };
+                }
+              }
+              return updated;
+            });
+          }
+        }
+      }
     } catch (e) {}
+  };
+
+  const handleAdminPushToVendor = async (requestId: string, targetVendor: string = 'Eco Rent a Car') => {
+    try {
+      setIsPushingRequest(requestId);
+      const res = await fetch('/api/portal/requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'push_to_vendor',
+          requestId,
+          targetVendor,
+          adminActor: currentUser ? `${currentUser.fullName} (${currentUser.staffCode || currentUser.email})` : 'Atharva Super Admin',
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        showToast(`✅ Pushed #${data.request?.bookingCode || requestId} to Vendor Portal (${targetVendor}) for Cab Allocation!`);
+        await fetchLiveBackendTrips();
+      }
+    } catch (e) {
+      showToast('Error pushing request to Vendor Portal');
+    } finally {
+      setIsPushingRequest(null);
+    }
+  };
+
+  const handleSimulateEmployeeBooking = async () => {
+    try {
+      const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+      const names = ['Kavita Sundaram', 'Amrutha Rao', 'Priya Sharma', 'Rahul Sen', 'Deepak Verma'];
+      const chosenName = names[Math.floor(Math.random() * names.length)];
+      const res = await fetch('/api/portal/requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'create_request',
+          employeeId: `EMP-${randomSuffix}`,
+          employeeCode: `EMP-${randomSuffix}`,
+          employeeName: chosenName,
+          employeePhone: `+91 98450 ${Math.floor(10000 + Math.random() * 90000)}`,
+          department: 'Enterprise Engineering',
+          direction: 'LOGIN',
+          shiftDate: new Date().toISOString().split('T')[0],
+          shiftTime: '13:30',
+          officeCampus: 'Enterprise Tech Park, Tower B',
+          pickupAddress: 'HAL 2nd Stage, Indiranagar',
+          dropAddress: 'Enterprise Tech Park, Tower B',
+          bookingType: 'REGULAR_SHIFT',
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        showToast(`📱 Employee App booked ride! New request #${data.request?.bookingCode} arrived in Admin Queue.`);
+        await fetchLiveBackendTrips();
+      }
+    } catch (e) {
+      showToast('Error simulating booking');
+    }
   };
 
   useEffect(() => {
@@ -758,6 +879,27 @@ export default function ETSPortal() {
       if (res.ok) {
         const data = await res.json();
         showToast(`✅ Trip #${data.trip?.tripCode || routeId} created in Database! Cab ${cab.plate} allocated & dispatched to Driver ${cab.driver}.`);
+
+        // If this route originated from an employee ride request, update it to ASSIGNED_BY_VENDOR
+        const matchingReq = rideRequests.find(
+          (r) => r.bookingCode.replace('REQ-', 'RO-') === routeId || r.id === routeId || r.bookingCode === routeId
+        );
+        if (matchingReq) {
+          await fetch('/api/portal/requests', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'assign_cab',
+              requestId: matchingReq.id,
+              cabPlate: cab.plate,
+              driverId: cab.driver.includes('Suresh') ? 'drv-suresh' : cab.driver.includes('Mahesh') ? 'drv-mahesh' : 'drv-venkatesh',
+              driverName: cab.driver,
+              driverPhone: cab.phone,
+              vendorActor: 'Corporate Vendor Desk (Eco Rent a Car)',
+            }),
+          }).catch(() => {});
+        }
+
         fetchLiveBackendTrips();
       }
     } catch (e) {
@@ -2978,6 +3120,231 @@ export default function ETSPortal() {
                 </div>
               </div>
             )}
+
+            {/* INCOMING EMPLOYEE RIDE REQUESTS & ROSTER PIPELINE */}
+            <div className="bg-white border border-slate-200 p-5 shadow-sm space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                <div className="flex items-center space-x-2.5">
+                  <div className="w-8 h-8 bg-blue-100 text-blue-800 flex items-center justify-center font-black">
+                    <Smartphone className="w-4 h-4 text-blue-700" />
+                  </div>
+                  <div>
+                    <div className="flex items-center space-x-2">
+                      <h3 className="font-black text-sm text-slate-900 tracking-tight">
+                        Incoming Employee Ride Requests & Roster Queue
+                      </h3>
+                      {rideRequests.filter((r) => r.status === 'PENDING_ADMIN').length > 0 && (
+                        <span className="bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider animate-pulse">
+                          {rideRequests.filter((r) => r.status === 'PENDING_ADMIN').length} Awaiting Vendor Push
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Live requests from Employee Commuter Mobile Apps. Review and push to Vendor Portal for Cab &amp; Driver allocation.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={handleSimulateEmployeeBooking}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3 py-1.5 transition-colors flex items-center space-x-1.5 shadow-xs"
+                  >
+                    <Smartphone className="w-3.5 h-3.5" />
+                    <span>+ Simulate Employee Ride Booking</span>
+                  </button>
+                  <button
+                    onClick={fetchLiveBackendTrips}
+                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs p-1.5 border border-slate-300"
+                    title="Refresh Requests"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Filter Tabs: ALL | PENDING_ADMIN | PUSHED_TO_VENDOR | ASSIGNED_BY_VENDOR */}
+              <div className="flex items-center space-x-2 text-xs font-semibold">
+                <button
+                  onClick={() => setRequestFilter('ALL')}
+                  className={`px-3 py-1 border transition-all ${
+                    requestFilter === 'ALL'
+                      ? 'bg-slate-900 text-white border-slate-900'
+                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                  }`}
+                >
+                  All Requests ({rideRequests.length})
+                </button>
+                <button
+                  onClick={() => setRequestFilter('PENDING_ADMIN')}
+                  className={`px-3 py-1 border transition-all ${
+                    requestFilter === 'PENDING_ADMIN'
+                      ? 'bg-amber-600 text-white border-amber-600'
+                      : 'bg-white text-amber-700 border-amber-200 hover:bg-amber-50'
+                  }`}
+                >
+                  Pending Admin Approval ({rideRequests.filter((r) => r.status === 'PENDING_ADMIN').length})
+                </button>
+                <button
+                  onClick={() => setRequestFilter('PUSHED_TO_VENDOR')}
+                  className={`px-3 py-1 border transition-all ${
+                    requestFilter === 'PUSHED_TO_VENDOR'
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'bg-white text-blue-700 border-blue-200 hover:bg-blue-50'
+                  }`}
+                >
+                  Pushed to Vendor ({rideRequests.filter((r) => r.status === 'PUSHED_TO_VENDOR').length})
+                </button>
+                <button
+                  onClick={() => setRequestFilter('ASSIGNED_BY_VENDOR')}
+                  className={`px-3 py-1 border transition-all ${
+                    requestFilter === 'ASSIGNED_BY_VENDOR'
+                      ? 'bg-emerald-700 text-white border-emerald-700'
+                      : 'bg-white text-emerald-800 border-emerald-200 hover:bg-emerald-50'
+                  }`}
+                >
+                  Cab &amp; Driver Assigned ({rideRequests.filter((r) => r.status === 'ASSIGNED_BY_VENDOR').length})
+                </button>
+              </div>
+
+              {/* Table of Requests */}
+              <div className="border border-slate-200 overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 text-slate-500 font-semibold uppercase tracking-wider border-b border-slate-200">
+                    <tr>
+                      <th className="py-2.5 px-3">Booking ID</th>
+                      <th className="py-2.5 px-3">Employee Details</th>
+                      <th className="py-2.5 px-3">Shift &amp; Direction</th>
+                      <th className="py-2.5 px-3">Pickup Address</th>
+                      <th className="py-2.5 px-3">Office Hub</th>
+                      <th className="py-2.5 px-3">Status Pipeline</th>
+                      <th className="py-2.5 px-3 text-right">Admin Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 font-medium">
+                    {rideRequests
+                      .filter((r) => (requestFilter === 'ALL' ? true : r.status === requestFilter))
+                      .map((req) => (
+                        <tr key={req.id} className="hover:bg-slate-50 transition-colors">
+                          <td className="py-3 px-3">
+                            <span className="font-mono font-black text-slate-900 block">{req.bookingCode}</span>
+                            <span className="text-[10px] text-slate-400 block">
+                              {new Date(req.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </td>
+                          <td className="py-3 px-3">
+                            <span className="font-black text-slate-900 block">{req.employeeName}</span>
+                            <span className="text-[11px] text-slate-500">
+                              {req.employeeCode} • {req.department}
+                            </span>
+                            <span className="text-[10px] font-mono text-slate-400 block">{req.employeePhone}</span>
+                          </td>
+                          <td className="py-3 px-3">
+                            <div className="flex items-center space-x-1.5">
+                              <span className="font-bold text-slate-800">{req.shiftTime}</span>
+                              <span
+                                className={`text-[10px] font-black px-1.5 py-0.2 ${
+                                  req.direction === 'LOGIN'
+                                    ? 'bg-blue-100 text-blue-800'
+                                    : 'bg-purple-100 text-purple-800'
+                                }`}
+                              >
+                                {req.direction}
+                              </span>
+                            </div>
+                            <span className="text-[10px] text-slate-500 block font-mono mt-0.5">{req.shiftDate}</span>
+                          </td>
+                          <td className="py-3 px-3 text-slate-700 max-w-[220px]">
+                            <div className="flex items-start space-x-1">
+                              <MapPin className="w-3 h-3 text-emerald-600 shrink-0 mt-0.5" />
+                              <span className="truncate">{req.pickupAddress}</span>
+                            </div>
+                          </td>
+                          <td className="py-3 px-3 text-slate-600">
+                            <div className="flex items-center space-x-1">
+                              <Building2 className="w-3 h-3 text-blue-600 shrink-0" />
+                              <span className="truncate">{req.officeCampus}</span>
+                            </div>
+                          </td>
+                          <td className="py-3 px-3">
+                            {req.status === 'PENDING_ADMIN' && (
+                              <span className="bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider inline-flex items-center space-x-1">
+                                <Clock className="w-3 h-3 text-amber-700" />
+                                <span>Awaiting Admin Review</span>
+                              </span>
+                            )}
+                            {req.status === 'PUSHED_TO_VENDOR' && (
+                              <div>
+                                <span className="bg-blue-100 text-blue-900 border border-blue-300 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider inline-flex items-center space-x-1">
+                                  <Send className="w-3 h-3 text-blue-700" />
+                                  <span>Pushed to {req.targetVendorName || 'Eco Rent a Car'}</span>
+                                </span>
+                                <span className="text-[10px] text-slate-400 block mt-0.5">Awaiting Cab Allocation</span>
+                              </div>
+                            )}
+                            {req.status === 'ASSIGNED_BY_VENDOR' && (
+                              <div>
+                                <span className="bg-emerald-100 text-emerald-900 border border-emerald-300 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider inline-flex items-center space-x-1">
+                                  <CheckCircle2 className="w-3 h-3 text-emerald-700" />
+                                  <span>Cab: {req.assignedCabPlate}</span>
+                                </span>
+                                <span className="text-[10px] text-slate-600 block mt-0.5">
+                                  Driver: <strong>{req.assignedDriverName}</strong>
+                                </span>
+                              </div>
+                            )}
+                          </td>
+                          <td className="py-3 px-3 text-right">
+                            {req.status === 'PENDING_ADMIN' && (
+                              <button
+                                onClick={() => handleAdminPushToVendor(req.id, 'Eco Rent a Car')}
+                                disabled={isPushingRequest === req.id}
+                                className="bg-[#0f5fc2] hover:bg-blue-700 text-white font-bold text-xs px-3 py-1.5 shadow-xs transition-colors flex items-center space-x-1 ml-auto"
+                              >
+                                <Send className="w-3 h-3" />
+                                <span>{isPushingRequest === req.id ? 'Pushing...' : 'Approve & Push to Vendor ➔'}</span>
+                              </button>
+                            )}
+
+                            {req.status === 'PUSHED_TO_VENDOR' && (
+                              <button
+                                onClick={() => {
+                                  setViewState('vendor-portal');
+                                  setActiveHeaderTab('ALLOCATE_CABS');
+                                  showToast('Switched to Vendor Portal Allocate Cabs queue');
+                                }}
+                                className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs px-2.5 py-1.5 shadow-xs transition-colors flex items-center space-x-1 ml-auto"
+                              >
+                                <span>Allocate Cab in Vendor ➔</span>
+                              </button>
+                            )}
+
+                            {req.status === 'ASSIGNED_BY_VENDOR' && (
+                              <button
+                                onClick={() => {
+                                  setViewState('driver-app');
+                                  showToast(`Switched to Driver Terminal for ${req.assignedDriverName}`);
+                                }}
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-2.5 py-1.5 shadow-xs transition-colors flex items-center space-x-1 ml-auto"
+                              >
+                                <span>View in Driver App ➔</span>
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+
+                    {rideRequests.filter((r) => (requestFilter === 'ALL' ? true : r.status === requestFilter)).length === 0 && (
+                      <tr>
+                        <td colSpan={7} className="text-center py-6 text-slate-400 text-xs">
+                          No ride requests found in this queue. Click &quot;+ Simulate Employee Ride Booking&quot; to test.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
 
             {/* RADAR MAP TRACKER (LIGHT BG CONTAINER) */}
             <div className="space-y-3">

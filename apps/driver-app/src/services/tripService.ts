@@ -6,21 +6,77 @@
 import { TripRecord, PassengerStop, PassengerStatus } from '../types';
 import { offlineStorage } from './offlineStorage';
 import { syncService } from './syncService';
+import { getApiBaseUrl, API_ENDPOINTS } from './apiConfig';
 
 export const tripService = {
   /**
    * Fetches the active trip for the logged in driver.
    * Checks offline cache first; if online, fetches from server and caches locally.
    */
-  async getActiveTrip(): Promise<TripRecord | null> {
+  async getActiveTrip(driverId?: string, vehiclePlate?: string): Promise<TripRecord | null> {
     const isOnline = syncService.getIsOnline();
     const cached = await offlineStorage.getActiveManifest();
 
-    if (!isOnline && cached) {
-      return cached;
+    if (isOnline) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3500);
+
+        const url = `${getApiBaseUrl()}${API_ENDPOINTS.DRIVER_MANIFEST}?driverId=${encodeURIComponent(
+          driverId || 'drv-suresh'
+        )}&plate=${encodeURIComponent(vehiclePlate || '')}`;
+
+        const res = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeoutId);
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data.tripManifest) {
+            const m = data.tripManifest;
+            const mapped: TripRecord = {
+              id: m.tripId,
+              tripCode: m.tripCode,
+              type: (m.type as any) || 'LOGIN',
+              shiftDate: m.shiftDate,
+              shiftTime: m.shiftTime,
+              corporateClient: 'Enterprise Tech Park, Tower B',
+              routeName: m.routeName || 'Indiranagar ➔ Enterprise Tech Park',
+              status: m.status === 'IN_TRANSIT' ? 'IN_TRANSIT' : 'SCHEDULED',
+              vehiclePlate: m.vehiclePlate || vehiclePlate || 'KA-03-HA-8821',
+              totalDistanceKm: 14.8,
+              estimatedMinutes: 35,
+              stops: (m.stops || []).map((s: any, idx: number) => ({
+                id: s.id,
+                employeeId: s.passengerId || s.empCode || `emp-${idx + 1}`,
+                name: s.name,
+                phone: s.phone,
+                sequence: s.sequence || idx + 1,
+                address: s.pickupAddress,
+                coords: s.pickupCoords || { latitude: 12.9719, longitude: 77.6412 },
+                scheduledTime: s.scheduledPickupTime || m.shiftTime,
+                boardingOtp: s.pin || '1234',
+                status: s.boardingStatus === 'BOARDED' ? 'BOARDED' : s.boardingStatus === 'NO_SHOW' ? 'NO_SHOW' : 'WAITING',
+                isReassigned: s.isLocationReassigned || false,
+                reassignmentReason: s.reassignmentDetails?.reason,
+              })),
+            };
+
+            await offlineStorage.saveActiveManifest(mapped);
+            return mapped;
+          } else {
+            // No trip assigned on server
+            if (cached && cached.status !== 'IN_TRANSIT') {
+              await offlineStorage.saveActiveManifest(null as any);
+              return null;
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('Driver trip manifest sync notice:', e);
+      }
     }
 
-    // If cached exists and is in progress, return it
+    // Return cached if exists
     if (cached) {
       return cached;
     }

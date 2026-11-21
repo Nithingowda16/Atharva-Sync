@@ -64,6 +64,12 @@ export const EmployeeMobileApp: React.FC<EmployeeMobileAppProps> = ({
   const [locationIssueReason, setLocationIssueReason] = useState('Gate closed / waiting 200m ahead');
   const [isSubmittingLocation, setIsSubmittingLocation] = useState(false);
   const [activeSOSModal, setActiveSOSModal] = useState(false);
+  const [pendingRequests, setPendingRequests] = useState<any[]>([]);
+  const [isBookModalOpen, setIsBookModalOpen] = useState(false);
+  const [bookShiftTime, setBookShiftTime] = useState('13:30');
+  const [bookDirection, setBookDirection] = useState<'LOGIN' | 'LOGOUT'>('LOGIN');
+  const [bookPickupInput, setBookPickupInput] = useState('Gate 2, Golden Palms Apts, Indiranagar 100ft Road');
+  const [isSubmittingBooking, setIsSubmittingBooking] = useState(false);
 
   // 1. Fetch live employee commute from database
   const fetchCommute = async () => {
@@ -71,6 +77,9 @@ export const EmployeeMobileApp: React.FC<EmployeeMobileAppProps> = ({
       const res = await fetch(`/api/mobile/employee/commute?employeeId=${encodeURIComponent(employeeId)}`);
       if (res.ok) {
         const data = await res.json();
+        if (data.pendingRequests) {
+          setPendingRequests(data.pendingRequests);
+        }
         if (data.activeCommute) {
           const c = data.activeCommute;
           setTripId(c.tripId);
@@ -97,6 +106,37 @@ export const EmployeeMobileApp: React.FC<EmployeeMobileAppProps> = ({
       }
     } catch (e) {
       console.warn('Could not fetch commute data:', e);
+    }
+  };
+
+  const handleBookRide = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmittingBooking(true);
+    try {
+      const res = await fetch('/api/mobile/employee/commute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          employeeId,
+          employeeName,
+          shiftDate: new Date().toISOString().split('T')[0],
+          shiftTime: bookShiftTime,
+          direction: bookDirection,
+          pickupAddress: bookPickupInput.trim(),
+          dropAddress: 'Enterprise Tech Park, Tower B',
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setIsBookModalOpen(false);
+        alert(`✅ Ride scheduled! Request #${data.bookingCode} pushed to Admin Portal for approval.`);
+        await fetchCommute();
+      }
+    } catch (err) {
+      alert('Error scheduling ride.');
+    } finally {
+      setIsSubmittingBooking(false);
     }
   };
 
@@ -270,6 +310,52 @@ export const EmployeeMobileApp: React.FC<EmployeeMobileAppProps> = ({
         {/* Main Body */}
         <div className="p-4 space-y-4">
           
+          {/* PENDING RIDE ALLOCATION NOTIFICATION */}
+          {pendingRequests.filter((r) => r.status === 'PENDING_ADMIN' || r.status === 'PUSHED_TO_VENDOR').length > 0 && (
+            <div className="bg-amber-50 border-2 border-amber-400 p-3.5 space-y-2 animate-in fade-in">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-black uppercase text-amber-900 tracking-wider flex items-center space-x-1.5">
+                  <Clock className="w-4 h-4 text-amber-600 animate-spin" />
+                  <span>Ride Scheduled • Allocation In Progress</span>
+                </span>
+                <span className="text-[10px] bg-amber-200 text-amber-950 font-bold px-2 py-0.5">
+                  {pendingRequests[0].status === 'PENDING_ADMIN' ? 'Awaiting Admin' : 'Pushed to Vendor'}
+                </span>
+              </div>
+              <p className="text-xs text-amber-900">
+                Booking <strong>#{pendingRequests[0].bookingCode}</strong> for <strong>{pendingRequests[0].shiftTime} {pendingRequests[0].direction}</strong> is currently queued.
+                {pendingRequests[0].status === 'PENDING_ADMIN'
+                  ? ' Waiting for Admin approval to push to vendor.'
+                  : ' Pushed to Vendor Portal for Cab & Chauffeur assignment.'}
+              </p>
+              {onSwitchPortal && (
+                <div className="flex space-x-2 pt-1">
+                  <button
+                    onClick={() => onSwitchPortal('admin-portal')}
+                    className="text-[11px] bg-blue-700 hover:bg-blue-800 text-white font-bold px-2.5 py-1"
+                  >
+                    View in Admin Portal ➔
+                  </button>
+                  <button
+                    onClick={() => onSwitchPortal('vendor-portal')}
+                    className="text-[11px] bg-amber-700 hover:bg-amber-800 text-white font-bold px-2.5 py-1"
+                  >
+                    View in Vendor Portal ➔
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* SCHEDULE NEW RIDE ACTION */}
+          <button
+            onClick={() => setIsBookModalOpen(true)}
+            className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs flex items-center justify-center space-x-2 tracking-wider uppercase shadow transition-colors"
+          >
+            <Calendar className="w-4 h-4" />
+            <span>Schedule / Book Another Ride</span>
+          </button>
+
           {/* Active Trip Header */}
           <div className="bg-slate-50 border border-slate-200 p-3 space-y-2">
             <div className="flex items-center justify-between text-xs">
@@ -410,6 +496,92 @@ export const EmployeeMobileApp: React.FC<EmployeeMobileAppProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Schedule / Book Ride Modal */}
+      {isBookModalOpen && (
+        <div className="fixed inset-0 bg-slate-950/80 z-50 flex items-center justify-center p-4">
+          <div className="bg-white border-4 border-slate-900 max-w-sm w-full p-5 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b pb-2">
+              <div className="flex items-center space-x-2">
+                <Calendar className="w-5 h-5 text-blue-600" />
+                <h4 className="font-black text-sm text-slate-900">Schedule Commute Ride</h4>
+              </div>
+              <button onClick={() => setIsBookModalOpen(false)} className="text-slate-400 hover:text-slate-800">
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleBookRide} className="space-y-3 text-xs">
+              <div>
+                <label className="text-[11px] font-bold text-slate-700 block mb-1">Direction</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setBookDirection('LOGIN')}
+                    className={`py-1.5 font-bold text-center border ${
+                      bookDirection === 'LOGIN' ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 text-slate-700 border-slate-300'
+                    }`}
+                  >
+                    LOGIN (To Office)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBookDirection('LOGOUT')}
+                    className={`py-1.5 font-bold text-center border ${
+                      bookDirection === 'LOGOUT' ? 'bg-purple-600 text-white border-purple-600' : 'bg-slate-50 text-slate-700 border-slate-300'
+                    }`}
+                  >
+                    LOGOUT (To Home)
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-slate-700 block mb-1">Shift Time</label>
+                <select
+                  value={bookShiftTime}
+                  onChange={(e) => setBookShiftTime(e.target.value)}
+                  className="w-full p-2 border border-slate-300 text-xs font-semibold bg-white"
+                >
+                  <option value="09:30">09:30 Shift</option>
+                  <option value="11:30">11:30 Shift</option>
+                  <option value="13:30">13:30 Shift</option>
+                  <option value="18:30">18:30 Shift</option>
+                  <option value="22:30">22:30 Night Shift (Escort Safeguard)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-slate-700 block mb-1">Pickup Address</label>
+                <input
+                  type="text"
+                  required
+                  value={bookPickupInput}
+                  onChange={(e) => setBookPickupInput(e.target.value)}
+                  className="w-full p-2 border border-slate-300 text-xs font-semibold focus:outline-none focus:border-blue-600"
+                />
+              </div>
+
+              <div className="pt-2 flex space-x-2">
+                <button
+                  type="button"
+                  onClick={() => setIsBookModalOpen(false)}
+                  className="flex-1 py-2 bg-slate-200 text-slate-700 font-bold text-xs"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingBooking}
+                  className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs shadow-xs"
+                >
+                  {isSubmittingBooking ? 'Submitting...' : 'Confirm & Request ➔'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Pickup Location Change Modal */}
       {isLocationModalOpen && (

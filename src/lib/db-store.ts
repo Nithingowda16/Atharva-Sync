@@ -194,10 +194,41 @@ export interface AuditLogRecord {
   timestamp: string;
 }
 
+export interface RideRequestRecord {
+  id: string;
+  bookingCode: string;
+  employeeId: string;
+  employeeCode: string;
+  employeeName: string;
+  employeePhone: string;
+  department: string;
+  direction: 'LOGIN' | 'LOGOUT';
+  shiftDate: string; // YYYY-MM-DD
+  shiftTime: string; // e.g. "13:30"
+  officeCampus: string;
+  pickupAddress: string;
+  pickupCoords: { latitude: number; longitude: number };
+  dropAddress: string;
+  dropCoords: { latitude: number; longitude: number };
+  bookingType: 'REGULAR_SHIFT' | 'FLEXI' | 'RENTALZ';
+  status: 'PENDING_ADMIN' | 'PUSHED_TO_VENDOR' | 'ASSIGNED_BY_VENDOR' | 'CANCELLED';
+  pushedToVendorAt?: string;
+  pushedByAdmin?: string;
+  targetVendorName?: string;
+  assignedCabPlate?: string;
+  assignedDriverName?: string;
+  assignedDriverPhone?: string;
+  assignedTripId?: string;
+  boardingOtp?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 interface DBData {
   trips: TripRecord[];
   vehicles: VehicleRecord[];
   drivers: DriverRecord[];
+  rideRequests: RideRequestRecord[];
   sosAlerts: SOSAlertRecord[];
   notifications: NotificationRecord[];
   auditLogs: AuditLogRecord[];
@@ -428,6 +459,52 @@ const SEED_DATA: DBData = {
       updatedAt: '2026-11-11T12:56:10.000Z',
     },
   ],
+  rideRequests: [
+    {
+      id: 'req-init-9042',
+      bookingCode: 'REQ-2026-9042',
+      employeeId: 'emp-amrutha',
+      employeeCode: 'EMP-9042',
+      employeeName: 'Amrutha Rao',
+      employeePhone: '+91 98450 11223',
+      department: 'Core Supply Chain & Logistics Engineering',
+      direction: 'LOGIN',
+      shiftDate: '2026-11-21',
+      shiftTime: '13:30',
+      officeCampus: 'Enterprise Tech Park, Tower B',
+      pickupAddress: 'Gate 2, Golden Palms Apts, Indiranagar 100ft Road',
+      pickupCoords: { latitude: 12.9719, longitude: 77.6412 },
+      dropAddress: 'Enterprise Tech Park, Tower B, Domlur',
+      dropCoords: { latitude: 12.9352, longitude: 77.6946 },
+      bookingType: 'REGULAR_SHIFT',
+      status: 'PENDING_ADMIN',
+      boardingOtp: '7492',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    {
+      id: 'req-init-9018',
+      bookingCode: 'REQ-2026-9018',
+      employeeId: 'emp-priya',
+      employeeCode: 'EMP-9018',
+      employeeName: 'Priya Sharma',
+      employeePhone: '+91 98711 22334',
+      department: 'Product Management',
+      direction: 'LOGIN',
+      shiftDate: '2026-11-21',
+      shiftTime: '13:30',
+      officeCampus: 'Enterprise Tech Park, Tower B',
+      pickupAddress: 'HAL 2nd Stage, 80ft Road, Indiranagar',
+      pickupCoords: { latitude: 12.98, longitude: 77.625 },
+      dropAddress: 'Enterprise Tech Park, Tower B, Domlur',
+      dropCoords: { latitude: 12.9352, longitude: 77.6946 },
+      bookingType: 'REGULAR_SHIFT',
+      status: 'PENDING_ADMIN',
+      boardingOtp: '3190',
+      createdAt: new Date(Date.now() - 3600000).toISOString(),
+      updatedAt: new Date(Date.now() - 3600000).toISOString(),
+    },
+  ],
   sosAlerts: [],
   notifications: [
     {
@@ -469,7 +546,11 @@ function ensureDataLoaded(): DBData {
 
     if (fs.existsSync(DATA_FILE)) {
       const raw = fs.readFileSync(DATA_FILE, 'utf-8');
-      inMemoryData = JSON.parse(raw);
+      const parsed = JSON.parse(raw);
+      if (!parsed.rideRequests) {
+        parsed.rideRequests = JSON.parse(JSON.stringify(SEED_DATA.rideRequests));
+      }
+      inMemoryData = parsed;
     } else {
       inMemoryData = JSON.parse(JSON.stringify(SEED_DATA));
       fs.writeFileSync(DATA_FILE, JSON.stringify(inMemoryData, null, 2), 'utf-8');
@@ -989,18 +1070,30 @@ export const db = {
   },
 
   // 8. MOBILE INTERFACE QUERIES
-  async getDriverManifest(driverIdOrPhone: string): Promise<{ activeTrip: TripRecord | null; driver: DriverRecord | null }> {
+  async getDriverManifest(driverIdOrPhone: string, vehiclePlate?: string): Promise<{ activeTrip: TripRecord | null; driver: DriverRecord | null }> {
     const data = ensureDataLoaded();
-    const driver = data.drivers.find(
+    let driver = data.drivers.find(
       (d) =>
         d.id === driverIdOrPhone ||
         d.userId === driverIdOrPhone ||
         d.phone.replace(/\s+/g, '') === driverIdOrPhone.replace(/\s+/g, '')
-    ) || data.drivers[0];
+    );
+
+    if (!driver && vehiclePlate) {
+      const cleanPlate = vehiclePlate.replace(/[^A-Za-z0-9]/g, '').toLowerCase();
+      const v = data.vehicles.find((veh) => veh.plateNumber.replace(/[^A-Za-z0-9]/g, '').toLowerCase() === cleanPlate);
+      if (v) {
+        driver = data.drivers.find((d) => d.assignedVehicleId === v.id);
+      }
+    }
+    if (!driver) {
+      driver = data.drivers[0];
+    }
 
     const activeTrip = data.trips.find(
       (t) =>
-        (t.driverId === driver?.id || t.driver.fullName === driver?.fullName) &&
+        ((driver && (t.driverId === driver.id || t.driver.fullName === driver.fullName)) ||
+         (vehiclePlate && t.vehicle.plateNumber.replace(/[^A-Za-z0-9]/g, '').toLowerCase() === vehiclePlate.replace(/[^A-Za-z0-9]/g, '').toLowerCase())) &&
         ['ASSIGNED', 'DRIVER_ACCEPTED', 'DRIVER_ARRIVED', 'TRIP_STARTED', 'PASSENGER_BOARDING', 'IN_TRANSIT'].includes(
           t.status
         )
@@ -1012,8 +1105,17 @@ export const db = {
   async getEmployeeCommute(employeeIdOrCode: string): Promise<{
     activeTrip: TripRecord | null;
     passenger: PassengerRecord | null;
+    pendingRequests: RideRequestRecord[];
   }> {
     const data = ensureDataLoaded();
+    const pendingRequests = (data.rideRequests || []).filter(
+      (r) =>
+        (r.employeeId === employeeIdOrCode ||
+         r.employeeCode.toLowerCase() === employeeIdOrCode.toLowerCase() ||
+         r.employeeName.toLowerCase().includes(employeeIdOrCode.toLowerCase())) &&
+        ['PENDING_ADMIN', 'PUSHED_TO_VENDOR', 'ASSIGNED_BY_VENDOR'].includes(r.status)
+    );
+
     for (const trip of data.trips) {
       if (['ASSIGNED', 'DRIVER_ACCEPTED', 'DRIVER_ARRIVED', 'TRIP_STARTED', 'PASSENGER_BOARDING', 'IN_TRANSIT'].includes(trip.status)) {
         const pax = trip.passengers.find(
@@ -1023,7 +1125,7 @@ export const db = {
             p.fullName.toLowerCase().includes(employeeIdOrCode.toLowerCase())
         );
         if (pax) {
-          return { activeTrip: trip, passenger: pax };
+          return { activeTrip: trip, passenger: pax, pendingRequests };
         }
       }
     }
@@ -1032,10 +1134,243 @@ export const db = {
     const defaultTrip = data.trips[0];
     const defaultPax = defaultTrip ? defaultTrip.passengers[1] || defaultTrip.passengers[0] : null;
 
-    return { activeTrip: defaultTrip || null, passenger: defaultPax || null };
+    return { activeTrip: defaultTrip || null, passenger: defaultPax || null, pendingRequests };
   },
 
-  // 9. FLEET & COMPLIANCE
+  // 9. RIDE REQUEST PIPELINE (EMPLOYEE -> ADMIN -> VENDOR -> DRIVER)
+  async getRideRequests(filters?: {
+    status?: 'PENDING_ADMIN' | 'PUSHED_TO_VENDOR' | 'ASSIGNED_BY_VENDOR' | 'CANCELLED';
+    employeeId?: string;
+    shiftDate?: string;
+  }): Promise<RideRequestRecord[]> {
+    const data = ensureDataLoaded();
+    let list = [...(data.rideRequests || [])];
+    if (filters?.status) list = list.filter((r) => r.status === filters.status);
+    if (filters?.employeeId) list = list.filter((r) => r.employeeId === filters.employeeId || r.employeeCode === filters.employeeId);
+    if (filters?.shiftDate) list = list.filter((r) => r.shiftDate === filters.shiftDate);
+    return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  },
+
+  async createRideRequest(payload: {
+    employeeId: string;
+    employeeCode?: string;
+    employeeName: string;
+    employeePhone?: string;
+    department?: string;
+    direction: 'LOGIN' | 'LOGOUT';
+    shiftDate: string;
+    shiftTime: string;
+    officeCampus?: string;
+    pickupAddress: string;
+    pickupCoords?: { latitude: number; longitude: number };
+    dropAddress?: string;
+    dropCoords?: { latitude: number; longitude: number };
+    bookingType?: 'REGULAR_SHIFT' | 'FLEXI' | 'RENTALZ';
+  }): Promise<RideRequestRecord> {
+    const data = ensureDataLoaded();
+    const reqId = `req-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
+    const bookingCode = `REQ-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    const newRequest: RideRequestRecord = {
+      id: reqId,
+      bookingCode,
+      employeeId: payload.employeeId,
+      employeeCode: payload.employeeCode || payload.employeeId,
+      employeeName: payload.employeeName,
+      employeePhone: payload.employeePhone || '+91 98450 11223',
+      department: payload.department || 'Operations',
+      direction: payload.direction,
+      shiftDate: payload.shiftDate,
+      shiftTime: payload.shiftTime,
+      officeCampus: payload.officeCampus || 'Enterprise Tech Park, Tower B',
+      pickupAddress: payload.pickupAddress,
+      pickupCoords: payload.pickupCoords || { latitude: 12.9719, longitude: 77.6412 },
+      dropAddress: payload.dropAddress || 'Enterprise Tech Park, Tower B',
+      dropCoords: payload.dropCoords || { latitude: 12.9352, longitude: 77.6946 },
+      bookingType: payload.bookingType || 'REGULAR_SHIFT',
+      status: 'PENDING_ADMIN',
+      boardingOtp: `${Math.floor(1000 + Math.random() * 9000)}`,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    if (!data.rideRequests) data.rideRequests = [];
+    data.rideRequests.unshift(newRequest);
+
+    // Notify Admin of incoming employee booking
+    data.notifications.unshift({
+      id: `notif-${Date.now()}`,
+      recipientRole: 'ADMIN',
+      title: '📥 New Employee Ride Scheduled',
+      body: `${payload.employeeName} scheduled a ${payload.direction} ride for ${payload.shiftDate} at ${payload.shiftTime}. Awaiting Admin Review.`,
+      type: 'TRIP_ASSIGNED',
+      read: false,
+      createdAt: new Date().toISOString(),
+    });
+
+    data.auditLogs.unshift({
+      id: `audit-${Date.now()}`,
+      actor: `${payload.employeeName} (${payload.employeeCode || payload.employeeId})`,
+      actorRole: 'EMPLOYEE',
+      action: 'BOOK_COMMUTE',
+      resource: 'RIDE_REQUEST',
+      resourceId: reqId,
+      newState: newRequest,
+      timestamp: new Date().toISOString(),
+    });
+
+    persistData();
+    return newRequest;
+  },
+
+  async pushRequestToVendor(requestId: string, targetVendor: string = 'Eco Rent a Car', adminActor: string = 'Atharva Admin'): Promise<RideRequestRecord> {
+    const data = ensureDataLoaded();
+    const req = (data.rideRequests || []).find((r) => r.id === requestId || r.bookingCode === requestId);
+    if (!req) throw new Error(`Ride request ${requestId} not found.`);
+
+    req.status = 'PUSHED_TO_VENDOR';
+    req.targetVendorName = targetVendor;
+    req.pushedByAdmin = adminActor;
+    req.pushedToVendorAt = new Date().toISOString();
+    req.updatedAt = new Date().toISOString();
+
+    data.notifications.unshift({
+      id: `notif-${Date.now()}`,
+      recipientRole: 'ADMIN',
+      title: '➔ Pushed to Vendor Portal',
+      body: `Booking ${req.bookingCode} for ${req.employeeName} pushed to ${targetVendor} for Cab Allocation.`,
+      type: 'TRIP_ASSIGNED',
+      read: false,
+      createdAt: new Date().toISOString(),
+    });
+
+    data.auditLogs.unshift({
+      id: `audit-${Date.now()}`,
+      actor: adminActor,
+      actorRole: 'SUPER_ADMIN',
+      action: 'PUSH_TO_VENDOR',
+      resource: 'RIDE_REQUEST',
+      resourceId: req.id,
+      newState: { targetVendor, status: 'PUSHED_TO_VENDOR' },
+      timestamp: new Date().toISOString(),
+    });
+
+    persistData();
+    return req;
+  },
+
+  async assignVendorToRequest(params: {
+    requestId: string;
+    cabPlate: string;
+    driverId?: string;
+    driverName?: string;
+    driverPhone?: string;
+    vendorActor?: string;
+  }): Promise<{ request: RideRequestRecord; trip: TripRecord }> {
+    const data = ensureDataLoaded();
+    const req = (data.rideRequests || []).find((r) => r.id === params.requestId || r.bookingCode === params.requestId);
+    if (!req) throw new Error(`Ride request ${params.requestId} not found.`);
+
+    const vehicle = data.vehicles.find((v) => v.plateNumber === params.cabPlate) || {
+      id: `veh-${Date.now()}`,
+      plateNumber: params.cabPlate,
+      make: 'Toyota',
+      model: 'Innova Crysta',
+      color: 'Pearl White',
+      seatingCapacity: 4,
+      fleetType: 'PREMIUM_MUV',
+      insuranceExpiry: '2028-12-31',
+      fitnessExpiry: '2028-12-31',
+      permitExpiry: '2028-12-31',
+      pollutionExpiry: '2027-12-31',
+      isActive: true,
+      complianceStatus: 'VALID' as const,
+    };
+
+    const driver = data.drivers.find((d) => d.id === params.driverId || d.fullName === params.driverName) || {
+      id: params.driverId || 'drv-suresh',
+      userId: `usr-${Date.now()}`,
+      fullName: params.driverName || 'Suresh Babu',
+      phone: params.driverPhone || '+91 98765 43210',
+      licenseNumber: 'KA-03-2018-009124',
+      licenseExpiry: '2032-05-15',
+      rating: 4.92,
+      totalTripsCompleted: 840,
+      dutyStatus: 'ON_TRIP' as const,
+      assignedVehicleId: vehicle.id,
+      currentLocation: {
+        latitude: req.pickupCoords.latitude,
+        longitude: req.pickupCoords.longitude,
+        heading: 45,
+        speed: 30,
+        lastUpdated: new Date().toISOString(),
+      },
+    };
+
+    // Create or append to TripRecord
+    const trip = await db.createTrip({
+      shiftDate: req.shiftDate,
+      shiftTime: req.shiftTime,
+      type: req.direction,
+      corporateClient: req.officeCampus,
+      routeName: `${req.pickupAddress} ➔ ${req.dropAddress}`,
+      vehicleId: vehicle.id,
+      driverId: driver.id,
+      passengers: [
+        {
+          employeeId: req.employeeId,
+          employeeCode: req.employeeCode,
+          fullName: req.employeeName,
+          phone: req.employeePhone,
+          gender: 'FEMALE',
+          femaleSafeguard: true,
+          department: req.department,
+          pickupAddress: req.pickupAddress,
+          pickupCoords: req.pickupCoords,
+          dropAddress: req.dropAddress,
+          dropCoords: req.dropCoords,
+          scheduledPickupTime: req.shiftTime,
+        },
+      ],
+      actor: params.vendorActor || 'Vendor Desk (Eco Rent a Car)',
+    });
+
+    // Update the request
+    req.status = 'ASSIGNED_BY_VENDOR';
+    req.assignedTripId = trip.id;
+    req.assignedCabPlate = vehicle.plateNumber;
+    req.assignedDriverName = driver.fullName;
+    req.assignedDriverPhone = driver.phone;
+    req.boardingOtp = trip.passengers[0]?.boardingOtp || req.boardingOtp;
+    req.updatedAt = new Date().toISOString();
+
+    persistData();
+    return { request: req, trip };
+  },
+
+  async cancelRideRequest(requestId: string, reason?: string): Promise<RideRequestRecord> {
+    const data = ensureDataLoaded();
+    const req = (data.rideRequests || []).find((r) => r.id === requestId || r.bookingCode === requestId);
+    if (!req) throw new Error(`Ride request ${requestId} not found.`);
+
+    req.status = 'CANCELLED';
+    req.updatedAt = new Date().toISOString();
+
+    data.notifications.unshift({
+      id: `notif-${Date.now()}`,
+      recipientRole: 'ADMIN',
+      title: 'Ride Request Cancelled',
+      body: `Request ${req.bookingCode} for ${req.employeeName} was cancelled: ${reason || 'Employee cancelled'}.`,
+      type: 'TRIP_ASSIGNED',
+      read: false,
+      createdAt: new Date().toISOString(),
+    });
+
+    persistData();
+    return req;
+  },
+
+  // 10. FLEET & COMPLIANCE
   async getVehicles(): Promise<VehicleRecord[]> {
     const data = ensureDataLoaded();
     return data.vehicles;
@@ -1054,7 +1389,7 @@ export const db = {
     return data.notifications;
   },
 
-  // 10. REAL METRICS FOR REPORTS
+  // 11. REAL METRICS FOR REPORTS
   async getReportsMetrics() {
     const data = ensureDataLoaded();
     const totalTrips = data.trips.length;

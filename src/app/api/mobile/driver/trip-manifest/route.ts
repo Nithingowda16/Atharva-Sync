@@ -7,8 +7,9 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const driverId = searchParams.get('driverId') || 'drv-suresh';
+    const vehiclePlate = searchParams.get('plate') || searchParams.get('vehiclePlate') || undefined;
 
-    const { activeTrip, driver } = await db.getDriverManifest(driverId);
+    const { activeTrip, driver } = await db.getDriverManifest(driverId, vehiclePlate);
 
     if (!activeTrip) {
       return NextResponse.json({

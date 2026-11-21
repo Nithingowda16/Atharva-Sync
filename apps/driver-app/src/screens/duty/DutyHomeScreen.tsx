@@ -50,7 +50,7 @@ export const DutyHomeScreen: React.FC<DutyHomeScreenProps> = ({
   const loadData = async () => {
     setRefreshing(true);
     if (isOnDuty) {
-      const trip = await tripService.getActiveTrip();
+      const trip = await tripService.getActiveTrip(profile.id, profile.assignedVehiclePlate);
       setActiveTrip(trip);
     } else {
       setActiveTrip(null);
@@ -61,7 +61,15 @@ export const DutyHomeScreen: React.FC<DutyHomeScreenProps> = ({
 
   useEffect(() => {
     loadData();
-  }, [isOnDuty]);
+    const pollInterval = setInterval(() => {
+      if (isOnDuty) {
+        tripService.getActiveTrip(profile.id, profile.assignedVehiclePlate).then((trip) => {
+          setActiveTrip(trip);
+        });
+      }
+    }, 5000);
+    return () => clearInterval(pollInterval);
+  }, [isOnDuty, profile.id, profile.assignedVehiclePlate]);
 
   // Periodic contact timer simulation
   useEffect(() => {
