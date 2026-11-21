@@ -84,7 +84,7 @@ export const SideDrawer: React.FC<SideDrawerProps> = ({
 
             <View style={styles.headerInfo}>
               <View style={styles.plateBadge}>
-                <Text style={styles.plateText}>{profile.assignedVehiclePlate || 'KA-03-AB-6182'}</Text>
+                <Text style={styles.plateText}>{profile.assignedVehiclePlate || 'No Assigned Vehicle'}</Text>
               </View>
               <Text style={styles.hubText}>{hubCode}</Text>
             </View>

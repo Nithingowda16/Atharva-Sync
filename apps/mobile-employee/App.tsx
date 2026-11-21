@@ -189,12 +189,10 @@ export default function EmployeeApp() {
 
         {/* Co-Riders Manifest */}
         <View style={styles.coRidersBox}>
-          <Text style={styles.coRidersTitle}>CO-RIDERS IN THIS CAB</Text>
-          <Text style={styles.coRiderItem}>1. Priya Sharma • HAL 2nd Stage (Boarded ✓)</Text>
+          <Text style={styles.coRidersTitle}>PASSENGER ROSTER</Text>
           <Text style={[styles.coRiderItem, { fontWeight: 'bold', color: '#1e40af' }]}>
-            2. You ({commute.name}) • Indiranagar (Next Stop)
+            1. You ({commute.name}) • Indiranagar (Boarded ✓)
           </Text>
-          <Text style={styles.coRiderItem}>3. Karthik Natarajan • Domlur (Pending)</Text>
         </View>
       </ScrollView>
 

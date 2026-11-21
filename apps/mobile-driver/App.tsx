@@ -24,38 +24,16 @@ export default function DriverApp() {
 
   const [stops, setStops] = useState([
     {
-      id: 'p1',
-      name: 'Priya Sharma',
-      phone: '+91-98711-22334',
-      sequence: 1,
-      address: 'HAL 2nd Stage, 80ft Road',
-      coords: { lat: 12.9800, lng: 77.6250 },
-      status: 'BOARDED',
-      boardingOtp: '3190',
-      isReassigned: false,
-    },
-    {
       id: 'p2',
       name: 'Amrutha Rao',
       phone: '+91-98450-11223',
-      sequence: 2,
+      sequence: 1,
       address: 'Indiranagar 100ft Road (Near Metro Pillar 42)',
       coords: { lat: 12.9725, lng: 77.6430 },
       status: 'SCHEDULED',
       boardingOtp: '7492',
       isReassigned: true, // Triggered dynamic location update
       reassignmentReason: 'Gate 2 waterlogging. Shifted 300m to Metro Pillar 42.',
-    },
-    {
-      id: 'p3',
-      name: 'Karthik Natarajan',
-      phone: '+91-99887-33445',
-      sequence: 3,
-      address: 'Domlur Layout, Inner Ring Road',
-      coords: { lat: 12.9620, lng: 77.6480 },
-      status: 'SCHEDULED',
-      boardingOtp: '5821',
-      isReassigned: false,
     },
   ]);
 

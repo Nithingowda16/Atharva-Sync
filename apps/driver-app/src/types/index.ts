@@ -17,6 +17,7 @@ export interface DriverProfile {
   licenseExpiry: string;
   rating: number;
   totalTripsCompleted: number;
+  vendorName?: string;
   assignedVehicleId: string;
   assignedVehiclePlate: string;
   assignedVehicleModel: string;

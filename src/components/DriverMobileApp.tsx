@@ -49,7 +49,7 @@ interface DriverMobileAppProps {
   shiftTime?: string;
   initialPassengers?: DriverPassenger[];
   onPassengerBoarded?: (empCode: string, pin: string) => void;
-  onSwitchPortal?: (portal: 'vendor-portal' | 'admin-portal' | 'employee-app') => void;
+  onSwitchPortal?: (portal: 'vendor-portal' | 'employee-app') => void;
   onTriggerSOS?: () => void;
 }
 

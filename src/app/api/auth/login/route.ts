@@ -55,26 +55,6 @@ export async function POST(request: NextRequest) {
           phone: '+91 98450 11223',
           role: 'EMPLOYEE',
         },
-        {
-          id: 'emp-priya',
-          employeeId: 'EMP-9018',
-          employeeCode: 'EMP-9018',
-          fullName: 'Priya Sharma',
-          email: 'priya.sharma@walmart.internal',
-          department: 'Product Management',
-          phone: '+91 98711 22334',
-          role: 'EMPLOYEE',
-        },
-        {
-          id: 'emp-karthik',
-          employeeId: 'EMP-9033',
-          employeeCode: 'EMP-9033',
-          fullName: 'Karthik Natarajan',
-          email: 'karthik.natarajan@walmart.internal',
-          department: 'Cloud Infrastructure & DevOps',
-          phone: '+91 99887 33445',
-          role: 'EMPLOYEE',
-        },
       ];
 
       const emp = EMPLOYEES.find(

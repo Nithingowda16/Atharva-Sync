@@ -29,7 +29,7 @@ interface EmployeeMobileAppProps {
   employeeCode?: string;
   employeeId?: string;
   companyName?: string;
-  onSwitchPortal?: (portal: 'vendor-portal' | 'admin-portal' | 'driver-app') => void;
+  onSwitchPortal?: (portal: 'vendor-portal' | 'driver-app') => void;
 }
 
 export const EmployeeMobileApp: React.FC<EmployeeMobileAppProps> = ({
@@ -44,17 +44,17 @@ export const EmployeeMobileApp: React.FC<EmployeeMobileAppProps> = ({
   const [employeeId, setEmployeeId] = useState(defaultId);
   const [companyName, setCompanyName] = useState(defaultCompany);
 
-  const [tripId, setTripId] = useState('trip-ath-8821');
-  const [tripCode, setTripCode] = useState('ATH-2026-00124');
+  const [tripId, setTripId] = useState('');
+  const [tripCode, setTripCode] = useState('');
   const [pickupAddress, setPickupAddress] = useState('Gate 2, Golden Palms Apts, Indiranagar 100ft Road, Bengaluru');
-  const [pickupCoords, setPickupCoords] = useState({ latitude: 12.9719, longitude: 77.6412 });
-  const [vehiclePlate, setVehiclePlate] = useState('KA-03-HA-8821');
-  const [vehicleModel, setVehicleModel] = useState('Toyota Innova Crysta (White AC)');
-  const [driverName, setDriverName] = useState('Suresh Babu');
-  const [driverPhone, setDriverPhone] = useState('+91 98765 43210');
-  const [driverRating, setDriverRating] = useState('4.9 ★');
-  const [driverLocation, setDriverLocation] = useState({ latitude: 12.976, longitude: 77.632 });
-  const [boardingPin, setBoardingPin] = useState('7492');
+  const [pickupCoords, setPickupCoords] = useState<{ latitude: number; longitude: number }>({ latitude: 12.9719, longitude: 77.6412 });
+  const [vehiclePlate, setVehiclePlate] = useState('');
+  const [vehicleModel, setVehicleModel] = useState('');
+  const [driverName, setDriverName] = useState('');
+  const [driverPhone, setDriverPhone] = useState('');
+  const [driverRating, setDriverRating] = useState('');
+  const [driverLocation, setDriverLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [boardingPin, setBoardingPin] = useState('');
   const [boardedState, setBoardedState] = useState<boolean>(false);
   const [tripStatus, setTripStatus] = useState<string>('IN_TRANSIT');
   const [showShareToast, setShowShareToast] = useState<boolean>(false);
@@ -335,16 +335,10 @@ export const EmployeeMobileApp: React.FC<EmployeeMobileAppProps> = ({
               {onSwitchPortal && (
                 <div className="flex space-x-2 pt-1">
                   <button
-                    onClick={() => onSwitchPortal('admin-portal')}
-                    className="text-[11px] bg-blue-700 hover:bg-blue-800 text-white font-bold px-2.5 py-1"
-                  >
-                    View in Admin Portal ➔
-                  </button>
-                  <button
                     onClick={() => onSwitchPortal('vendor-portal')}
-                    className="text-[11px] bg-amber-700 hover:bg-amber-800 text-white font-bold px-2.5 py-1"
+                    className="text-[11px] bg-[#0f5fc2] hover:bg-blue-700 text-white font-bold px-3 py-1.5 rounded-lg"
                   >
-                    View in Vendor Portal ➔
+                    View in Operations Dashboard ➔
                   </button>
                 </div>
               )}

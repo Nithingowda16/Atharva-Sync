@@ -192,8 +192,8 @@ export const DutyHomeScreen: React.FC<DutyHomeScreenProps> = ({
       {/* Bottom Docked Bar (Screenshot 1) */}
       <View style={styles.bottomDock}>
         <View style={styles.dockLeft}>
-          <Text style={styles.vendorText}>ECO RENT A CAR - 10059</Text>
-          <Text style={styles.plateText}>{profile.assignedVehiclePlate || 'KA-03-AB-6182'}</Text>
+          <Text style={styles.vendorText}>{profile.vendorName || 'Atharva Fleet'}</Text>
+          <Text style={styles.plateText}>{profile.assignedVehiclePlate || 'No Assigned Vehicle'}</Text>
         </View>
 
         {isOnDuty ? (

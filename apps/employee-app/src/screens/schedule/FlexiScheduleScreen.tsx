@@ -50,56 +50,7 @@ interface EnRouteCab {
   direction: 'LOGIN' | 'LOGOUT';
 }
 
-const AVAILABLE_CABS: EnRouteCab[] = [
-  {
-    id: 'cab-live-8821',
-    tripCode: 'ATH-8821',
-    driverName: 'Suresh Babu',
-    driverPhone: '+91 98765 43210',
-    rating: 4.92,
-    vehiclePlate: 'KA-03-HA-8821',
-    vehicleModel: 'Toyota Innova Crysta',
-    vacantSeats: 3,
-    totalSeats: 6,
-    corridorName: 'Indiranagar 100ft Rd -> Domlur Flyover -> ORR Campus',
-    etaMinutes: 6,
-    speedKmH: 38,
-    currentStop: '100ft Road Metro Junction (1.2 km away)',
-    direction: 'LOGIN',
-  },
-  {
-    id: 'cab-live-4109',
-    tripCode: 'ATH-4109',
-    driverName: 'Ramesh Kumar',
-    driverPhone: '+91 98450 77123',
-    rating: 4.88,
-    vehiclePlate: 'KA-05-MB-4109',
-    vehicleModel: 'Toyota Etios (Sedan)',
-    vacantSeats: 1,
-    totalSeats: 4,
-    corridorName: 'Old Airport Rd -> HAL 2nd Stage -> Bellandur Hub',
-    etaMinutes: 11,
-    speedKmH: 42,
-    currentStop: 'Leela Palace Signal (2.8 km away)',
-    direction: 'LOGIN',
-  },
-  {
-    id: 'cab-live-9920',
-    tripCode: 'ATH-9920',
-    driverName: 'Vinod Prasad',
-    driverPhone: '+91 97411 22890',
-    rating: 4.95,
-    vehiclePlate: 'KA-01-MJ-9920',
-    vehicleModel: 'Tata Nexon EV (Green Fleet)',
-    vacantSeats: 2,
-    totalSeats: 4,
-    corridorName: 'CMH Road -> Indiranagar 100ft -> Bellandur Tech Park',
-    etaMinutes: 15,
-    speedKmH: 35,
-    currentStop: 'CMH Road Junction (4.1 km away)',
-    direction: 'LOGIN',
-  },
-];
+const AVAILABLE_CABS: EnRouteCab[] = [];
 
 export const FlexiScheduleScreen: React.FC<FlexiScheduleScreenProps> = ({
   user,
@@ -227,68 +178,80 @@ export const FlexiScheduleScreen: React.FC<FlexiScheduleScreenProps> = ({
 
         {/* Cabs List */}
         <View style={styles.cabsList}>
-          {AVAILABLE_CABS.map((cab) => (
-            <RoundedCard key={cab.id} style={styles.cabCard}>
-              {/* Card Top: Plate, ETA & Seats */}
-              <View style={styles.cabHeaderRow}>
-                <View>
-                  <Text style={styles.plateText}>{cab.vehiclePlate}</Text>
-                  <Text style={styles.modelText}>{cab.vehicleModel}</Text>
+          {AVAILABLE_CABS.length === 0 ? (
+            <View style={{ alignItems: 'center', justifyContent: 'center', padding: 32, backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: '#E2E8F0', marginTop: 12 }}>
+              <Ionicons name="car-outline" size={44} color="#94A3B8" />
+              <Text style={{ fontSize: 15, fontWeight: '700', color: '#1E293B', marginTop: 10 }}>
+                No En-Route Cabs Scanning
+              </Text>
+              <Text style={{ fontSize: 12, color: '#64748B', textAlign: 'center', marginTop: 4, lineHeight: 18 }}>
+                No active cabs currently scanning in this corridor. Use regular schedule to book.
+              </Text>
+            </View>
+          ) : (
+            AVAILABLE_CABS.map((cab) => (
+              <RoundedCard key={cab.id} style={styles.cabCard}>
+                {/* Card Top: Plate, ETA & Seats */}
+                <View style={styles.cabHeaderRow}>
+                  <View>
+                    <Text style={styles.plateText}>{cab.vehiclePlate}</Text>
+                    <Text style={styles.modelText}>{cab.vehicleModel}</Text>
+                  </View>
+
+                  <View style={styles.badgeGroup}>
+                    <View style={styles.etaPill}>
+                      <Ionicons name="time-outline" size={12} color="#000000" />
+                      <Text style={styles.etaPillText}>{cab.etaMinutes} MINS ETA</Text>
+                    </View>
+                    <View style={styles.seatsPill}>
+                      <Text style={styles.seatsPillText}>{cab.vacantSeats} Seats Left</Text>
+                    </View>
+                  </View>
                 </View>
 
-                <View style={styles.badgeGroup}>
-                  <View style={styles.etaPill}>
-                    <Ionicons name="time-outline" size={12} color="#000000" />
-                    <Text style={styles.etaPillText}>{cab.etaMinutes} MINS ETA</Text>
+                {/* Chauffeur & Corridor Info */}
+                <View style={styles.infoBox}>
+                  <View style={styles.chauffeurRow}>
+                    <View style={styles.avatarMini}>
+                      <Ionicons name="person" size={14} color="#000000" />
+                    </View>
+                    <Text style={styles.driverNameText}>{cab.driverName}</Text>
+                    <View style={styles.ratingBadge}>
+                      <Ionicons name="star" size={11} color="#EAB308" />
+                      <Text style={styles.ratingText}>{cab.rating}</Text>
+                    </View>
+                    <Text style={styles.speedText}>• {cab.speedKmH} km/h</Text>
                   </View>
-                  <View style={styles.seatsPill}>
-                    <Text style={styles.seatsPillText}>{cab.vacantSeats} Seats Left</Text>
+
+                  <View style={styles.corridorRow}>
+                    <Ionicons name="navigate-outline" size={13} color="#64748B" style={{ marginRight: 6 }} />
+                    <Text style={styles.corridorText} numberOfLines={1}>
+                      {cab.corridorName}
+                    </Text>
+                  </View>
+
+                  <View style={styles.currentStopRow}>
+                    <Ionicons name="radio-outline" size={13} color="#16A34A" style={{ marginRight: 6 }} />
+                    <Text style={styles.currentStopText} numberOfLines={1}>
+                      Near: {cab.currentStop}
+                    </Text>
                   </View>
                 </View>
-              </View>
 
-              {/* Chauffeur & Corridor Info */}
-              <View style={styles.infoBox}>
-                <View style={styles.chauffeurRow}>
-                  <View style={styles.avatarMini}>
-                    <Ionicons name="person" size={14} color="#000000" />
-                  </View>
-                  <Text style={styles.driverNameText}>{cab.driverName}</Text>
-                  <View style={styles.ratingBadge}>
-                    <Ionicons name="star" size={11} color="#EAB308" />
-                    <Text style={styles.ratingText}>{cab.rating}</Text>
-                  </View>
-                  <Text style={styles.speedText}>• {cab.speedKmH} km/h</Text>
-                </View>
-
-                <View style={styles.corridorRow}>
-                  <Ionicons name="navigate-outline" size={13} color="#64748B" style={{ marginRight: 6 }} />
-                  <Text style={styles.corridorText} numberOfLines={1}>
-                    {cab.corridorName}
+                {/* Request Seat Action Button */}
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  onPress={() => handleOpenConfirm(cab)}
+                  style={styles.requestButton}
+                >
+                  <Ionicons name="hand-right-outline" size={16} color="#FFFFFF" style={{ marginRight: 8 }} />
+                  <Text style={styles.requestButtonText}>
+                    Request Seat in this Cab ({cab.etaMinutes} min)
                   </Text>
-                </View>
-
-                <View style={styles.currentStopRow}>
-                  <Ionicons name="radio-outline" size={13} color="#16A34A" style={{ marginRight: 6 }} />
-                  <Text style={styles.currentStopText} numberOfLines={1}>
-                    Near: {cab.currentStop}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Request Seat Action Button */}
-              <TouchableOpacity
-                activeOpacity={0.85}
-                onPress={() => handleOpenConfirm(cab)}
-                style={styles.requestButton}
-              >
-                <Ionicons name="hand-right-outline" size={16} color="#FFFFFF" style={{ marginRight: 8 }} />
-                <Text style={styles.requestButtonText}>
-                  Request Seat in this Cab ({cab.etaMinutes} min)
-                </Text>
-              </TouchableOpacity>
-            </RoundedCard>
-          ))}
+                </TouchableOpacity>
+              </RoundedCard>
+            ))
+          )}
         </View>
       </ScrollView>
 

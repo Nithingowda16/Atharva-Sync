@@ -32,23 +32,7 @@ export const CompletedTripsScreen: React.FC<CompletedTripsScreenProps> = ({ onBa
       if (active && active.status === 'COMPLETED') {
         setCompletedList([active]);
       } else {
-        // Fallback default sample history item
-        setCompletedList([
-          {
-            id: 'trip-comp-1',
-            tripCode: 'ATH-2026-00389',
-            type: 'LOGOUT',
-            shiftDate: new Date().toISOString().split('T')[0],
-            shiftTime: '11:00 PM',
-            corporateClient: 'Enterprise Tech Park, Tower B',
-            routeName: 'EGL Tech Park → Domlur → Indiranagar',
-            status: 'COMPLETED',
-            vehiclePlate: 'KA-03-AB-6182',
-            totalDistanceKm: 16.2,
-            estimatedMinutes: 42,
-            stops: [],
-          },
-        ]);
+        setCompletedList([]);
       }
     };
     load();
@@ -72,21 +56,33 @@ export const CompletedTripsScreen: React.FC<CompletedTripsScreenProps> = ({ onBa
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        {completedList.map((trip) => (
-          <View key={trip.id} style={styles.card}>
-            <View style={styles.cardHeader}>
-              <Text style={styles.tripCode}>{trip.tripCode}</Text>
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>COMPLETED</Text>
-              </View>
-            </View>
-
-            <Text style={styles.route}>{trip.routeName}</Text>
-            <Text style={styles.meta}>
-              {trip.shiftDate} • {trip.shiftTime} • {trip.totalDistanceKm} km
+        {completedList.length === 0 ? (
+          <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 48 }}>
+            <Ionicons name="checkmark-done-circle-outline" size={48} color="#94A3B8" />
+            <Text style={{ fontSize: 16, fontWeight: '700', color: '#1E293B', marginTop: 12 }}>
+              No Completed Trips
+            </Text>
+            <Text style={{ fontSize: 13, color: '#64748B', textAlign: 'center', marginTop: 4 }}>
+              Completed duty manifests will appear here once finalized.
             </Text>
           </View>
-        ))}
+        ) : (
+          completedList.map((trip) => (
+            <View key={trip.id} style={styles.card}>
+              <View style={styles.cardHeader}>
+                <Text style={styles.tripCode}>{trip.tripCode}</Text>
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>COMPLETED</Text>
+                </View>
+              </View>
+
+              <Text style={styles.route}>{trip.routeName}</Text>
+              <Text style={styles.meta}>
+                {trip.shiftDate} • {trip.shiftTime} • {trip.totalDistanceKm} km
+              </Text>
+            </View>
+          ))
+        )}
       </ScrollView>
     </View>
   );

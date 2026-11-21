@@ -77,7 +77,7 @@ export const authService = {
     const knownEmpCode = ident.toUpperCase();
     activeUserSession = {
       employeeId: knownEmpCode.includes('EMP') ? knownEmpCode : 'EMP-9042',
-      fullName: knownEmpCode === 'EMP-9018' ? 'Priya Sharma' : knownEmpCode === 'EMP-9033' ? 'Karthik Natarajan' : 'Amrutha Rao',
+      fullName: 'Amrutha Rao',
       email: ident.includes('@') ? ident : `${ident.toLowerCase()}@walmart.internal`,
       department: 'Core Supply Chain Engineering',
       phone: '+91 98450 11223',
