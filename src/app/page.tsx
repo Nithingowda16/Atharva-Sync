@@ -1497,7 +1497,7 @@ export default function ETSPortal() {
                 <button
                   onClick={() => {
                     setActiveHeaderTab('BUS_DASHBOARD');
-                    showToast('Bus Shuttle Dashboard: 8 Active Employee Transit Lines');
+                    showToast('Bus Shuttle Dashboard: 0 Active Employee Transit Lines');
                   }}
                   className={`px-4 py-1.5 transition-all ${
                     activeHeaderTab === 'BUS_DASHBOARD'
@@ -1510,7 +1510,7 @@ export default function ETSPortal() {
                 <button
                   onClick={() => {
                     setActiveHeaderTab('ANALYTICS');
-                    showToast('Commute SLA Analytics: 99.4% On-Time, Carbon Saved: 182.4 kg');
+                    showToast('Commute SLA Analytics: 0 Completed Trips Recorded');
                   }}
                   className={`px-4 py-1.5 transition-all ${
                     activeHeaderTab === 'ANALYTICS'
@@ -1778,7 +1778,7 @@ export default function ETSPortal() {
                     </span>
                   </h4>
                   <p className="text-xs text-red-900 mt-0.5">
-                    Passenger: <strong>{activeAlerts[0].employeeName}</strong> ({activeAlerts[0].employeePhone}) • Vehicle: <strong>{activeAlerts[0].vehiclePlate || 'KA-03-HA-8821'}</strong> • Chauffeur: {activeAlerts[0].driverName || 'Suresh Babu'}
+                    Passenger: <strong>{activeAlerts[0].employeeName}</strong> ({activeAlerts[0].employeePhone}) • Vehicle: <strong>{activeAlerts[0].vehiclePlate || 'Assigned Vehicle'}</strong> • Chauffeur: {activeAlerts[0].driverName || 'Assigned Driver'}
                   </p>
                 </div>
               </div>
@@ -2227,11 +2227,17 @@ export default function ETSPortal() {
                                   </button>
                                 </div>
                                 <GoogleMapsTracker
-                                  vehiclePlate="KA-03-HA-8821"
-                                  driverName="Suresh Babu"
+                                  vehiclePlate={
+                                    matchingRequests.find((r) => r.bookingCode === trackingTripCode || r.assignedTripCode === trackingTripCode)
+                                      ?.vehiclePlate || 'Fleet Vehicle'
+                                  }
+                                  driverName={
+                                    matchingRequests.find((r) => r.bookingCode === trackingTripCode || r.assignedTripCode === trackingTripCode)
+                                      ?.driverName || 'Assigned Driver'
+                                  }
                                   pickupAddress={
                                     matchingRequests.find((r) => r.bookingCode === trackingTripCode || r.assignedTripCode === trackingTripCode)
-                                      ?.pickupAddress || 'Indiranagar 100ft Rd'
+                                      ?.pickupAddress || 'Corporate Pickup Point'
                                   }
                                 />
                               </div>
@@ -3254,35 +3260,12 @@ export default function ETSPortal() {
               </div>
 
               {/* BUS SHUTTLE CARDS */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {[
-                  { routeNo: 'SH-01', from: 'Whitefield TTMC', to: 'Tech Park Campus', occupancy: '28 / 32 Seated', driver: 'Nagaraj K.', plate: 'KA-04-E-6620', eta: 'On Time (12m)' },
-                  { routeNo: 'SH-02', from: 'Indiranagar Metro', to: 'Tech Park Campus', occupancy: '18 / 20 Seated', driver: 'Basavaraj M.', plate: 'KA-05-NB-9044', eta: 'On Time (8m)' },
-                  { routeNo: 'SH-03', from: 'Koramangala Sony World', to: 'Tech Park Campus', occupancy: '22 / 24 Seated', driver: 'Muniswamy R.', plate: 'KA-01-EQ-9011', eta: '+3m Delay' },
-                  { routeNo: 'SH-04', from: 'Electronic City Toll', to: 'Tech Park Campus', occupancy: '30 / 32 Seated', driver: 'Girish Patil', plate: 'KA-53-B-7712', eta: 'On Time (15m)' },
-                ].map((shuttle) => (
-                  <div key={shuttle.routeNo} className="bg-white border border-slate-200 p-4 shadow-sm space-y-3 rounded-2xl">
-                    <div className="flex items-center justify-between">
-                      <span className="bg-[#0f5fc2] text-white font-black text-xs px-2 py-0.5 rounded">
-                        ROUTE {shuttle.routeNo}
-                      </span>
-                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 border border-emerald-200 rounded">
-                        {shuttle.eta}
-                      </span>
-                    </div>
-
-                    <div className="text-xs space-y-1">
-                      <div className="font-bold text-slate-900">{shuttle.from} ➔ {shuttle.to}</div>
-                      <div className="text-slate-500 text-[11px]">Vehicle: <strong className="text-slate-700">{shuttle.plate}</strong></div>
-                      <div className="text-slate-500 text-[11px]">Chauffeur: {shuttle.driver}</div>
-                    </div>
-
-                    <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
-                      <span className="font-semibold text-slate-600">Capacity:</span>
-                      <span className="font-bold text-[#0f5fc2]">{shuttle.occupancy}</span>
-                    </div>
-                  </div>
-                ))}
+              <div className="p-12 text-center bg-white border border-slate-200 rounded-2xl shadow-sm">
+                <Bus className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                <h4 className="font-bold text-slate-800 text-base">No Active Shuttle Corridors Deployed</h4>
+                <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
+                  Mass transit bus corridors and corporate shuttles will appear here when scheduled by the logistics transport desk.
+                </p>
               </div>
             </div>
           )}
@@ -3321,9 +3304,11 @@ export default function ETSPortal() {
                   <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
                     On-Time Commute SLA
                   </span>
-                  <div className="text-3xl font-black text-emerald-700 mt-1">99.4%</div>
-                  <span className="text-[10px] text-emerald-700 font-semibold block mt-0.5">
-                    Above 98.0% Contract Target
+                  <div className="text-3xl font-black text-slate-400 mt-1">
+                    {dbTrips.filter((t) => t.status === 'COMPLETED').length > 0 ? '100%' : '0%'}
+                  </div>
+                  <span className="text-[10px] text-slate-400 font-semibold block mt-0.5">
+                    {dbTrips.filter((t) => t.status === 'COMPLETED').length > 0 ? 'Above 98.0% Contract Target' : 'No completed trips yet'}
                   </span>
                 </div>
 
@@ -3331,9 +3316,11 @@ export default function ETSPortal() {
                   <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
                     Total Passenger Trips
                   </span>
-                  <div className="text-3xl font-black text-slate-900 mt-1">1,842</div>
+                  <div className="text-3xl font-black text-slate-900 mt-1">
+                    {dbTrips.filter((t) => t.status === 'COMPLETED').length}
+                  </div>
                   <span className="text-[10px] text-slate-500 font-semibold block mt-0.5">
-                    Login: 924 • Logout: 918
+                    Login: {dbTrips.filter((t) => t.status === 'COMPLETED' && t.type === 'LOGIN').length} • Logout: {dbTrips.filter((t) => t.status === 'COMPLETED' && t.type === 'LOGOUT').length}
                   </span>
                 </div>
 
@@ -3341,9 +3328,11 @@ export default function ETSPortal() {
                   <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
                     Carbon Saved (ESG Metric)
                   </span>
-                  <div className="text-3xl font-black text-[#0f5fc2] mt-1">182.4 kg</div>
+                  <div className="text-3xl font-black text-slate-700 mt-1">
+                    {(dbTrips.filter((t) => t.status === 'COMPLETED').length * 0.12).toFixed(1)} kg
+                  </div>
                   <span className="text-[10px] text-slate-500 font-semibold block mt-0.5">
-                    Via Route Pooling & EV Fleet
+                    Via Route Pooling &amp; EV Fleet
                   </span>
                 </div>
 
@@ -3351,9 +3340,11 @@ export default function ETSPortal() {
                   <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
                     Zero Safety Incidents
                   </span>
-                  <div className="text-3xl font-black text-emerald-700 mt-1">100% Safe</div>
+                  <div className="text-3xl font-black text-emerald-700 mt-1">
+                    {activeAlerts.length === 0 ? '100% Safe' : `${activeAlerts.length} Alerts`}
+                  </div>
                   <span className="text-[10px] text-emerald-700 font-semibold block mt-0.5">
-                    480 Consecutive Accident-Free Days
+                    {activeAlerts.length === 0 ? '0 Incidents Reported' : 'Active SOS in progress'}
                   </span>
                 </div>
               </div>

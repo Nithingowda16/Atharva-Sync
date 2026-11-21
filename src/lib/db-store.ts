@@ -258,187 +258,9 @@ const DATA_FILE = path.join(DATA_DIR, 'ets-database.json');
 
 // Initial seed dataset
 const SEED_DATA: DBData = {
-  vehicles: [
-    {
-      id: 'veh-8821',
-      plateNumber: 'KA-03-HA-8821',
-      make: 'Toyota',
-      model: 'Innova Crysta 2.4 VX',
-      color: 'Pearl White',
-      seatingCapacity: 4,
-      fleetType: 'PREMIUM_MUV',
-      insuranceExpiry: '2027-12-31',
-      fitnessExpiry: '2028-06-30',
-      permitExpiry: '2028-01-15',
-      pollutionExpiry: '2026-12-10',
-      isActive: true,
-      complianceStatus: 'VALID',
-    },
-    {
-      id: 'veh-4310',
-      plateNumber: 'KA-05-MJ-4310',
-      make: 'Toyota',
-      model: 'Innova Crysta',
-      color: 'Silver Grey',
-      seatingCapacity: 4,
-      fleetType: 'PREMIUM_MUV',
-      insuranceExpiry: '2027-10-15',
-      fitnessExpiry: '2028-04-20',
-      permitExpiry: '2027-11-01',
-      pollutionExpiry: '2026-11-25',
-      isActive: true,
-      complianceStatus: 'EXPIRING_SOON',
-    },
-    {
-      id: 'veh-9011',
-      plateNumber: 'KA-01-EQ-9011',
-      make: 'Force',
-      model: 'Urbania Tempo 3300',
-      color: 'Arctic Silver',
-      seatingCapacity: 12,
-      fleetType: 'TEMPO_TRAVELER',
-      insuranceExpiry: '2028-03-10',
-      fitnessExpiry: '2028-08-15',
-      permitExpiry: '2028-03-20',
-      pollutionExpiry: '2027-02-18',
-      isActive: true,
-      complianceStatus: 'VALID',
-    },
-  ],
-  drivers: [
-    {
-      id: 'drv-suresh',
-      userId: 'usr-suresh',
-      fullName: 'Suresh Babu',
-      phone: '+91 98765 43210',
-      licenseNumber: 'KA-03-2018-009124',
-      licenseExpiry: '2032-05-15',
-      rating: 4.92,
-      totalTripsCompleted: 840,
-      dutyStatus: 'ON_TRIP',
-      assignedVehicleId: 'veh-8821',
-      currentLocation: {
-        latitude: 12.9719,
-        longitude: 77.6412,
-        heading: 45,
-        speed: 34,
-        lastUpdated: new Date().toISOString(),
-      },
-    },
-    {
-      id: 'drv-mahesh',
-      userId: 'usr-mahesh',
-      fullName: 'Mahesh Gowda',
-      phone: '+91 98450 77112',
-      licenseNumber: 'KA-05-2016-004412',
-      licenseExpiry: '2030-08-20',
-      rating: 4.85,
-      totalTripsCompleted: 1120,
-      dutyStatus: 'AVAILABLE',
-      assignedVehicleId: 'veh-4310',
-      currentLocation: {
-        latitude: 12.985,
-        longitude: 77.72,
-        heading: 90,
-        speed: 0,
-        lastUpdated: new Date().toISOString(),
-      },
-    },
-    {
-      id: 'drv-venkatesh',
-      userId: 'usr-venkatesh',
-      fullName: 'Venkatesh R.',
-      phone: '+91 97400 33881',
-      licenseNumber: 'KA-01-2019-007811',
-      licenseExpiry: '2033-01-10',
-      rating: 4.96,
-      totalTripsCompleted: 620,
-      dutyStatus: 'AVAILABLE',
-      assignedVehicleId: 'veh-9011',
-      currentLocation: {
-        latitude: 12.9352,
-        longitude: 77.6946,
-        heading: 0,
-        speed: 0,
-        lastUpdated: new Date().toISOString(),
-      },
-    },
-  ],
-  trips: [
-    {
-      id: 'trip-ath-8821',
-      tripCode: 'ATH-2026-00124',
-      type: 'LOGIN',
-      shiftDate: '2026-11-11',
-      shiftTime: '13:30',
-      corporateClient: 'Enterprise Tech Park',
-      routeName: 'Indiranagar 100ft → Domlur → EGL Tech Park',
-      status: 'IN_TRANSIT',
-      vehicleId: 'veh-8821',
-      vehicle: {
-        id: 'veh-8821',
-        plateNumber: 'KA-03-HA-8821',
-        make: 'Toyota',
-        model: 'Innova Crysta',
-        color: 'Pearl White',
-        seatingCapacity: 4,
-        fleetType: 'PREMIUM_MUV',
-        insuranceExpiry: '2027-12-31',
-        fitnessExpiry: '2028-06-30',
-        permitExpiry: '2028-01-15',
-        pollutionExpiry: '2026-12-10',
-        isActive: true,
-        complianceStatus: 'VALID',
-      },
-      driverId: 'drv-suresh',
-      driver: {
-        id: 'drv-suresh',
-        userId: 'usr-suresh',
-        fullName: 'Suresh Babu',
-        phone: '+91 98765 43210',
-        licenseNumber: 'KA-03-2018-009124',
-        licenseExpiry: '2032-05-15',
-        rating: 4.92,
-        totalTripsCompleted: 840,
-        dutyStatus: 'ON_TRIP',
-        assignedVehicleId: 'veh-8821',
-      },
-      totalDistanceKm: 14.8,
-      estimatedMinutes: 38,
-      scheduledStartTime: '2026-11-11T12:45:00.000Z',
-      scheduledEndTime: '2026-11-11T13:30:00.000Z',
-      actualStartTime: '2026-11-11T12:48:00.000Z',
-      currentLocation: {
-        latitude: 12.9719,
-        longitude: 77.6412,
-        heading: 45,
-        speed: 34,
-        lastUpdated: new Date().toISOString(),
-      },
-      passengers: [
-        {
-          id: 'pax-amrutha',
-          employeeId: 'emp-amrutha',
-          employeeCode: 'EMP-9042',
-          fullName: 'Amrutha Rao',
-          phone: '+91 98450 11223',
-          gender: 'FEMALE',
-          femaleSafeguard: true,
-          department: 'Core Supply Chain & Logistics Engineering',
-          stopSequence: 1,
-          pickupAddress: 'Gate 2, Golden Palms Apts, Indiranagar 100ft Road',
-          pickupCoords: { latitude: 12.9719, longitude: 77.6412 },
-          dropAddress: 'Enterprise Tech Park, Tower B, Domlur',
-          dropCoords: { latitude: 12.9352, longitude: 77.6946 },
-          scheduledPickupTime: '01:05 PM',
-          boardingOtp: '7492',
-          boardingStatus: 'WAITING',
-        },
-      ],
-      createdAt: '2026-11-11T10:00:00.000Z',
-      updatedAt: '2026-11-11T12:56:10.000Z',
-    },
-  ],
+  vehicles: [],
+  drivers: [],
+  trips: [],
   employees: [
     {
       id: 'emp-amrutha',
@@ -457,54 +279,10 @@ const SEED_DATA: DBData = {
       createdAt: '2026-01-15T09:00:00.000Z',
     },
   ],
-  rideRequests: [
-    {
-      id: 'req-seed-0900-amrutha-today',
-      bookingCode: 'REQ-2026-9042',
-      employeeId: 'emp-amrutha',
-      employeeCode: 'EMP-9042',
-      employeeName: 'Amrutha Rao',
-      employeePhone: '+91 98450 11223',
-      department: 'Core Supply Chain & Logistics Engineering',
-      direction: 'LOGIN',
-      shiftDate: '2026-11-21',
-      shiftTime: '09:00',
-      officeCampus: 'Enterprise Tech Park, Tower B',
-      pickupAddress: 'Gate 2, Golden Palms Apts, Indiranagar 100ft Road',
-      pickupCoords: { latitude: 12.9719, longitude: 77.6412 },
-      dropAddress: 'Enterprise Tech Park, Tower B, Domlur',
-      dropCoords: { latitude: 12.9352, longitude: 77.6946 },
-      bookingType: 'REGULAR_SHIFT',
-      status: 'PENDING_ADMIN',
-      boardingOtp: '7492',
-      createdAt: '2026-11-21T07:30:00.000Z',
-      updatedAt: '2026-11-21T07:30:00.000Z',
-    },
-  ],
+  rideRequests: [],
   sosAlerts: [],
-  notifications: [
-    {
-      id: 'notif-01',
-      recipientRole: 'ADMIN',
-      title: 'Trip ATH-2026-00124 En-Route',
-      body: 'Driver Suresh Babu started trip for 13:30 Login shift with 3 passengers.',
-      type: 'TRIP_STARTED',
-      tripId: 'trip-ath-8821',
-      read: false,
-      createdAt: new Date().toISOString(),
-    },
-  ],
-  auditLogs: [
-    {
-      id: 'audit-01',
-      actor: 'Harish R. (ATH-HARISH-01)',
-      actorRole: 'SUPER_ADMIN',
-      action: 'ALLOCATE_CAB',
-      resource: 'TRIP',
-      resourceId: 'trip-ath-8821',
-      timestamp: new Date().toISOString(),
-    },
-  ],
+  notifications: [],
+  auditLogs: [],
 };
 
 // Global memory cache to ensure fast reads and instant multi-interface synchronization
@@ -523,13 +301,24 @@ function ensureDataLoaded(): DBData {
     if (fs.existsSync(DATA_FILE)) {
       const raw = fs.readFileSync(DATA_FILE, 'utf-8');
       const parsed = JSON.parse(raw);
-      if (!parsed.rideRequests || parsed.rideRequests.length === 0) {
-        parsed.rideRequests = JSON.parse(JSON.stringify(SEED_DATA.rideRequests));
+      // Clean legacy mock trips and requests
+      if (Array.isArray(parsed.trips)) {
+        parsed.trips = parsed.trips.filter((t: any) => t.id !== 'trip-ath-8821' && t.tripCode !== 'ATH-2026-00124');
+      }
+      if (Array.isArray(parsed.rideRequests)) {
+        parsed.rideRequests = parsed.rideRequests.filter((r: any) => r.id !== 'req-seed-0900-amrutha-today' && r.bookingCode !== 'REQ-2026-9042');
+      }
+      if (Array.isArray(parsed.vehicles)) {
+        parsed.vehicles = parsed.vehicles.filter((v: any) => v.id !== 'veh-8821' && v.id !== 'veh-4310' && v.id !== 'veh-9011');
+      }
+      if (Array.isArray(parsed.drivers)) {
+        parsed.drivers = parsed.drivers.filter((d: any) => d.id !== 'drv-suresh' && d.id !== 'drv-mahesh' && d.id !== 'drv-venkatesh');
       }
       if (!parsed.employees || parsed.employees.length === 0) {
         parsed.employees = JSON.parse(JSON.stringify(SEED_DATA.employees));
       }
       inMemoryData = parsed;
+      fs.writeFileSync(DATA_FILE, JSON.stringify(inMemoryData, null, 2), 'utf-8');
     } else {
       inMemoryData = JSON.parse(JSON.stringify(SEED_DATA));
       fs.writeFileSync(DATA_FILE, JSON.stringify(inMemoryData, null, 2), 'utf-8');
@@ -1273,14 +1062,14 @@ export const db = {
     };
 
     const driver = data.drivers.find((d) => d.id === params.driverId || d.fullName === params.driverName) || {
-      id: params.driverId || 'drv-suresh',
+      id: params.driverId || `drv-${Date.now()}`,
       userId: `usr-${Date.now()}`,
-      fullName: params.driverName || 'Suresh Babu',
-      phone: params.driverPhone || '+91 98765 43210',
-      licenseNumber: 'KA-03-2018-009124',
+      fullName: params.driverName || 'Assigned Chauffeur',
+      phone: params.driverPhone || '+91 98000 00000',
+      licenseNumber: 'KA-COMMERCIAL-DL',
       licenseExpiry: '2032-05-15',
-      rating: 4.92,
-      totalTripsCompleted: 840,
+      rating: 5.0,
+      totalTripsCompleted: 0,
       dutyStatus: 'ON_TRIP' as const,
       assignedVehicleId: vehicle.id,
       currentLocation: {

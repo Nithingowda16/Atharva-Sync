@@ -68,8 +68,8 @@ export const QrBoardingScreen: React.FC<QrBoardingScreenProps> = ({
   }, [scanAnim]);
 
   const otpCode = ride?.boardingOtp || '7492';
-  const driverName = ride?.driver?.fullName || 'Suresh Babu';
-  const vehiclePlate = ride?.vehicle?.plateNumber || 'KA-03-HA-8821';
+  const driverName = ride?.driver?.fullName || 'Driver Partner';
+  const vehiclePlate = ride?.vehicle?.plateNumber || 'Fleet Cab';
 
   const completeBoarding = (method: 'QR_SCAN' | 'OTP_VERIFIED') => {
     const timeNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });

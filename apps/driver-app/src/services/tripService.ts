@@ -42,7 +42,7 @@ export const tripService = {
               corporateClient: 'Enterprise Tech Park, Tower B',
               routeName: m.routeName || 'Indiranagar ➔ Enterprise Tech Park',
               status: m.status === 'IN_TRANSIT' ? 'IN_TRANSIT' : 'SCHEDULED',
-              vehiclePlate: m.vehiclePlate || vehiclePlate || 'KA-03-HA-8821',
+              vehiclePlate: m.vehiclePlate || vehiclePlate || 'Fleet Cab',
               totalDistanceKm: 14.8,
               estimatedMinutes: 35,
               stops: (m.stops || []).map((s: any, idx: number) => ({

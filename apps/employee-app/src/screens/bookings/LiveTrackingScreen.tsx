@@ -86,9 +86,9 @@ export const LiveTrackingScreen: React.FC<LiveTrackingScreenProps> = ({
   const [latestBroadcast, setLatestBroadcast] = useState<string | null>(null);
   const [broadcastTime, setBroadcastTime] = useState<string | null>(null);
 
-  const driverName = ride?.driver?.fullName || 'Suresh Babu';
+  const driverName = ride?.driver?.fullName || 'Driver Partner';
   const driverPhone = ride?.driver?.phone || '+91 98450 11223';
-  const vehiclePlate = ride?.vehicle?.plateNumber || 'KA-03-HA-8821';
+  const vehiclePlate = ride?.vehicle?.plateNumber || 'Fleet Cab';
 
   // 1. Direct Phone Call to Driver
   const handleCallDriver = () => {

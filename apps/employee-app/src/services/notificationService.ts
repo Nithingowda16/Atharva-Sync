@@ -30,8 +30,8 @@ export const notificationService = {
     return [
       {
         id: 'n-1',
-        title: 'Cab En Route (KA-03-HA-8821)',
-        body: 'Chauffeur Suresh Babu is 7 minutes away from Indiranagar 100ft Road.',
+        title: 'Cab En Route (Fleet Cab)',
+        body: 'Chauffeur Driver Partner is 7 minutes away from Indiranagar 100ft Road.',
         type: 'TRIP_UPDATE',
         timestamp: '12:53 PM',
         isRead: false,

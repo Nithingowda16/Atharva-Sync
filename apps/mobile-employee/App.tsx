@@ -17,19 +17,19 @@ import { StatusBar } from 'expo-status-bar';
 const API_BASE_URL = 'http://10.0.2.2:3000/api'; // Android Emulator alias for localhost (or production URL)
 
 export default function EmployeeApp() {
-  const [commute, setCommute] = useState({
-    tripId: 'ATH-8821',
+  const [commute, setCommute] = useState<any>({
+    tripId: '',
     employeeId: 'EMP-9042',
     name: 'Amrutha Rao',
     pickupAddress: 'Gate 2, Golden Palms Apts, Indiranagar 100ft Road',
     pickupCoords: { latitude: 12.9719, longitude: 77.6412 },
-    boardingOtp: '7492',
-    boardingStatus: 'SCHEDULED',
-    driverName: 'Suresh Babu',
-    driverPhone: '+91 98765 43210',
-    vehiclePlate: 'KA-03-HA-8821',
-    vehicleModel: 'Toyota Innova Crysta (White)',
-    etaMinutes: 7,
+    boardingOtp: '----',
+    boardingStatus: 'UNSCHEDULED',
+    driverName: 'Awaiting Allocation',
+    driverPhone: '',
+    vehiclePlate: 'Pending',
+    vehicleModel: 'Corporate Cab',
+    etaMinutes: 0,
   });
 
   const [isModalOpen, setIsModalOpen] = useState(false);

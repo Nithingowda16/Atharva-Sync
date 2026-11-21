@@ -16,26 +16,13 @@ const API_BASE_URL = 'http://10.0.2.2:3000/api';
 
 export default function DriverApp() {
   const [driverInfo] = useState({
-    name: 'Suresh Babu',
-    vehiclePlate: 'KA-03-HA-8821',
-    tripCode: 'ATH-8821',
-    tripId: 'ATH-8821',
+    name: 'Driver Partner',
+    vehiclePlate: 'Depot Fleet',
+    tripCode: '',
+    tripId: '',
   });
 
-  const [stops, setStops] = useState([
-    {
-      id: 'p2',
-      name: 'Amrutha Rao',
-      phone: '+91-98450-11223',
-      sequence: 1,
-      address: 'Indiranagar 100ft Road (Near Metro Pillar 42)',
-      coords: { lat: 12.9725, lng: 77.6430 },
-      status: 'SCHEDULED',
-      boardingOtp: '7492',
-      isReassigned: true, // Triggered dynamic location update
-      reassignmentReason: 'Gate 2 waterlogging. Shifted 300m to Metro Pillar 42.',
-    },
-  ]);
+  const [stops, setStops] = useState<any[]>([]);
 
   const [otpInput, setOtpInput] = useState('');
   const [activePassengerId, setActivePassengerId] = useState('p2');

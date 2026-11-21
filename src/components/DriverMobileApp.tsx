@@ -54,12 +54,12 @@ interface DriverMobileAppProps {
 }
 
 export const DriverMobileApp: React.FC<DriverMobileAppProps> = ({
-  driverName: defaultDriverName = 'Suresh Babu',
-  driverId: defaultDriverId = 'drv-suresh',
-  vehiclePlate: defaultPlate = 'KA-03-HA-8821',
-  vehicleModel: defaultModel = 'Toyota Innova Crysta',
-  tripId: defaultTripId = 'trip-ath-8821',
-  shiftTime: defaultShiftTime = '13:30 Shift • Login',
+  driverName: defaultDriverName = 'Driver Partner',
+  driverId: defaultDriverId = 'drv-01',
+  vehiclePlate: defaultPlate = 'Depot Fleet',
+  vehicleModel: defaultModel = 'Fleet Cab',
+  tripId: defaultTripId = '',
+  shiftTime: defaultShiftTime = 'Regular Shift',
   onPassengerBoarded,
   onSwitchPortal,
   onTriggerSOS,
@@ -69,7 +69,7 @@ export const DriverMobileApp: React.FC<DriverMobileAppProps> = ({
   const [vehiclePlate, setVehiclePlate] = useState(defaultPlate);
   const [vehicleModel, setVehicleModel] = useState(defaultModel);
   const [tripId, setTripId] = useState(defaultTripId);
-  const [tripCode, setTripCode] = useState('ATH-2026-00124');
+  const [tripCode, setTripCode] = useState('');
   const [shiftTime, setShiftTime] = useState(defaultShiftTime);
   const [passengers, setPassengers] = useState<DriverPassenger[]>([]);
   const [tripStatus, setTripStatus] = useState<string>('IN_TRANSIT');

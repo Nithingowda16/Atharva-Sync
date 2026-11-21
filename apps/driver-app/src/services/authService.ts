@@ -22,14 +22,14 @@ export const authService = {
     // Provisioned corporate driver profile
     const profile: DriverProfile = {
       id: 'drv-suresh',
-      fullName: 'Suresh Babu',
+      fullName: 'Driver Partner',
       phone: '+91 98765 43210',
       licenseNumber: 'KA-03-2018-009124',
       licenseExpiry: '2032-05-15',
       rating: 4.92,
       totalTripsCompleted: 842,
       assignedVehicleId: 'veh-8821',
-      assignedVehiclePlate: 'KA-03-HA-8821',
+      assignedVehiclePlate: 'Fleet Cab',
       assignedVehicleModel: 'Toyota Innova Crysta 2.4 VX',
       dutyStatus: 'OFFLINE',
       complianceStatus: 'VALID',

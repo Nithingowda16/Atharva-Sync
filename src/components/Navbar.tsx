@@ -84,21 +84,21 @@ export const Navbar: React.FC<NavbarProps> = ({ currentRole, onRoleChange, onOpe
 
           <div className="flex items-center space-x-3 pl-3 border-l border-slate-200">
             <div className="w-8 h-8 rounded-full bg-blue-100 border border-blue-300 flex items-center justify-center font-bold text-xs text-blue-800">
-              {currentRole === 'EMPLOYEE' ? 'AR' : currentRole === 'DRIVER' ? 'SB' : 'AD'}
+              {currentRole === 'EMPLOYEE' ? 'AR' : currentRole === 'DRIVER' ? 'DR' : 'AD'}
             </div>
             <div className="hidden sm:block text-left text-xs">
               <p className="font-semibold text-slate-800">
                 {currentRole === 'EMPLOYEE'
                   ? 'Amrutha Rao'
                   : currentRole === 'DRIVER'
-                  ? 'Suresh Babu'
+                  ? 'Driver Partner'
                   : 'Admin Command'}
               </p>
               <p className="text-slate-400">
                 {currentRole === 'EMPLOYEE'
                   ? 'EMP-9042'
                   : currentRole === 'DRIVER'
-                  ? 'KA-03-HA-8821'
+                  ? 'Depot Fleet'
                   : 'Central TCR'}
               </p>
             </div>

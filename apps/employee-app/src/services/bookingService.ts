@@ -66,14 +66,14 @@ export const bookingService = {
             },
             vehicle: c.vehicle ? {
               id: 'v-1',
-              plateNumber: c.vehicle.plateNumber || 'KA-03-HA-8821',
+              plateNumber: c.vehicle.plateNumber || 'Fleet Cab',
               model: c.vehicle.model || 'Toyota Innova Crysta',
               make: 'Toyota',
               color: c.vehicle.color || 'Pearl White',
             } : undefined,
             driver: c.driver ? {
               id: 'dr-1',
-              fullName: c.driver.name || 'Suresh Babu',
+              fullName: c.driver.name || 'Driver Partner',
               phone: c.driver.phone || '+91 98765 43210',
               rating: 4.9,
             } : undefined,

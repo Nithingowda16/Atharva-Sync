@@ -247,7 +247,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onFinish }) 
             {/* Driver Allocation Info */}
             <View style={styles.driverPill}>
               <Ionicons name="person-circle" size={20} color="#0F172A" />
-              <Text style={styles.driverPillText}>Suresh Babu • KA-03-AG-2024</Text>
+              <Text style={styles.driverPillText}>Driver Partner • KA-03-AG-2024</Text>
             </View>
           </View>
 

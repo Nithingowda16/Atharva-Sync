@@ -167,7 +167,7 @@ export const trackingService = {
       const res = await fetch(`${getApiBaseUrl()}${API_ENDPOINTS.TELEMETRY}`);
       if (res.ok) {
         const data = await res.json();
-        const cab = data.fleet?.find((f: any) => f.plateNumber === 'KA-03-HA-8821') || data.fleet?.[0];
+        const cab = data.fleet?.find((f: any) => f.plateNumber === 'Fleet Cab') || data.fleet?.[0];
         if (cab) {
           return {
             hasTelemetry: true,
